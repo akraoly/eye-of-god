@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+data/memory.db
+data/logs/
+data/user_files/
+
+# Frontend
+node_modules/
+.next/
+frontend/web/.env.local
+frontend/web/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
