@@ -20,17 +20,26 @@ export default function App() {
 
 function MemoryView() {
   const [memories, setMemories] = useState([])
+  const [deleting, setDeleting] = useState(null)
 
-  useEffect(() => {
+  const load = () =>
     fetch('/api/memory/get')
       .then(r => r.json())
       .then(setMemories)
       .catch(() => {})
-  }, [])
+
+  useEffect(() => { load() }, [])
+
+  const handleDelete = async (id) => {
+    setDeleting(id)
+    await fetch(`/api/memory/${id}`, { method: 'DELETE' })
+    await load()
+    setDeleting(null)
+  }
 
   return (
     <div className="memory-view">
-      <h2>Mémoires</h2>
+      <h2>Mémoires <span className="mem-count">{memories.length}</span></h2>
       {memories.length === 0 ? (
         <p className="empty">Aucune mémoire enregistrée. Commence à parler !</p>
       ) : (
@@ -41,6 +50,14 @@ function MemoryView() {
               <span className="mem-key">{m.key}</span>
               <span className="mem-value">{m.value}</span>
               <span className="mem-score">{(m.importance * 100).toFixed(0)}%</span>
+              <button
+                className="mem-delete"
+                onClick={() => handleDelete(m.id)}
+                disabled={deleting === m.id}
+                title="Supprimer"
+              >
+                {deleting === m.id ? '…' : '✕'}
+              </button>
             </div>
           ))}
         </div>
