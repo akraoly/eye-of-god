@@ -9,8 +9,8 @@ class ChatService:
         # Extraire les infos importantes du message
         memory_engine.extract_and_save(db=db, message=message)
 
-        # Récupérer le contexte mémorisé
-        memories = memory_engine.get_relevant_memories(db=db)
+        # Récupérer les mémoires sémantiquement proches du message
+        memories = memory_engine.get_relevant_memories(db=db, query=message)
         profile = memory_engine.get_user_profile(db=db)
 
         # Construire le prompt système enrichi
@@ -35,7 +35,20 @@ class ChatService:
             context_used=len(memories),
         )
 
-        return {"response": response, "session_id": session_id, "memories_used": len(memories)}
+        # Résumé automatique si l'historique est trop long (asynchrone, non bloquant)
+        try:
+            from core.memory.summarizer import summarizer
+            import asyncio
+            asyncio.create_task(summarizer.summarize_if_needed(db=db))
+        except Exception:
+            pass
+
+        return {
+            "response": response,
+            "session_id": session_id,
+            "memories_used": len(memories),
+            "vector_backend": __import__("core.memory.vector_store", fromlist=["vector_store"]).vector_store.backend,
+        }
 
     def clear_session(self, session_id: str):
         context_builder.clear_session(session_id)

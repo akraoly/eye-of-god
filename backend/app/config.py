@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     SHORT_TERM_LIMIT: int = 20
     USER_MEMORY_LIMIT: int = 100
 
+    # Vector store (v1.1)
+    CHROMA_DIR: str = "./data/chroma"
+    VECTOR_SEARCH_K: int = 8
+    SUMMARY_THRESHOLD: int = 50   # résume après N échanges
+    SUMMARY_BATCH: int = 20       # nombre d'échanges résumés à la fois
+
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3001,http://localhost:3000"
 

@@ -8,3 +8,6 @@ python-dotenv==1.0.1
 aiofiles==24.1.0
 pytest==8.3.4
 httpx==0.27.2
+# Phase 2 — Mémoire vectorielle
+chromadb==0.5.23
+sentence-transformers==3.3.1
