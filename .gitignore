@@ -1,4 +1,5 @@
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -9,9 +10,14 @@ venv/
 dist/
 build/
 .pytest_cache/
+
+# Données locales (DB + logs)
 data/memory.db
 data/logs/
 data/user_files/
+backend/data/memory.db
+backend/data/logs/
+backend/data/user_files/
 
 # Frontend
 node_modules/
@@ -23,3 +29,4 @@ frontend/web/dist/
 .vscode/
 .idea/
 *.swp
+*.DS_Store
