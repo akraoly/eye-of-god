@@ -52,18 +52,22 @@ export default function WelcomeNodes({ eyeState, onSend }) {
       >
         <defs>
           {/* Gradient de chaque ligne : lumineux côté œil, transparent côté nœud */}
-          {NODES.map(n => (
-            <linearGradient
-              key={`lg-${n.id}`}
-              id={`lg${n.id}`}
-              x1={EX} y1={EY} x2={n.x} y2={n.y}
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop offset="0%"   stopColor="var(--accent)" stopOpacity={hovered === n.id ? 0.85 : 0.45} />
-              <stop offset="55%"  stopColor="var(--accent)" stopOpacity={hovered === n.id ? 0.30 : 0.12} />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-            </linearGradient>
-          ))}
+          {NODES.map(n => {
+            const active = hovered === n.id
+            const c = active ? '#38bdf8' : 'var(--accent)'   // bleu électrique au survol
+            return (
+              <linearGradient
+                key={`lg-${n.id}`}
+                id={`lg${n.id}`}
+                x1={EX} y1={EY} x2={n.x} y2={n.y}
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%"   stopColor={c} stopOpacity={active ? 0.9 : 0.45} />
+                <stop offset="50%"  stopColor={c} stopOpacity={active ? 0.35 : 0.12} />
+                <stop offset="100%" stopColor={c} stopOpacity="0" />
+              </linearGradient>
+            )
+          })}
 
           {/* Glow filter pour lignes actives */}
           <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">

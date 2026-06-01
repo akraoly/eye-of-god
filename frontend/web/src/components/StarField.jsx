@@ -15,17 +15,24 @@ export default function StarField({ theme = 'galactic' }) {
     resize()
     window.addEventListener('resize', resize)
 
-    // Générer les étoiles
+    // Générer les étoiles — 3 couleurs : thème / bleu électrique / or
     const N = 260
-    const stars = Array.from({ length: N }, () => ({
-      x:    Math.random() * canvas.width,
-      y:    Math.random() * canvas.height,
-      r:    Math.random() * 1.6 + 0.2,
-      speed: Math.random() * 0.12 + 0.02,
-      twinkle: Math.random() * Math.PI * 2,
-      twinkleSpeed: Math.random() * 0.025 + 0.005,
-      color: themeStarColor(theme),
-    }))
+    const stars = Array.from({ length: N }, () => {
+      const rng = Math.random()
+      let color
+      if (rng < 0.65)      color = themeStarColor(theme)      // 65% couleur thème
+      else if (rng < 0.87) color = '56, 189, 248'             // 22% bleu électrique
+      else                 color = '253, 230, 138'             // 13% blanc-or
+      return {
+        x:    Math.random() * canvas.width,
+        y:    Math.random() * canvas.height,
+        r:    Math.random() * 1.6 + 0.2,
+        speed: Math.random() * 0.12 + 0.02,
+        twinkle: Math.random() * Math.PI * 2,
+        twinkleSpeed: Math.random() * 0.025 + 0.005,
+        color,
+      }
+    })
 
     // Nébuleuses
     const nebulae = [

@@ -150,17 +150,20 @@ export default function EyeOfGod({ state = 'idle', size = 220 }) {
           Ring 2 : moyen, CW, segments plus denses (Métatron reference)
           Ring 3 : intérieur, CCW rapide, trait continu très fin
         */}
+        {/* Bleu électrique — anneau externe, 12 secteurs (cosmique) */}
         <Ring r={91} speed={48} direction={-1}
               dashArray="1.5 7.5" tickCount={12} tickLen={4}
-              stroke="#4fc3f7" strokeWidth={0.6} opacity={0.45} />
+              stroke="#38bdf8" strokeWidth={0.65} opacity={0.5} />
 
+        {/* Violet-indigo — anneau médian, 6 points */}
         <Ring r={75} speed={28} direction={1}
               dashArray="6 3 1.5 3" tickCount={6} tickLen={3}
               stroke="#818cf8" strokeWidth={0.7} opacity={0.5} />
 
+        {/* Blanc-violacé — anneau intérieur, rotation rapide */}
         <Ring r={60} speed={16} direction={-1}
               dashArray="none" tickCount={0}
-              stroke="#c4b5fd" strokeWidth={0.5} opacity={0.35} />
+              stroke="#c4b5fd" strokeWidth={0.45} opacity={0.3} />
 
         {/* ── BLANC DE L'ŒIL ──────────────────────────────────────── */}
         <path d="M 8 100 C 35 38, 165 38, 192 100 C 165 162, 35 162, 8 100 Z"
@@ -213,9 +216,11 @@ export default function EyeOfGod({ state = 'idle', size = 220 }) {
           fill="#7c3aed" opacity="0.85"
           clipPath="url(#eyeClip)"
           filter="url(#pupilGlow)" />
+        {/* Éclat or — le point le plus lumineux de l'œil */}
         <circle cx={CX} cy={CY} r="3.5"
-          fill="#ddd6fe" opacity="1"
-          clipPath="url(#eyeClip)" />
+          fill="#fde68a" opacity="0.95"
+          clipPath="url(#eyeClip)"
+          filter="url(#pupilGlow)" />
 
         {/* ── REFLETS ──────────────────────────────────────────────── */}
         {/* Reflet principal (blanc-or) */}

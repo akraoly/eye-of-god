@@ -2,18 +2,24 @@
 
 /* ── THÈMES ──────────────────────────────────────────────────────────────── */
 :root, [data-theme="galactic"] {
-  --bg:        #03020d;
-  --glass:     rgba(8, 5, 28, 0.75);
-  --glass2:    rgba(14, 10, 42, 0.65);
+  --bg:        #02010a;
+  --glass:     rgba(6, 4, 22, 0.78);
+  --glass2:    rgba(11, 8, 34, 0.68);
   --border:    rgba(124, 58, 237, 0.18);
-  --border2:   rgba(124, 58, 237, 0.35);
+  --border2:   rgba(124, 58, 237, 0.38);
   --accent:    #7c3aed;
   --accent2:   #4f46e5;
-  --glow:      rgba(124, 58, 237, 0.4);
-  --glow2:     rgba(124, 58, 237, 0.12);
-  --text:      #e2e0ff;
-  --text2:     #9090c0;
-  --text3:     #50507a;
+  --glow:      rgba(124, 58, 237, 0.42);
+  --glow2:     rgba(124, 58, 237, 0.13);
+  /* Bleu électrique — accents secondaires, survol */
+  --elec:      #38bdf8;
+  --elec2:     rgba(56, 189, 248, 0.22);
+  /* Blanc-or — éléments importants (nom, points clés) */
+  --gold:      #fde68a;
+  --gold2:     rgba(253, 230, 138, 0.22);
+  --text:      #e4e2ff;
+  --text2:     #8888b8;
+  --text3:     #48487a;
   --green:     #34d399;
   --red:       #f87171;
   --radius:    16px;
@@ -82,6 +88,24 @@ body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   height: 100vh; overflow: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Halo atmosphérique radial — centré en haut où vit l'œil */
+body::before {
+  content: '';
+  position: fixed;
+  top: -8%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 78vw;
+  height: 58vh;
+  background: radial-gradient(ellipse at center,
+    rgba(79, 70, 229, 0.09) 0%,
+    rgba(56, 189, 248, 0.05) 38%,
+    transparent 72%
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ── LAYOUT ──────────────────────────────────────────────────────────────── */
@@ -213,23 +237,27 @@ body {
 
 .welcome-text { text-align: center; }
 .welcome-title {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-size: 1.7rem;
+  font-weight: 600;          /* élégant, pas lourd */
+  letter-spacing: 0.07em;    /* espacement cosmique */
   color: var(--text);
   line-height: 1.15;
+  text-transform: uppercase;
 }
+/* Le nom en blanc-or — l'élément le plus important */
 .welcome-title span {
-  color: var(--accent);
-  text-shadow: 0 0 18px var(--glow);
-  letter-spacing: 0.02em;
+  color: var(--gold);
+  text-shadow: 0 0 14px var(--gold2), 0 0 30px rgba(253,230,138,0.1);
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 .welcome-sub {
-  font-size: 0.83rem;
+  font-size: 0.8rem;
   color: var(--text2);
-  margin-top: 6px;
+  margin-top: 7px;
   max-width: 360px;
-  line-height: 1.6;
+  line-height: 1.65;
+  letter-spacing: 0.02em;
 }
 
 /* ── CONSTELLATION WelcomeNodes ─────────────────────────────────────────── */
@@ -393,10 +421,16 @@ body {
   position: relative;
 }
 .msg.user .bubble {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  background: linear-gradient(135deg,
+    var(--accent) 0%,
+    var(--accent2) 55%,
+    rgba(56, 189, 248, 0.75) 100%  /* touche bleu électrique en bout */
+  );
   color: white;
   border-radius: var(--radius) var(--radius) 3px var(--radius);
-  box-shadow: 0 4px 20px var(--glow2);
+  box-shadow:
+    0 4px 20px var(--glow2),
+    0 0 12px rgba(56, 189, 248, 0.12);
   white-space: pre-wrap;
 }
 .bubble-md {
@@ -497,12 +531,36 @@ body {
   border: 1px solid var(--border2);
   border-radius: var(--radius);
   padding: 10px 10px 10px 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s;
   backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;   /* pour le sweep */
 }
+
+/* Ligne lumineuse qui balaye de gauche à droite au focus */
+.input-box::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 1.5px; width: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--elec) 30%,
+    var(--accent) 65%,
+    transparent 100%
+  );
+  border-radius: 1px;
+  transition: width 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.input-box:focus-within::after { width: 100%; }
+
 .input-box:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--glow2), 0 0 20px var(--glow2);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.12),
+    0 0 18px rgba(56, 189, 248, 0.06),
+    0 0 0 1px rgba(124, 58, 237, 0.18);
 }
 .input-box textarea {
   flex: 1; background: none; border: none; outline: none;
