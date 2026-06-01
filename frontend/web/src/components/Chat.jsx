@@ -5,21 +5,28 @@ import WelcomeNodes from './WelcomeNodes'
 import VoiceInput from './VoiceInput'
 import { sendMessage, loadHistory, resetSession } from '../utils/api'
 
-const fmt = d => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const fmtTime = d => d instanceof Date
+  ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  : ''
 
+const fmtDate = d => d instanceof Date
+  ? d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  : ''
+
+const isSameDay = (a, b) =>
+  a instanceof Date && b instanceof Date &&
+  a.toDateString() === b.toDateString()
+
+// ── CodeBlock avec copie ──────────────────────────────────────────────────
 function PreBlock({ children }) {
   const [copied, setCopied] = useState(false)
-  // Extraire le langage depuis la classe du <code> enfant
   const codeEl = children?.props
   const lang = /language-(\w+)/.exec(codeEl?.className || '')?.[1] || ''
   const code = String(codeEl?.children ?? '').replace(/\n$/, '')
-  const copy = () => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true); setTimeout(() => setCopied(false), 1800)
-    })
-  }
+  const copy = () => navigator.clipboard.writeText(code)
+    .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800) })
   return (
-    <div style={{ margin: '0.7em 0' }}>
+    <div style={{ margin: '0.75em 0' }}>
       <div className="code-block-header">
         <span className="code-lang">{lang || 'code'}</span>
         <button className="code-copy" onClick={copy}>{copied ? '✅ Copié' : '📋 Copier'}</button>
@@ -28,33 +35,61 @@ function PreBlock({ children }) {
     </div>
   )
 }
-
-const MD_COMPONENTS = {
+const MD = {
   pre: PreBlock,
   code: ({ inline, className, children }) =>
-    inline ? <code className={className}>{children}</code> : <code className={className}>{children}</code>,
+    <code className={className}>{children}</code>,
+}
+
+// ── Séparateur de date ────────────────────────────────────────────────────
+function DateSep({ date }) {
+  return (
+    <div className="date-sep">
+      <span className="date-sep-line" />
+      <span className="date-sep-label">{fmtDate(date)}</span>
+      <span className="date-sep-line" />
+    </div>
+  )
+}
+
+// ── Bulle assistant avec bouton copier ────────────────────────────────────
+function AssistantBubble({ msg, isLast }) {
+  const [copied, setCopied] = useState(false)
+  const copyMsg = () => navigator.clipboard.writeText(msg.content)
+    .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800) })
+
+  return (
+    <div className="bubble bubble-md bubble-assistant">
+      {/* Badge outil si agent utilisé */}
+      {msg.tool && (
+        <div className="msg-agent-badge">
+          <span className="agent-dot" />
+          {msg.agents?.join(' · ') || 'outil exécuté'}
+        </div>
+      )}
+      <ReactMarkdown components={MD}>{msg.content}</ReactMarkdown>
+      <button className="msg-copy-btn" onClick={copyMsg} title="Copier">
+        {copied ? '✅' : '⎘'}
+      </button>
+    </div>
+  )
 }
 
 export default function Chat({ sessionId }) {
-  const [messages,     setMessages]     = useState([])
-  const [input,        setInput]        = useState('')
-  const [loading,      setLoading]      = useState(false)
-  const [eyeState,     setEyeState]     = useState('idle')
+  const [messages,      setMessages]      = useState([])
+  const [input,         setInput]         = useState('')
+  const [loading,       setLoading]       = useState(false)
+  const [eyeState,      setEyeState]      = useState('idle')
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const bottomRef = useRef(null)
   const taRef     = useRef(null)
 
-  // ── Chargement de l'historique au montage ─────────────────────────
+  // Chargement historique au montage
   useEffect(() => {
     if (!sessionId) return
-    loadHistory(sessionId, 30).then(msgs => {
+    loadHistory(sessionId, 40).then(msgs => {
       if (msgs.length > 0) {
-        // Convertir les timestamps string en Date
-        const parsed = msgs.map(m => ({
-          ...m,
-          ts: m.ts ? new Date(m.ts) : new Date(),
-        }))
-        setMessages(parsed)
+        setMessages(msgs.map(m => ({ ...m, ts: m.ts ? new Date(m.ts) : new Date(), fromHistory: true })))
       }
       setHistoryLoaded(true)
     }).catch(() => setHistoryLoaded(true))
@@ -71,14 +106,6 @@ export default function Chat({ sessionId }) {
     ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'
   }, [input])
 
-  // Nouvelle conversation : reset session localStorage + vide les messages
-  const handleNewChat = () => {
-    const newId = resetSession()
-    setMessages([])
-    // Forcer un rechargement pour utiliser le nouveau sessionId
-    window.location.reload()
-  }
-
   const send = useCallback(async (text) => {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
@@ -90,57 +117,40 @@ export default function Chat({ sessionId }) {
       const data = await sendMessage(msg, sessionId)
       setEyeState('responding')
       setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: data.response,
-        ts: new Date(),
-        tool: data.tool_executed,
-        intent: data.intent,
-        agents: data.agents_used,
+        role: 'assistant', content: data.response, ts: new Date(),
+        tool: data.tool_executed, intent: data.intent, agents: data.agents_used,
       }])
       setTimeout(() => setEyeState('idle'), 1200)
     } catch {
       setEyeState('idle')
       setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: '⚠️ Connexion backend perdue. Port 8001 ?',
-        ts: new Date(),
+        role: 'assistant', content: '⚠️ Connexion backend perdue. Port 8001 ?', ts: new Date(),
       }])
     } finally {
       setLoading(false)
     }
   }, [input, loading, sessionId])
 
-  const onKey = e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
-  }
+  const onKey = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
+  const onVoiceTranscript = text => { setInput(text); send(text) }
+  const handleNewChat = () => { resetSession(); window.location.reload() }
 
-  const onVoiceTranscript = (text) => {
-    setInput(text)
-    send(text)
-  }
-
-  // ── Spinner pendant le chargement de l'historique ─────────────────────
+  // ── Spinner ───────────────────────────────────────────────────────────
   if (!historyLoaded) {
     return (
-      <div className="chat" style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, opacity: 0.5 }}>
-          <EyeOfGod state="thinking" size={80} />
-          <div style={{ fontSize: '0.75rem', color: 'var(--text2)', letterSpacing: '0.1em' }}>
-            CHARGEMENT DE LA MÉMOIRE…
-          </div>
-        </div>
+      <div className="chat chat-loading">
+        <EyeOfGod state="thinking" size={72} />
+        <div className="chat-loading-label">CHARGEMENT DE LA MÉMOIRE…</div>
       </div>
     )
   }
 
-  // ── Écran accueil ──────────────────────────────────────────────────────
+  // ── Écran accueil ─────────────────────────────────────────────────────
   if (messages.length === 0 && !loading) {
     return (
       <div className="chat">
         <div className="welcome-screen">
-          {/* Constellation œil + nœuds orbitaux */}
           <WelcomeNodes eyeState={eyeState} onSend={send} />
-          {/* Titre sous la constellation */}
           <div className="welcome-text">
             <div className="welcome-title">Bonjour, <span>Mr Vitch</span></div>
             <div className="welcome-sub">
@@ -149,88 +159,79 @@ export default function Chat({ sessionId }) {
             </div>
           </div>
         </div>
-        <InputBar
-          input={input} setInput={setInput} loading={loading}
+        <InputBar input={input} setInput={setInput} loading={loading}
           onKey={onKey} taRef={taRef} onSend={send}
-          eyeState={eyeState} onVoice={onVoiceTranscript}
-          onVoiceState={setEyeState}
-        />
+          onVoice={onVoiceTranscript} onVoiceState={setEyeState} />
       </div>
     )
   }
 
-  // ── Vue conversation ───────────────────────────────────────────────────
+  // ── Vue conversation ──────────────────────────────────────────────────
   return (
     <div className="chat">
-      {/* Œil en header compact */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        padding: '10px 20px 8px',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--glass)',
-        backdropFilter: 'blur(20px)',
-        flexShrink: 0,
-      }}>
-        <EyeOfGod state={eyeState} size={52} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>L'Œil de Dieu</div>
-          <div style={{ fontSize: '0.68rem', color: 'var(--text3)' }}>
-            {{ idle: 'En attente', listening: '👂 Écoute...', thinking: '⚡ Réflexion...', responding: '✨ Réponse...' }[eyeState]}
-          </div>
-        </div>
-        {/* Bouton nouvelle conversation */}
-        <button
-          onClick={handleNewChat}
-          title="Nouvelle conversation"
-          style={{
-            background: 'none',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            color: 'var(--text3)',
-            fontSize: '0.72rem',
-            padding: '5px 10px',
-            cursor: 'pointer',
-            letterSpacing: '0.04em',
-            transition: 'all 0.15s',
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => { e.target.style.borderColor = 'var(--border2)'; e.target.style.color = 'var(--text2)'; }}
-          onMouseLeave={e => { e.target.style.borderColor = 'var(--border)';  e.target.style.color = 'var(--text3)'; }}
-        >
-          + Nouveau
-        </button>
-      </div>
+      <ChatHeader eyeState={eyeState} msgCount={messages.length} onNew={handleNewChat} />
 
       <div className="messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`msg-group ${m.role}`}>
-            <div className={`msg ${m.role}`}>
-              {m.role === 'assistant' && <div className="avatar avatar-ai">👁️</div>}
-              <div className="bubble-wrap">
-                <div className="bubble-meta">
-                  <span className="meta-name">{m.role === 'assistant' ? "L'Œil" : 'Mr Vitch'}</span>
-                  {m.ts && <span className="meta-time">{fmt(m.ts)}</span>}
-                  {m.tool && <span className="meta-tool">⚡ {m.agents?.join(', ') || 'outil'}</span>}
-                </div>
-                {m.role === 'assistant' ? (
-                  <div className="bubble bubble-md">
-                    <ReactMarkdown components={MD_COMPONENTS}>{m.content}</ReactMarkdown>
+        {messages.map((m, i) => {
+          const prev = messages[i - 1]
+          // Séparateur de date
+          const showDate = !prev || (m.ts && prev.ts && !isSameDay(m.ts, prev.ts))
+          // Groupement : premier message d'un groupe si rôle change ou date change
+          const isFirstInGroup = !prev || prev.role !== m.role || showDate
+          // Dernier message d'un groupe
+          const next = messages[i + 1]
+          const isLastInGroup = !next || next.role !== m.role
+
+          return (
+            <div key={i}>
+              {showDate && m.ts && <DateSep date={m.ts} />}
+              <div className={`msg-group ${m.role} ${isFirstInGroup ? 'group-first' : ''} ${isLastInGroup ? 'group-last' : ''}`}>
+                <div className={`msg ${m.role}`}>
+                  {/* Avatar IA — seulement sur le dernier du groupe */}
+                  {m.role === 'assistant' && (
+                    <div className={`avatar avatar-ai ${!isLastInGroup ? 'avatar-hidden' : ''}`}>
+                      {isLastInGroup ? '👁️' : ''}
+                    </div>
+                  )}
+
+                  <div className="bubble-wrap">
+                    {/* Méta : affiché sur hover, uniquement sur premier du groupe */}
+                    {isFirstInGroup && (
+                      <div className="bubble-meta">
+                        <span className="meta-name">{m.role === 'assistant' ? "L'Œil de Dieu" : 'Mr Vitch'}</span>
+                        {m.ts && <span className="meta-time">{fmtTime(m.ts)}</span>}
+                        {m.fromHistory && <span className="meta-history">↩ historique</span>}
+                      </div>
+                    )}
+
+                    {m.role === 'assistant' ? (
+                      <AssistantBubble msg={m} isLast={isLastInGroup} />
+                    ) : (
+                      <div className="bubble bubble-user">{m.content}</div>
+                    )}
                   </div>
-                ) : (
-                  <div className="bubble">{m.content}</div>
-                )}
+
+                  {/* Avatar user — seulement sur le dernier du groupe */}
+                  {m.role === 'user' && (
+                    <div className={`avatar avatar-user ${!isLastInGroup ? 'avatar-hidden' : ''}`}>
+                      {isLastInGroup ? 'MV' : ''}
+                    </div>
+                  )}
+                </div>
               </div>
-              {m.role === 'user' && <div className="avatar avatar-user">MV</div>}
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {loading && (
-          <div className="msg-group assistant">
+          <div className="msg-group assistant group-last">
             <div className="msg assistant">
               <div className="avatar avatar-ai">👁️</div>
               <div className="bubble-wrap">
-                <div className="typing-bubble"><span /><span /><span /></div>
+                <div className="typing-bubble">
+                  <span /><span /><span />
+                  <span className="typing-label">réflexion…</span>
+                </div>
               </div>
             </div>
           </div>
@@ -238,43 +239,73 @@ export default function Chat({ sessionId }) {
         <div ref={bottomRef} />
       </div>
 
-      <InputBar
-        input={input} setInput={setInput} loading={loading}
+      <InputBar input={input} setInput={setInput} loading={loading}
         onKey={onKey} taRef={taRef} onSend={send}
-        eyeState={eyeState} onVoice={onVoiceTranscript}
-        onVoiceState={setEyeState}
-      />
+        onVoice={onVoiceTranscript} onVoiceState={setEyeState} />
     </div>
   )
 }
 
+// ── Header ────────────────────────────────────────────────────────────────
+const STATE_COLORS = {
+  idle:       '#50507a',
+  listening:  '#38bdf8',
+  thinking:   '#fde68a',
+  responding: '#a78bfa',
+}
+const STATE_LABELS = {
+  idle: 'En attente', listening: 'Écoute…', thinking: 'Réflexion…', responding: 'Réponse…',
+}
+
+function ChatHeader({ eyeState, msgCount, onNew }) {
+  return (
+    <header className="chat-header">
+      <EyeOfGod state={eyeState} size={48} />
+      <div className="chat-header-info">
+        <div className="chat-header-name">L'Œil de Dieu</div>
+        <div className="chat-header-state">
+          <span className="state-dot" style={{ background: STATE_COLORS[eyeState] }} />
+          {STATE_LABELS[eyeState]}
+          {msgCount > 0 && <span className="msg-count">{msgCount} messages</span>}
+        </div>
+      </div>
+      <button className="new-chat-btn" onClick={onNew} title="Nouvelle conversation">
+        <span>+</span> Nouveau
+      </button>
+    </header>
+  )
+}
+
+// ── Input bar ─────────────────────────────────────────────────────────────
 function InputBar({ input, setInput, loading, onKey, taRef, onSend, onVoice, onVoiceState }) {
+  const charCount = input.length
   return (
     <div className="input-area">
       <div className="input-box">
-        <VoiceInput
-          onTranscript={onVoice}
-          onStateChange={onVoiceState}
-          disabled={loading}
-        />
+        <VoiceInput onTranscript={onVoice} onStateChange={onVoiceState} disabled={loading} />
         <textarea
           ref={taRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={onKey}
-          placeholder="Message, commande, ou question..."
+          placeholder="Message, commande, ou question…"
           rows={1}
           disabled={loading}
           autoFocus
         />
+        {charCount > 200 && (
+          <span style={{ fontSize: '0.62rem', color: charCount > 2000 ? 'var(--red)' : 'var(--text3)', alignSelf: 'flex-end', paddingBottom: 10, flexShrink: 0 }}>
+            {charCount}
+          </span>
+        )}
         <button className="send-btn" onClick={() => onSend()} disabled={loading || !input.trim()} title="Envoyer">
           ➤
         </button>
       </div>
       <div className="input-hint">
         <span><kbd>Enter</kbd> envoyer</span>
-        <span><kbd>Shift+Enter</kbd> nouvelle ligne</span>
-        <span>🎙️ clic micro pour vocal</span>
+        <span><kbd>Shift+Enter</kbd> saut de ligne</span>
+        <span>🎙️ vocal</span>
       </div>
     </div>
   )
