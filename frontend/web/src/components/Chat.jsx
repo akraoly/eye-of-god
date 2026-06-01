@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import EyeOfGod from './EyeOfGod'
 import WelcomeNodes from './WelcomeNodes'
 import VoiceInput from './VoiceInput'
-import { sendMessage } from '../utils/api'
+import { sendMessage, loadHistory, resetSession } from '../utils/api'
 
 const fmt = d => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
@@ -36,12 +36,29 @@ const MD_COMPONENTS = {
 }
 
 export default function Chat({ sessionId }) {
-  const [messages,  setMessages]  = useState([])
-  const [input,     setInput]     = useState('')
-  const [loading,   setLoading]   = useState(false)
-  const [eyeState,  setEyeState]  = useState('idle')
+  const [messages,     setMessages]     = useState([])
+  const [input,        setInput]        = useState('')
+  const [loading,      setLoading]      = useState(false)
+  const [eyeState,     setEyeState]     = useState('idle')
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const bottomRef = useRef(null)
   const taRef     = useRef(null)
+
+  // ── Chargement de l'historique au montage ─────────────────────────
+  useEffect(() => {
+    if (!sessionId) return
+    loadHistory(sessionId, 30).then(msgs => {
+      if (msgs.length > 0) {
+        // Convertir les timestamps string en Date
+        const parsed = msgs.map(m => ({
+          ...m,
+          ts: m.ts ? new Date(m.ts) : new Date(),
+        }))
+        setMessages(parsed)
+      }
+      setHistoryLoaded(true)
+    }).catch(() => setHistoryLoaded(true))
+  }, [sessionId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -53,6 +70,14 @@ export default function Chat({ sessionId }) {
     ta.style.height = 'auto'
     ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'
   }, [input])
+
+  // Nouvelle conversation : reset session localStorage + vide les messages
+  const handleNewChat = () => {
+    const newId = resetSession()
+    setMessages([])
+    // Forcer un rechargement pour utiliser le nouveau sessionId
+    window.location.reload()
+  }
 
   const send = useCallback(async (text) => {
     const msg = (text ?? input).trim()
@@ -94,6 +119,20 @@ export default function Chat({ sessionId }) {
     send(text)
   }
 
+  // ── Spinner pendant le chargement de l'historique ─────────────────────
+  if (!historyLoaded) {
+    return (
+      <div className="chat" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, opacity: 0.5 }}>
+          <EyeOfGod state="thinking" size={80} />
+          <div style={{ fontSize: '0.75rem', color: 'var(--text2)', letterSpacing: '0.1em' }}>
+            CHARGEMENT DE LA MÉMOIRE…
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── Écran accueil ──────────────────────────────────────────────────────
   if (messages.length === 0 && !loading) {
     return (
@@ -133,12 +172,33 @@ export default function Chat({ sessionId }) {
         flexShrink: 0,
       }}>
         <EyeOfGod state={eyeState} size={52} />
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>L'Œil de Dieu</div>
           <div style={{ fontSize: '0.68rem', color: 'var(--text3)' }}>
             {{ idle: 'En attente', listening: '👂 Écoute...', thinking: '⚡ Réflexion...', responding: '✨ Réponse...' }[eyeState]}
           </div>
         </div>
+        {/* Bouton nouvelle conversation */}
+        <button
+          onClick={handleNewChat}
+          title="Nouvelle conversation"
+          style={{
+            background: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            color: 'var(--text3)',
+            fontSize: '0.72rem',
+            padding: '5px 10px',
+            cursor: 'pointer',
+            letterSpacing: '0.04em',
+            transition: 'all 0.15s',
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.target.style.borderColor = 'var(--border2)'; e.target.style.color = 'var(--text2)'; }}
+          onMouseLeave={e => { e.target.style.borderColor = 'var(--border)';  e.target.style.color = 'var(--text3)'; }}
+        >
+          + Nouveau
+        </button>
       </div>
 
       <div className="messages">

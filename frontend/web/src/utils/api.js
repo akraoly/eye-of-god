@@ -29,3 +29,18 @@ export async function getHealth() {
   const res = await fetch(`${BASE}/system/health`)
   return res.json()
 }
+
+// Charge l'historique de conversation d'une session depuis la DB
+export async function loadHistory(sessionId, limit = 30) {
+  const res = await fetch(`${BASE}/chat/history/${sessionId}?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.messages || []
+}
+
+// Réinitialise la session (nouvelle conversation)
+export function resetSession() {
+  const id = crypto.randomUUID()
+  localStorage.setItem('eye_session_id', id)
+  return id
+}

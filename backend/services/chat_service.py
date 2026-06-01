@@ -7,6 +7,9 @@ from core.orchestrator import orchestrator
 
 class ChatService:
     async def chat(self, db: Session, message: str, session_id: str = "default") -> dict:
+        # ── Mémoire cross-session : recharge l'historique si le cache est vide ──
+        context_builder.warm_from_db(db=db, session_id=session_id)
+
         # Extraire les infos importantes du message
         memory_engine.extract_and_save(db=db, message=message)
 

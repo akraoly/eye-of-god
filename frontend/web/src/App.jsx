@@ -5,7 +5,14 @@ import StarField from './components/StarField'
 import './App.css'
 
 export default function App() {
-  const [sessionId] = useState(() => crypto.randomUUID())
+  // Session persistante — survit aux rechargements de page
+  const [sessionId] = useState(() => {
+    const stored = localStorage.getItem('eye_session_id')
+    if (stored) return stored
+    const id = crypto.randomUUID()
+    localStorage.setItem('eye_session_id', id)
+    return id
+  })
   const [view,  setView]  = useState('chat')
   const [theme, setTheme] = useState('galactic')
 
