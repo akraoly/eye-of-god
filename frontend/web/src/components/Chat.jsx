@@ -1,15 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import EyeOfGod from './EyeOfGod'
+import WelcomeNodes from './WelcomeNodes'
 import VoiceInput from './VoiceInput'
 import { sendMessage } from '../utils/api'
-
-const SUGGESTIONS = [
-  { icon: '🔍', title: 'Explorer un projet', desc: 'Cartographie complète', prompt: 'explore /home/kali/eye-of-god' },
-  { icon: '⚔️', title: 'ROP chain x64',      desc: 'Exploit development',  prompt: 'Construis une ROP chain x64 pour appeler execve avec pwntools' },
-  { icon: '🛡️', title: 'Checksec binaire',   desc: 'Analyser les mitigations', prompt: 'checksec /usr/bin/python3' },
-  { icon: '🌌', title: 'Ma mémoire',          desc: 'Ce dont je me souviens', prompt: 'Qu\'est-ce que tu te souviens de moi ?' },
-]
 
 const fmt = d => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
@@ -105,22 +99,15 @@ export default function Chat({ sessionId }) {
     return (
       <div className="chat">
         <div className="welcome-screen">
-          <EyeOfGod state={eyeState} size={180} />
+          {/* Constellation œil + nœuds orbitaux */}
+          <WelcomeNodes eyeState={eyeState} onSend={send} />
+          {/* Titre sous la constellation */}
           <div className="welcome-text">
             <div className="welcome-title">Bonjour, <span>Mr Vitch</span></div>
             <div className="welcome-sub">
               Je suis L'Œil de Dieu — expert OSEE, assistant de programmation autonome,
               compagnon numérique évolutif.
             </div>
-          </div>
-          <div className="welcome-cards">
-            {SUGGESTIONS.map(s => (
-              <button key={s.title} className="welcome-card" onClick={() => send(s.prompt)}>
-                <div className="wc-icon">{s.icon}</div>
-                <div className="wc-title">{s.title}</div>
-                <div className="wc-desc">{s.desc}</div>
-              </button>
-            ))}
           </div>
         </div>
         <InputBar

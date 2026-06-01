@@ -1,12 +1,63 @@
-import { useEffect, useRef } from 'react'
-
 /**
- * L'Œil vivant — réagit aux états : idle | listening | thinking | responding
+ * EyeOfGod — L'Œil vivant avec géométrie sacrée.
+ * États : idle | listening | thinking | responding
+ * Performance : SVG pur + CSS transforms (GPU), 0 canvas, 0 lib tierce.
  */
-export default function EyeOfGod({ state = 'idle', size = 220 }) {
-  const eyeRef = useRef(null)
 
-  const stateClass = {
+const CX = 100, CY = 100   // centre du viewBox 200×200
+
+// Seed of Life : 6 cercles à 60° d'écart sur un rayon donné,
+// chacun de même rayon que la distance → motif fleur.
+function SeedOfLife({ orbitR, circleR, opacity = 0.07, stroke = '#818cf8' }) {
+  return (
+    <g>
+      {Array.from({ length: 6 }, (_, i) => {
+        const a = (i * 60 - 30) * Math.PI / 180
+        const cx = CX + Math.cos(a) * orbitR
+        const cy = CY + Math.sin(a) * orbitR
+        return (
+          <circle key={i} cx={cx} cy={cy} r={circleR}
+            fill="none" stroke={stroke}
+            strokeWidth="0.5" opacity={opacity} />
+        )
+      })}
+      {/* Cercle central de la Graine */}
+      <circle cx={CX} cy={CY} r={circleR}
+        fill="none" stroke={stroke}
+        strokeWidth="0.5" opacity={opacity} />
+    </g>
+  )
+}
+
+// Anneau SVG animé avec tirets, ticks et vitesse propre
+function Ring({ r, speed, direction = 1, dashArray, tickCount = 0,
+                stroke, strokeWidth = 0.7, opacity = 0.5, tickLen = 3 }) {
+  const dir = direction > 0 ? 'ring-cw' : 'ring-ccw'
+  const dur  = `${speed}s`
+  return (
+    <g style={{
+      transformOrigin: `${CX}px ${CY}px`,
+      animation: `${dir} ${dur} linear infinite`,
+    }}>
+      <circle cx={CX} cy={CY} r={r}
+        fill="none" stroke={stroke} strokeWidth={strokeWidth}
+        strokeDasharray={dashArray || 'none'}
+        opacity={opacity} />
+      {tickCount > 0 && Array.from({ length: tickCount }, (_, i) => {
+        const a  = (i / tickCount) * Math.PI * 2
+        const x1 = CX + Math.cos(a) * (r - tickLen / 2)
+        const y1 = CY + Math.sin(a) * (r - tickLen / 2)
+        const x2 = CX + Math.cos(a) * (r + tickLen / 2)
+        const y2 = CY + Math.sin(a) * (r + tickLen / 2)
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke={stroke} strokeWidth={strokeWidth + 0.3} opacity={opacity + 0.1} />
+      })}
+    </g>
+  )
+}
+
+export default function EyeOfGod({ state = 'idle', size = 220 }) {
+  const cls = {
     idle:       'eye-idle',
     listening:  'eye-listening',
     thinking:   'eye-thinking',
@@ -14,130 +65,194 @@ export default function EyeOfGod({ state = 'idle', size = 220 }) {
   }[state] || 'eye-idle'
 
   return (
-    <div className={`eye-container ${stateClass}`} ref={eyeRef} style={{ width: size, height: size }}>
-      {/* Halo externe */}
+    <div className={`eye-container ${cls}`}
+         style={{ width: size, height: size, position: 'relative' }}>
+
+      {/* ── Halo externe (CSS, 3 couches) ─────────────────────────── */}
       <div className="eye-halo eye-halo-1" />
       <div className="eye-halo eye-halo-2" />
-      <div className="eye-halo eye-halo-3" />
 
-      {/* Anneaux orbitaux */}
-      <div className="eye-ring eye-ring-1" />
-      <div className="eye-ring eye-ring-2" />
-      <div className="eye-ring eye-ring-3" />
-
-      {/* Particules */}
-      {Array.from({ length: 8 }, (_, i) => (
-        <div key={i} className="eye-particle" style={{ '--i': i }} />
-      ))}
-
-      {/* SVG principal */}
-      <svg
-        className="eye-svg"
-        viewBox="0 0 200 200"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+      {/* ── SVG principal ─────────────────────────────────────────── */}
+      <svg className="eye-svg" viewBox="0 0 200 200"
+           xmlns="http://www.w3.org/2000/svg"
+           style={{ width: '100%', height: '100%', overflow: 'visible' }}>
         <defs>
-          <radialGradient id="irisGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stopColor="#4c1d95" />
-            <stop offset="40%"  stopColor="#7c3aed" />
-            <stop offset="70%"  stopColor="#4f46e5" />
-            <stop offset="100%" stopColor="#1e1b4b" />
+          {/* Iris : radial violet → indigo → bleu nuit */}
+          <radialGradient id="eyeIrisGrad" cx="50%" cy="45%" r="55%">
+            <stop offset="0%"   stopColor="#2e1065" />
+            <stop offset="30%"  stopColor="#6d28d9" />
+            <stop offset="65%"  stopColor="#4338ca" />
+            <stop offset="100%" stopColor="#0f0720" />
           </radialGradient>
-          <radialGradient id="pupilGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stopColor="#7c3aed" stopOpacity="0.9" />
-            <stop offset="60%"  stopColor="#312e81" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#000010" stopOpacity="1" />
+
+          {/* Pupille : constellation sombre avec cœur lumineux */}
+          <radialGradient id="eyePupilGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="#a78bfa" stopOpacity="0.95" />
+            <stop offset="35%"  stopColor="#4c1d95" stopOpacity="0.8"  />
+            <stop offset="70%"  stopColor="#1e0540" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#030008" stopOpacity="1"    />
           </radialGradient>
-          <radialGradient id="glowGrad" cx="50%" cy="35%" r="50%">
-            <stop offset="0%"  stopColor="#a78bfa" stopOpacity="0.8" />
+
+          {/* Reflet supérieur */}
+          <radialGradient id="eyeShineGrad" cx="60%" cy="30%" r="50%">
+            <stop offset="0%"  stopColor="#e9d5ff" stopOpacity="0.7" />
             <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
           </radialGradient>
-          <filter id="eyeBlur">
-            <feGaussianBlur stdDeviation="1.5" />
+
+          {/* Glow sur l'iris */}
+          <filter id="irisGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
-          <filter id="glowFilter">
+
+          {/* Glow fort pour pupille */}
+          <filter id="pupilGlow" x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
-          <clipPath id="eyeShape">
-            <path d="M 10 100 Q 100 30 190 100 Q 100 170 10 100 Z" />
+
+          {/* Forme de l'œil en amande — plus dramatique */}
+          <clipPath id="eyeClip">
+            <path d="M 8 100 C 35 38, 165 38, 192 100
+                     C 165 162, 35 162, 8 100 Z" />
+          </clipPath>
+
+          {/* Masque intérieur iris */}
+          <clipPath id="irisClip">
+            <circle cx={CX} cy={CY} r="47" />
           </clipPath>
         </defs>
 
-        {/* Aura externe */}
-        <circle cx="100" cy="100" r="95" fill="none"
-          stroke="#7c3aed" strokeWidth="0.5" opacity="0.3" />
-        <circle cx="100" cy="100" r="88" fill="none"
-          stroke="#4f46e5" strokeWidth="0.3" opacity="0.2" />
-
-        {/* Forme œil — blanc */}
-        <path d="M 10 100 Q 100 30 190 100 Q 100 170 10 100 Z"
-          fill="#05010a" />
-
-        {/* Iris */}
-        <circle cx="100" cy="100" r="48"
-          fill="url(#irisGrad)"
-          clipPath="url(#eyeShape)"
-          filter="url(#glowFilter)" />
-
-        {/* Détail iris — stries */}
-        {Array.from({ length: 12 }, (_, i) => {
-          const angle = (i / 12) * Math.PI * 2
-          const x1 = 100 + Math.cos(angle) * 26
-          const y1 = 100 + Math.sin(angle) * 26
-          const x2 = 100 + Math.cos(angle) * 44
-          const y2 = 100 + Math.sin(angle) * 44
-          return (
-            <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke="#a78bfa" strokeWidth="0.5" opacity="0.4"
-              clipPath="url(#eyeShape)" />
-          )
-        })}
-
-        {/* Pupille */}
-        <circle cx="100" cy="100" r="22"
-          fill="url(#pupilGrad)"
-          clipPath="url(#eyeShape)" />
-
-        {/* Cœur lumineux */}
-        <circle cx="100" cy="100" r="10"
-          fill="#7c3aed" opacity="0.7"
-          clipPath="url(#eyeShape)" />
-        <circle cx="100" cy="100" r="5"
-          fill="#c4b5fd" opacity="0.9"
-          clipPath="url(#eyeShape)" />
-
-        {/* Reflets */}
-        <ellipse cx="115" cy="86" rx="7" ry="4"
-          fill="url(#glowGrad)" opacity="0.6"
-          clipPath="url(#eyeShape)" />
-        <circle cx="87" cy="112" r="3"
-          fill="white" opacity="0.2"
-          clipPath="url(#eyeShape)" />
-
-        {/* Contour paupières */}
-        <path d="M 10 100 Q 100 30 190 100"
-          fill="none" stroke="#7c3aed" strokeWidth="1" opacity="0.6" />
-        <path d="M 10 100 Q 100 170 190 100"
-          fill="none" stroke="#4f46e5" strokeWidth="1" opacity="0.6" />
-
-        {/* Cils supérieurs */}
-        {[20, 50, 80, 100, 120, 150, 180].map((x, i) => {
-          const y = i < 3 ? 100 - (x / 190) * 50 + 10
-                         : i === 3 ? 50
-                         : 100 - ((190 - x) / 190) * 50 + 10
+        {/* ── GÉOMÉTRIE SACRÉE (derrière tout) ────────────────────── */}
+        {/* Graine de Vie sur anneau extérieur, très discret */}
+        <SeedOfLife orbitR={78} circleR={20} opacity={0.055} stroke="#818cf8" />
+        {/* Hexagone intérieur — 6 traits reliant les points d'une graine */}
+        {Array.from({ length: 6 }, (_, i) => {
+          const a1 = ((i * 60 - 30) * Math.PI) / 180
+          const a2 = (((i + 1) * 60 - 30) * Math.PI) / 180
           return (
             <line key={i}
-              x1={x} y1={y}
-              x2={x + (x < 100 ? -3 : 3)} y2={y - 6}
-              stroke="#7c3aed" strokeWidth="0.8" opacity="0.5" />
+              x1={CX + Math.cos(a1) * 78} y1={CY + Math.sin(a1) * 78}
+              x2={CX + Math.cos(a2) * 78} y2={CY + Math.sin(a2) * 78}
+              stroke="#6366f1" strokeWidth="0.3" opacity="0.12" />
           )
         })}
+
+        {/* ── ANNEAUX CONCENTRIQUES ────────────────────────────────── */}
+        {/*
+          Ring 1 : extérieur, lent CCW, tirets espacés + 12 ticks (géométrie 12 secteurs)
+          Ring 2 : moyen, CW, segments plus denses (Métatron reference)
+          Ring 3 : intérieur, CCW rapide, trait continu très fin
+        */}
+        <Ring r={91} speed={48} direction={-1}
+              dashArray="1.5 7.5" tickCount={12} tickLen={4}
+              stroke="#4fc3f7" strokeWidth={0.6} opacity={0.45} />
+
+        <Ring r={75} speed={28} direction={1}
+              dashArray="6 3 1.5 3" tickCount={6} tickLen={3}
+              stroke="#818cf8" strokeWidth={0.7} opacity={0.5} />
+
+        <Ring r={60} speed={16} direction={-1}
+              dashArray="none" tickCount={0}
+              stroke="#c4b5fd" strokeWidth={0.5} opacity={0.35} />
+
+        {/* ── BLANC DE L'ŒIL ──────────────────────────────────────── */}
+        <path d="M 8 100 C 35 38, 165 38, 192 100 C 165 162, 35 162, 8 100 Z"
+          fill="#04010e" />
+
+        {/* ── IRIS : fond + rotation intérieure ───────────────────── */}
+        <circle cx={CX} cy={CY} r="47"
+          fill="url(#eyeIrisGrad)"
+          clipPath="url(#eyeClip)"
+          filter="url(#irisGlow)" />
+
+        {/* Iris interne : anneau tournant avec 24 stries */}
+        <g clipPath="url(#eyeClip)"
+           style={{ transformOrigin: `${CX}px ${CY}px`,
+                    animation: 'ring-cw 20s linear infinite' }}>
+          {Array.from({ length: 24 }, (_, i) => {
+            const a  = (i / 24) * Math.PI * 2
+            const r1 = 26, r2 = 44
+            return (
+              <line key={i}
+                x1={CX + Math.cos(a) * r1} y1={CY + Math.sin(a) * r1}
+                x2={CX + Math.cos(a) * r2} y2={CY + Math.sin(a) * r2}
+                stroke="#a78bfa" strokeWidth="0.45" opacity="0.35" />
+            )
+          })}
+          {/* Anneau intérieur de l'iris */}
+          <circle cx={CX} cy={CY} r="44"
+            fill="none" stroke="#7c3aed" strokeWidth="0.8" opacity="0.4"
+            strokeDasharray="3 5" />
+        </g>
+
+        {/* ── PUPILLE ──────────────────────────────────────────────── */}
+        <circle cx={CX} cy={CY} r="22"
+          fill="url(#eyePupilGrad)"
+          clipPath="url(#eyeClip)"
+          filter="url(#pupilGlow)" />
+
+        {/* Constellation : 5 étoiles microscopiques dans la pupille */}
+        {[
+          [104, 95, 1.2], [93, 108, 1.0], [108, 107, 0.8],
+          [96,  93, 0.7], [105, 103, 1.4],
+        ].map(([x, y, r], i) => (
+          <circle key={i} cx={x} cy={y} r={r}
+            fill="#e9d5ff" opacity={0.6 + i * 0.06}
+            clipPath="url(#eyeClip)" />
+        ))}
+
+        {/* Cœur lumineux — point central */}
+        <circle cx={CX} cy={CY} r="7"
+          fill="#7c3aed" opacity="0.85"
+          clipPath="url(#eyeClip)"
+          filter="url(#pupilGlow)" />
+        <circle cx={CX} cy={CY} r="3.5"
+          fill="#ddd6fe" opacity="1"
+          clipPath="url(#eyeClip)" />
+
+        {/* ── REFLETS ──────────────────────────────────────────────── */}
+        {/* Reflet principal (blanc-or) */}
+        <ellipse cx="116" cy="84" rx="8" ry="5"
+          fill="url(#eyeShineGrad)"
+          clipPath="url(#eyeClip)"
+          style={{ transform: 'rotate(-20deg)', transformOrigin: '116px 84px' }} />
+        {/* Micro-reflet secondaire */}
+        <circle cx="86" cy="114" r="2.5"
+          fill="white" opacity="0.18"
+          clipPath="url(#eyeClip)" />
+
+        {/* ── CONTOURS PAUPIÈRES ───────────────────────────────────── */}
+        <path d="M 8 100 C 35 38, 165 38, 192 100"
+          fill="none" stroke="#7c3aed" strokeWidth="1.2" opacity="0.65" />
+        <path d="M 8 100 C 35 162, 165 162, 192 100"
+          fill="none" stroke="#4f46e5" strokeWidth="1.2" opacity="0.55" />
+
+        {/* Liseré lumineux sur paupière sup */}
+        <path d="M 20 100 C 45 52, 155 52, 180 100"
+          fill="none" stroke="#a78bfa" strokeWidth="0.4" opacity="0.3" />
+
+        {/* ── CILS ─────────────────────────────────────────────────── */}
+        {[
+          [30, 66, -8, -5], [55, 51, -5, -7], [80, 43, -2, -7],
+          [100, 40, 0, -7],
+          [120, 43, 2, -7], [145, 51, 5, -7], [170, 66, 8, -5],
+        ].map(([x, y, dx, dy], i) => (
+          <line key={i} x1={x} y1={y} x2={x + dx} y2={y + dy}
+            stroke="#818cf8" strokeWidth="0.9" opacity="0.45"
+            strokeLinecap="round" />
+        ))}
       </svg>
 
-      {/* Label état */}
+      {/* ── Label état ──────────────────────────────────────────────── */}
       <div className="eye-state-label">
-        {{ idle: '', listening: '👂 écoute', thinking: '⚡ réflexion', responding: '✨ réponse' }[state]}
+        {{ idle: '', listening: '· écoute ·', thinking: '· réflexion ·', responding: '· réponse ·' }[state]}
       </div>
     </div>
   )

@@ -206,62 +206,129 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 20px;
+  gap: 18px;
+  padding: 16px 20px 20px;
   overflow: auto;
 }
 
-.welcome-text {
-  text-align: center;
-}
+.welcome-text { text-align: center; }
 .welcome-title {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.04em;
   color: var(--text);
-  line-height: 1.1;
+  line-height: 1.15;
 }
-.welcome-title span { color: var(--accent); text-shadow: 0 0 20px var(--glow); }
+.welcome-title span {
+  color: var(--accent);
+  text-shadow: 0 0 18px var(--glow);
+  letter-spacing: 0.02em;
+}
 .welcome-sub {
-  font-size: 0.88rem;
+  font-size: 0.83rem;
   color: var(--text2);
-  margin-top: 8px;
-  max-width: 380px;
+  margin-top: 6px;
+  max-width: 360px;
   line-height: 1.6;
 }
 
-.welcome-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  max-width: 480px;
-  width: 100%;
-}
-.welcome-card {
-  background: var(--glass2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s;
-  backdrop-filter: blur(12px);
+/* ── CONSTELLATION WelcomeNodes ─────────────────────────────────────────── */
+
+/* Conteneur positionnel : l'œil + le SVG des lignes + les nœuds s'y superposent */
+.wn-container {
   position: relative;
-  overflow: hidden;
+  flex-shrink: 0;
 }
-.welcome-card::before {
-  content: '';
+
+/* SVG des lignes et géométrie sacrée : couche basse */
+.wn-svg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--glow2) 0%, transparent 60%);
-  opacity: 0;
-  transition: opacity 0.2s;
+  pointer-events: none;
+  overflow: visible;
 }
-.welcome-card:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: 0 8px 24px var(--glow2); }
-.welcome-card:hover::before { opacity: 1; }
-.wc-icon { font-size: 1.3rem; margin-bottom: 6px; }
-.wc-title { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
-.wc-desc { font-size: 0.73rem; color: var(--text2); line-height: 1.4; }
+
+/* L'œil : positionné absolument dans le conteneur */
+.wn-eye {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Cercle de résonance animé au survol */
+@keyframes wn-resonate {
+  from { r: 48px; opacity: 0.3; }
+  to   { r: 90px; opacity: 0; }
+}
+.wn-resonance {
+  animation: wn-resonate 0.7s ease-out forwards;
+}
+
+/* ── Nœuds circulaires ──────────────────────────────────────────────────── */
+.wn-node {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--glass2);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 0;
+  /* Contour hexagonal subtil via box-shadow interne */
+  box-shadow:
+    inset 0 0 0 1px rgba(124,58,237,0.08),
+    0 0 0 1px rgba(124,58,237,0.06);
+  transition:
+    transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
+    border-color 0.22s,
+    box-shadow 0.22s;
+}
+
+.wn-node:hover,
+.wn-node-active {
+  border-color: var(--border2);
+  transform: scale(1.14);
+  box-shadow:
+    0 0 18px var(--glow2),
+    0 0 40px var(--glow2),
+    inset 0 0 12px var(--glow2);
+}
+
+/* Anneau hexagonal CSS sur le nœud actif */
+.wn-node-active::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  opacity: 0.4;
+  animation: wn-node-ring 1.6s ease-in-out infinite;
+}
+@keyframes wn-node-ring {
+  0%,100% { opacity: 0.25; transform: scale(1);    }
+  50%      { opacity: 0.55; transform: scale(1.06); }
+}
+
+.wn-node-icon  { font-size: 1.45rem; line-height: 1; }
+.wn-node-title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 70px;
+}
+.wn-node-sub {
+  font-size: 0.54rem;
+  color: var(--text3);
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.2;
+}
 
 /* ── MESSAGES ────────────────────────────────────────────────────────────── */
 .messages {
@@ -500,113 +567,107 @@ kbd {
 }
 
 /* ── L'ŒIL ───────────────────────────────────────────────────────────────── */
+
+/* Rotations SVG — les <g> les utilisent directement via style={{ animation }} */
+@keyframes ring-cw  { to { transform: rotate( 360deg); } }
+@keyframes ring-ccw { to { transform: rotate(-360deg); } }
+
 .eye-container {
   position: relative;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 
+/* Halos CSS — couches de lueur externe (pas de rotation) */
 .eye-halo {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid var(--accent);
-  animation: halo-spin 0s linear infinite;
-  opacity: 0.15;
-}
-.eye-halo-1 { inset: -8px;  animation-duration: 12s; border-style: dashed; }
-.eye-halo-2 { inset: -20px; animation-duration: 20s; animation-direction: reverse; opacity: 0.08; }
-.eye-halo-3 { inset: -32px; animation-duration: 30s; opacity: 0.05; }
-@keyframes halo-spin { to { transform: rotate(360deg); } }
-
-.eye-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid;
   pointer-events: none;
 }
-.eye-ring-1 {
-  width: 65%; height: 25%;
-  border-color: rgba(124,58,237,0.5);
-  animation: ring-spin-1 8s linear infinite;
-  top: 37.5%;
-  box-shadow: 0 0 6px var(--glow);
+.eye-halo-1 {
+  inset: -14px;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+  animation: eye-halo-pulse 4s ease-in-out infinite;
+  opacity: 0.55;
 }
-.eye-ring-2 {
-  width: 55%; height: 20%;
-  border-color: rgba(79,70,229,0.4);
-  animation: ring-spin-2 12s linear infinite;
-  top: 40%;
+.eye-halo-2 {
+  inset: -30px;
+  background: radial-gradient(circle, var(--glow2) 0%, transparent 65%);
+  animation: eye-halo-pulse 4s ease-in-out infinite reverse;
+  opacity: 0.3;
 }
-.eye-ring-3 {
-  width: 45%; height: 15%;
-  border-color: rgba(167,139,250,0.3);
-  animation: ring-spin-1 18s linear infinite reverse;
-  top: 42.5%;
-}
-@keyframes ring-spin-1 { to { transform: rotateX(70deg) rotate(360deg); } }
-@keyframes ring-spin-2 { to { transform: rotateX(70deg) rotate(-360deg); } }
-
-.eye-particle {
-  position: absolute;
-  width: 3px; height: 3px;
-  background: var(--accent);
-  border-radius: 50%;
-  box-shadow: 0 0 6px var(--glow);
-  animation: particle-orbit calc(6s + var(--i) * 0.8s) linear infinite;
-  top: 50%; left: 50%;
-  transform-origin: calc(45px + var(--i) * 5px) 0;
-  opacity: 0;
-}
-@keyframes particle-orbit {
-  0%   { opacity: 0; transform: rotate(calc(var(--i) * 45deg)) translateX(calc(45px + var(--i) * 3px)); }
-  10%  { opacity: 0.8; }
-  90%  { opacity: 0.8; }
-  100% { opacity: 0; transform: rotate(calc(var(--i) * 45deg + 360deg)) translateX(calc(45px + var(--i) * 3px)); }
+@keyframes eye-halo-pulse {
+  0%,100% { opacity: 0.45; transform: scale(0.97); }
+  50%      { opacity: 0.75; transform: scale(1.04); }
 }
 
+/* SVG global : respiration + drop-shadow */
 .eye-svg {
   width: 100%; height: 100%;
-  filter: drop-shadow(0 0 12px var(--glow));
-  animation: eye-breathe 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px var(--glow)) drop-shadow(0 0 20px var(--glow2));
+  animation: eye-breathe 5s ease-in-out infinite;
+  overflow: visible;
 }
 @keyframes eye-breathe {
-  0%,100% { filter: drop-shadow(0 0 10px var(--glow)); transform: scale(1); }
-  50%      { filter: drop-shadow(0 0 22px var(--glow)) drop-shadow(0 0 40px var(--glow2)); transform: scale(1.03); }
+  0%,100% { filter: drop-shadow(0 0 8px var(--glow))  drop-shadow(0 0 18px var(--glow2)); }
+  50%      { filter: drop-shadow(0 0 16px var(--glow)) drop-shadow(0 0 36px var(--glow2)); }
 }
 
+/* Label état sous l'œil */
 .eye-state-label {
   position: absolute;
-  bottom: -22px;
-  font-size: 0.68rem;
+  bottom: -24px;
+  font-size: 0.65rem;
   color: var(--accent);
   white-space: nowrap;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-shadow: 0 0 8px var(--glow);
   min-height: 1em;
+  opacity: 0.8;
 }
 
-/* États de l'œil */
+/* ── ÉTATS ─────────────────────────────────────────────────────────────── */
+
+/* Listening : œil ouvert + halos plus intenses */
 .eye-listening .eye-svg {
-  animation: eye-listen 1s ease-in-out infinite;
+  animation: eye-listen 1.2s ease-in-out infinite;
 }
 @keyframes eye-listen {
-  0%,100% { transform: scaleY(1.1); filter: drop-shadow(0 0 18px var(--glow)); }
-  50%      { transform: scaleY(1.2); filter: drop-shadow(0 0 28px var(--glow)); }
+  0%,100% { filter: drop-shadow(0 0 14px var(--glow)) drop-shadow(0 0 30px var(--glow2));
+             transform: scaleY(1.05); }
+  50%      { filter: drop-shadow(0 0 24px var(--glow)) drop-shadow(0 0 50px var(--glow2));
+             transform: scaleY(1.12); }
 }
-.eye-listening .eye-ring-1 { animation-duration: 3s; }
-.eye-listening .eye-ring-2 { animation-duration: 5s; }
-.eye-listening .eye-particle { opacity: 1; }
+.eye-listening .eye-halo-1 { animation-duration: 1.2s; }
 
+/* Thinking : contraction + anneaux rapides dans le SVG (via var CSS) */
+.eye-thinking {
+  --ring-speed-mult: 0.35;   /* les anneaux vont 3× plus vite */
+}
 .eye-thinking .eye-svg {
-  animation: eye-think 0.8s ease-in-out infinite;
+  animation: eye-think 0.9s ease-in-out infinite;
 }
 @keyframes eye-think {
-  0%,100% { transform: scaleY(0.85) scale(0.95); filter: drop-shadow(0 0 8px var(--glow)); }
-  50%      { transform: scaleY(0.75) scale(0.92); filter: drop-shadow(0 0 14px var(--glow)); }
+  0%,100% { transform: scale(0.94); filter: drop-shadow(0 0 10px var(--glow)); }
+  50%      { transform: scale(0.90); filter: drop-shadow(0 0 20px var(--glow))
+                                             drop-shadow(0 0 40px var(--glow2)); }
 }
-.eye-thinking .eye-ring-1 { animation-duration: 1.5s; }
-.eye-thinking .eye-ring-2 { animation-duration: 2s; }
-.eye-thinking .eye-halo-1 { animation-duration: 3s; opacity: 0.35; }
+.eye-thinking .eye-halo-1 { animation-duration: 1s; opacity: 0.7; }
+.eye-thinking .eye-halo-2 { animation-duration: 1.4s; opacity: 0.45; }
+
+/* Responding : expansion brève puis retour */
+.eye-responding .eye-svg {
+  animation: eye-respond 1.2s ease-out forwards;
+}
+@keyframes eye-respond {
+  0%   { transform: scale(0.9); filter: drop-shadow(0 0 6px var(--glow)); }
+  40%  { transform: scale(1.06); filter: drop-shadow(0 0 28px var(--glow))
+                                          drop-shadow(0 0 60px var(--glow2)); }
+  100% { transform: scale(1.02); filter: drop-shadow(0 0 14px var(--glow))
+                                          drop-shadow(0 0 28px var(--glow2)); }
+}
+.eye-responding .eye-halo-1 { opacity: 0.85; animation-duration: 0.6s; }
 
 .eye-responding .eye-svg {
   animation: eye-respond 0.5s ease-out forwards;
