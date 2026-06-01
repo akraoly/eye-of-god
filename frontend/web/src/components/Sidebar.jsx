@@ -1,67 +1,92 @@
-export default function Sidebar({ view, onNav }) {
-  const nav = [
-    { id: 'chat',   icon: '💬', label: 'Chat' },
-    { id: 'memory', icon: '🧠', label: 'Mémoires' },
-  ]
+import { useState } from 'react'
 
-  const caps = [
-    { icon: '⚔️', label: 'OSEE · Exploit Dev' },
-    { icon: '🔬', label: 'Reverse Engineering' },
-    { icon: '🛠️', label: 'Dev Autonome' },
-    { icon: '🔴', label: 'Kali · 323 outils' },
-  ]
+const THEMES = [
+  { id: 'galactic', icon: '🌌', label: 'Galactique' },
+  { id: 'divine',   icon: '✨', label: 'Divin'      },
+  { id: 'cyberpunk',icon: '⚡', label: 'Cyberpunk'  },
+  { id: 'alien',    icon: '🛸', label: 'Civilisation extraterrestre' },
+  { id: 'temple',   icon: '🔥', label: 'Temple numérique' },
+]
+
+const NAV = [
+  { id: 'chat',   icon: '💬', label: 'Chat' },
+  { id: 'memory', icon: '🧠', label: 'Mémoire' },
+]
+
+const CAPS = [
+  { icon: '⚔️', label: 'OSEE'  },
+  { icon: '🔬', label: 'RE'    },
+  { icon: '🛠️', label: 'Dev'   },
+  { icon: '🔴', label: 'Kali'  },
+  { icon: '📚', label: 'Know'  },
+  { icon: '🎯', label: 'Life'  },
+]
+
+export default function Sidebar({ view, onNav, theme, onTheme }) {
+  const [showThemes, setShowThemes] = useState(false)
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-brand">
-          <div className="brand-icon">👁️</div>
-          <div className="brand-text">
-            <div className="brand-name">L'Œil de Dieu</div>
-            <div className="brand-version">v3.0 · OSEE + Dev</div>
+    <>
+      {/* Panel thème */}
+      {showThemes && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+            onClick={() => setShowThemes(false)}
+          />
+          <div className="theme-overlay">
+            <div className="theme-panel">
+              {THEMES.map(t => (
+                <button
+                  key={t.id}
+                  className={`theme-option ${theme === t.id ? 'selected' : ''}`}
+                  onClick={() => { onTheme(t.id); setShowThemes(false) }}
+                >
+                  <span style={{ fontSize: '1.1rem' }}>{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="status-pill">
-          <span className="status-dot" />
-          En ligne
-        </div>
-      </div>
+        </>
+      )}
 
-      <nav className="sidebar-nav">
-        <div className="nav-section">
-          <span className="nav-section-label">Navigation</span>
-        </div>
-        {nav.map(item => (
+      <aside className="sidebar">
+        {/* Logo */}
+        <div className="sidebar-logo">👁️</div>
+        <div className="status-dot-sidebar" title="En ligne" />
+
+        {/* Navigation principale */}
+        {NAV.map(item => (
           <button
             key={item.id}
             className={`nav-btn ${view === item.id ? 'active' : ''}`}
             onClick={() => onNav(item.id)}
+            title={item.label}
           >
-            <span className="nav-icon">{item.icon}</span>
-            {item.label}
+            <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
+            <span className="nav-label">{item.label}</span>
           </button>
         ))}
 
-        <div className="nav-section">
-          <span className="nav-section-label">Capacités</span>
-        </div>
-        {caps.map(c => (
-          <div key={c.label} className="nav-btn" style={{ cursor: 'default', opacity: 0.55, fontSize: '0.8rem', pointerEvents: 'none' }}>
-            <span className="nav-icon">{c.icon}</span>
-            {c.label}
+        <div className="sidebar-divider" />
+
+        {/* Capacités (non-cliquables) */}
+        {CAPS.map(c => (
+          <div key={c.icon} className="nav-btn" title={c.label}
+            style={{ cursor: 'default', opacity: 0.45, pointerEvents: 'none' }}>
+            <span style={{ fontSize: '1rem' }}>{c.icon}</span>
+            <span className="nav-label">{c.label}</span>
           </div>
         ))}
-      </nav>
 
-      <div className="sidebar-footer">
-        <div className="footer-info">
-          Kali Linux · Port 8001<br />
-          FastAPI + Claude API
-        </div>
-        <div className="footer-hint">
-          <kbd>Enter</kbd> envoyer &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> saut de ligne
-        </div>
-      </div>
-    </aside>
+        <div className="sidebar-spacer" />
+
+        {/* Theme switcher */}
+        <button className="theme-btn" onClick={() => setShowThemes(v => !v)} title="Changer de thème">
+          {THEMES.find(t => t.id === theme)?.icon || '🌌'}
+        </button>
+      </aside>
+    </>
   )
 }

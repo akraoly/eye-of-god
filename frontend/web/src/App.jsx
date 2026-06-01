@@ -1,20 +1,29 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Chat from './components/Chat'
 import Sidebar from './components/Sidebar'
+import StarField from './components/StarField'
 import './App.css'
 
 export default function App() {
   const [sessionId] = useState(() => crypto.randomUUID())
-  const [view, setView] = useState('chat')
+  const [view,  setView]  = useState('chat')
+  const [theme, setTheme] = useState('galactic')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   return (
-    <div className="app">
-      <Sidebar view={view} onNav={setView} />
-      <main className="main">
-        {view === 'chat' && <Chat sessionId={sessionId} />}
-        {view === 'memory' && <MemoryView />}
-      </main>
-    </div>
+    <>
+      <StarField theme={theme} />
+      <div className="app">
+        <Sidebar view={view} onNav={setView} theme={theme} onTheme={setTheme} />
+        <main className="main">
+          {view === 'chat'   && <Chat sessionId={sessionId} />}
+          {view === 'memory' && <MemoryView />}
+        </main>
+      </div>
+    </>
   )
 }
 
@@ -23,10 +32,7 @@ function MemoryView() {
   const [deleting, setDeleting] = useState(null)
 
   const load = () =>
-    fetch('/api/memory/get')
-      .then(r => r.json())
-      .then(setMemories)
-      .catch(() => {})
+    fetch('/api/memory/get').then(r => r.json()).then(setMemories).catch(() => {})
 
   useEffect(() => { load() }, [])
 
@@ -41,14 +47,14 @@ function MemoryView() {
     <div className="memory-view">
       <div className="memory-header">
         <div className="memory-title">
-          🧠 Mémoires
+          🧠 Mémoire cosmique
           <span className="mem-badge">{memories.length}</span>
         </div>
       </div>
       <div className="memory-scroll">
         {memories.length === 0 ? (
           <div className="mem-empty">
-            <div className="mem-empty-icon">🧠</div>
+            <div className="mem-empty-icon">✨</div>
             <div>Aucune mémoire enregistrée.<br />Commence à parler pour que je mémorise.</div>
           </div>
         ) : (
@@ -62,12 +68,8 @@ function MemoryView() {
                 </div>
                 <div className="mem-right">
                   <span className="mem-importance">{(m.importance * 100).toFixed(0)}%</span>
-                  <button
-                    className="mem-del-btn"
-                    onClick={() => handleDelete(m.id)}
-                    disabled={deleting === m.id}
-                    title="Supprimer"
-                  >
+                  <button className="mem-del-btn" onClick={() => handleDelete(m.id)}
+                    disabled={deleting === m.id} title="Supprimer">
                     {deleting === m.id ? '…' : '✕'}
                   </button>
                 </div>
