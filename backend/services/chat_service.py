@@ -3,6 +3,7 @@ from core.llm.client import llm_client
 from core.llm.context import context_builder
 from core.memory.memory_engine import memory_engine
 from core.agents.cyber_agent import cyber_agent
+from core.agents.code_agent import code_agent
 
 
 class ChatService:
@@ -17,13 +18,26 @@ class ChatService:
         # Système enrichi
         system = context_builder.build_system(user_memories=memories, user_profile=profile)
 
-        # Exécution automatique si le CyberAgent peut gérer la demande
         tool_output = None
-        if cyber_agent.can_handle(message):
+        tool_label = ""
+
+        # 1. CodeAgent en priorité pour les tâches de dev
+        if code_agent.can_handle(message):
+            try:
+                agent_result = await code_agent.run(task=message)
+                if agent_result.get("success") and agent_result.get("output"):
+                    tool_output = agent_result["output"]
+                    tool_label = "CODE AGENT"
+            except Exception:
+                pass
+
+        # 2. CyberAgent pour les tâches offensives (si pas pris par CodeAgent)
+        if tool_output is None and cyber_agent.can_handle(message):
             try:
                 agent_result = await cyber_agent.run(task=message)
                 if agent_result.get("success") and agent_result.get("output"):
                     tool_output = agent_result["output"]
+                    tool_label = "CYBER AGENT (Kali)"
             except Exception:
                 pass
 
@@ -31,9 +45,9 @@ class ChatService:
         if tool_output:
             system = (
                 system
-                + f"\n\n## SORTIE OUTIL (exécution réelle sur Kali Linux)\n"
+                + f"\n\n## SORTIE {tool_label} (exécution réelle)\n"
                 + f"```\n{tool_output[:8000]}\n```\n"
-                + "Analyse et commente cette sortie de manière experte pour l'utilisateur."
+                + "Analyse et commente cette sortie de manière experte pour Mr Vitch."
             )
 
         # Construire les messages (mémoire courte + nouveau message)
