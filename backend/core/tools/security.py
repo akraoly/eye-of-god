@@ -6,47 +6,222 @@ from core.tools.logger import get_logger
 
 logger = get_logger(__name__)
 
-# ── Whitelist explicite des commandes autorisées ─────────────────────────────
+# ── Whitelist complète — outils Kali + développement + analyse ───────────────
 ALLOWED_COMMANDS = {
-    # Navigation et fichiers (lecture seule)
+    # ── Navigation et fichiers ──────────────────────────────────────────────
     "ls", "pwd", "cat", "grep", "find", "head", "tail", "wc", "file", "stat",
-    "tree", "du", "df", "diff",
-    # Identité et système
-    "whoami", "id", "uname", "hostname", "uptime", "date", "env", "echo",
-    "ps", "top", "htop", "pgrep", "free",
-    # Réseau (lecture)
-    "ip", "ifconfig", "netstat", "ss", "ping", "traceroute",
-    "nslookup", "dig", "whois", "curl", "wget",
-    # Sécurité / audit
-    "nmap", "netcat", "nc",
+    "tree", "du", "df", "diff", "locate", "which", "whereis", "type",
+    "ln", "cp", "mv", "mkdir", "touch", "chmod", "chown",
+    "tar", "gzip", "gunzip", "bzip2", "unzip", "zip", "7z", "xz",
+    "base64", "xxd", "od", "hexdump", "strings", "file",
+
+    # ── Texte et traitement ─────────────────────────────────────────────────
+    "echo", "printf", "cut", "awk", "sed", "sort", "uniq", "tr", "wc",
+    "xargs", "tee", "head", "tail", "less", "more", "column", "jq",
+
+    # ── Identité et système ─────────────────────────────────────────────────
+    "whoami", "id", "uname", "hostname", "uptime", "date", "env",
+    "ps", "top", "htop", "pgrep", "pkill", "kill", "free", "lsof",
+    "lscpu", "lsmem", "lsblk", "lsusb", "lspci", "dmesg",
+    "systemctl", "service", "journalctl",
+
+    # ── Réseau (lecture/audit) ──────────────────────────────────────────────
+    "ip", "ifconfig", "netstat", "ss", "ping", "ping6", "traceroute", "tracepath",
+    "nslookup", "dig", "host", "whois", "curl", "wget",
+    "iptables", "ip6tables", "nftables", "route", "arp",
+
+    # ── Scripting et langages ───────────────────────────────────────────────
+    "python", "python2", "python3", "ruby", "perl", "lua", "node", "nodejs",
+    "php", "bash", "sh", "zsh", "dash", "fish",
+    "pip", "pip3", "gem", "npm",
+
+    # ── Compilation et assemblage ───────────────────────────────────────────
+    "gcc", "g++", "cc", "c++", "clang", "clang++",
+    "make", "cmake", "ninja", "meson",
+    "as", "ld", "objcopy", "objdump", "readelf", "nm", "ar", "ranlib",
+    "nasm", "yasm", "fasm",
+    "strip", "size", "addr2line", "c++filt",
+    "patchelf", "ldd", "checksec",
+    "musl-gcc", "musl-clang",
+
+    # ── Analyse binaire et reverse engineering ──────────────────────────────
+    "gdb", "gdbserver",
+    "r2", "radare2", "r2pipe",
+    "ltrace", "strace", "ptrace",
+    "ROPgadget", "ropper",
+    "binwalk",
+    "exiftool",
+    "foremost", "scalpel",
+    "upx", "unupx",
+    "pev", "readpe",
+    "capstone",
+
+    # ── Débogueurs et exploit tools ─────────────────────────────────────────
+    "pwndbg", "peda", "gef",
+    "pwntools",
+
+    # ── Scan réseau et recon ────────────────────────────────────────────────
+    "nmap", "masscan", "rustscan", "unicornscan",
+    "arp-scan", "netdiscover",
+    "hping3", "hping",
+    "fping", "arping",
+
+    # ── DNS et OSINT ────────────────────────────────────────────────────────
+    "dnsenum", "dnsrecon", "fierce",
+    "amass", "subfinder", "sublist3r",
+    "theharvester", "theHarvester",
+    "recon-ng",
+    "shodan",
+    "dmitry",
+
+    # ── Scan Web et fuzzing ─────────────────────────────────────────────────
+    "nikto",
+    "gobuster", "dirb", "dirsearch",
+    "ffuf", "wfuzz",
+    "whatweb", "wafw00f",
+    "wpscan", "joomscan", "droopescan",
+    "sqlmap",
+    "commix", "xsser",
+    "cutycapt", "eyewitness",
+    "httprobe",
+
+    # ── Attaques par mot de passe ───────────────────────────────────────────
+    "hydra", "medusa", "patator",
+    "hashcat",
+    "john", "johnny",
+    "crackmapexec", "cme",
+    "evil-winrm",
+    "kerbrute",
+    "spray",
+    "brutespray",
+    "ncrack",
+
+    # ── SMB/Active Directory ────────────────────────────────────────────────
+    "enum4linux", "enum4linux-ng",
+    "smbclient", "smbmap",
+    "rpcclient", "rpcinfo",
+    "ldapsearch",
+    "nbtscan",
+    "onesixtyone",
+
+    # ── Metasploit ──────────────────────────────────────────────────────────
+    "msfconsole", "msfvenom", "msfdb",
+    "msf", "msfrpc",
+    "searchsploit",
+
+    # ── Impacket ────────────────────────────────────────────────────────────
+    "impacket-smbclient", "impacket-psexec", "impacket-wmiexec",
+    "impacket-secretsdump", "impacket-ntlmrelayx", "impacket-smbserver",
+    "impacket-ticketer", "impacket-lookupsid", "impacket-rpcdump",
+    "impacket-dcomexec", "impacket-atexec", "impacket-reg",
+    "impacket-samrdump", "impacket-getTGT", "impacket-getST",
+    "secretsdump",
+
+    # ── Post-exploitation et pivoting ───────────────────────────────────────
+    "netcat", "nc", "ncat",
+    "socat", "nohup",
+    "proxychains", "proxychains4",
+    "sshuttle",
+    "chisel", "ligolo-ng",
+    "meterpreter",
+
+    # ── Réseau avancé / MITM ────────────────────────────────────────────────
+    "tcpdump",
+    "tshark", "wireshark",
+    "ettercap", "bettercap",
+    "responder",
+    "dsniff", "arpspoof", "sslstrip",
+    "mitmdump", "mitmproxy",
+    "scapy",
+
+    # ── Wireless ────────────────────────────────────────────────────────────
+    "aircrack-ng", "airodump-ng", "aireplay-ng",
+    "airbase-ng", "airmon-ng", "airtun-ng",
+    "packetforge-ng", "airdecap-ng",
+    "iwconfig", "iwlist", "iw",
+    "wifi-honey", "wifite",
+
+    # ── Cryptographie et stéganographie ────────────────────────────────────
+    "openssl", "gpg", "gnupg",
+    "steghide", "outguess", "stegcracker",
+    "pngcheck", "zsteg",
+    "hashid", "hash-identifier",
+
+    # ── Forensics et analyse mémoire ────────────────────────────────────────
+    "volatility", "volatility3",
+    "bulk_extractor",
+    "autopsy",
+    "dd",   # utilisé avec params précis (pas vers /dev/)
+    "dcfldd",
+    "strings",
+
+    # ── SSH et accès distant ────────────────────────────────────────────────
+    "ssh", "scp", "sftp", "rsync",
+    "ssh-keygen", "ssh-keyscan",
+    "ftp", "tftp",
+    "rdesktop", "xfreerdp", "freerdp",
+
+    # ── Utilitaires divers ──────────────────────────────────────────────────
+    "git", "svn",
+    "screen", "tmux",
+    "watch", "timeout",
+    "at", "cron", "crontab",
+    "mount", "umount",
+    "stdbuf",
 }
+
+# ── Outils nécessitant un timeout long (secondes) ────────────────────────────
+TOOL_TIMEOUTS = {
+    # Scans réseau
+    "nmap": 300, "masscan": 300, "rustscan": 120, "unicornscan": 300,
+    # Password cracking
+    "hashcat": 3600, "john": 3600, "hydra": 600, "medusa": 600,
+    "crackmapexec": 300, "kerbrute": 300,
+    # Web
+    "gobuster": 300, "dirb": 300, "ffuf": 300, "wfuzz": 300,
+    "nikto": 600, "sqlmap": 600, "wpscan": 300,
+    # Compilation
+    "gcc": 120, "g++": 120, "make": 300,
+    # RE
+    "binwalk": 120, "foremost": 300,
+    # Recon
+    "amass": 600, "sublist3r": 300, "theharvester": 300,
+    # Forensics
+    "volatility": 300, "volatility3": 300,
+    # Metasploit
+    "msfvenom": 120,
+    # Wireless
+    "airodump-ng": 300, "aireplay-ng": 300,
+}
+
+DEFAULT_TIMEOUT = 60
 
 # ── Patterns destructeurs bloqués inconditionnellement ───────────────────────
 _DESTROY_PATTERNS = [
     # Suppression massive
-    r"rm\s+.*-[a-zA-Z]*r[a-zA-Z]*f",   # rm -rf / rm -fr
+    r"rm\s+.*-[a-zA-Z]*r[a-zA-Z]*f",
     r"rm\s+.*-[a-zA-Z]*f[a-zA-Z]*r",
-    r"rmdir",
-    # Effacement disque
-    r"\bdd\b",
+    r"rmdir\s",
+    # Effacement disque (dd vers devices critiques)
+    r"\bdd\b.*of\s*=\s*/dev/(sda|hda|vda|nvme|sdb|sdc|mmcblk)",
     r"mkfs",
     r"shred",
     r"wipefs",
     # Fork bomb
     r":\(\)\s*\{",
     r"forkbomb",
-    # Redirection vers périphériques critiques
-    r">\s*/dev/(sda|hda|vda|nvme|zero|null|random|urandom|mem)",
+    # Redirection vers fichiers critiques
+    r">\s*/dev/(sda|hda|vda|nvme|zero|mem)",
     r">\s*/boot/",
     r">\s*/etc/passwd",
     r">\s*/etc/shadow",
     # Shutdown / reboot
     r"\b(shutdown|reboot|halt|poweroff|init\s+0|init\s+6)\b",
-    # Injection de commandes
-    r";\s*(bash|sh|zsh|fish|dash)\s+-[ci]",
-    r"\|\s*(bash|sh|zsh)\b",
-    # Curl/wget pipe vers shell
-    r"(curl|wget).*(bash|sh|python|perl|ruby)",
+    # Curl/wget pipe vers shell (exécution aveugle)
+    r"(curl|wget).*\|\s*(bash|sh|zsh|python|python3|ruby|perl)",
+    # Suppression de la base de données ou mémoire du projet
+    r"rm\s+.*memory\.db",
+    r"rm\s+.*\.env",
 ]
 _DESTROY_RE = [re.compile(p, re.IGNORECASE) for p in _DESTROY_PATTERNS]
 
@@ -55,10 +230,6 @@ class CommandSecurity:
     """Gatekeeper central — toute commande passe par check() avant exécution."""
 
     def check(self, command: str) -> dict:
-        """
-        Retourne {"allowed": True} ou {"allowed": False, "reason": str}.
-        L'IA propose, ce module valide, le terminal exécute si allowed.
-        """
         if not command or not command.strip():
             return {"allowed": False, "reason": "Commande vide"}
 
@@ -69,7 +240,7 @@ class CommandSecurity:
                 self._audit("BLOCKED_DESTRUCTIVE", command)
                 return {"allowed": False, "reason": "Pattern destructeur détecté"}
 
-        # 2. Parser et vérifier la commande de base
+        # 2. Parser la commande
         try:
             parts = shlex.split(command)
         except ValueError as e:
@@ -78,7 +249,7 @@ class CommandSecurity:
         if not parts:
             return {"allowed": False, "reason": "Commande vide après parsing"}
 
-        base_cmd = parts[0].split("/")[-1]  # accepte /usr/bin/ls → ls
+        base_cmd = parts[0].split("/")[-1]
 
         # 3. Vérifier la whitelist
         if base_cmd not in ALLOWED_COMMANDS:
@@ -89,10 +260,17 @@ class CommandSecurity:
         self._audit("ALLOWED", command)
         return {"allowed": True}
 
+    def get_timeout(self, command: str) -> int:
+        try:
+            base_cmd = shlex.split(command)[0].split("/")[-1]
+        except (ValueError, IndexError):
+            return DEFAULT_TIMEOUT
+        return TOOL_TIMEOUTS.get(base_cmd, DEFAULT_TIMEOUT)
+
     def _audit(self, status: str, command: str):
         logger.info(f"[AUDIT] {status} | cmd={command!r}")
 
-    # ── Utilitaires crypto (inchangés) ─────────────────────────────────────
+    # ── Utilitaires crypto ──────────────────────────────────────────────────
 
     def generate_token(self, length: int = 32) -> str:
         return secrets.token_hex(length)

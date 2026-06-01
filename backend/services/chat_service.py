@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from core.llm.client import llm_client
 from core.llm.context import context_builder
 from core.memory.memory_engine import memory_engine
+from core.agents.cyber_agent import cyber_agent
 
 
 class ChatService:
@@ -9,12 +10,31 @@ class ChatService:
         # Extraire les infos importantes du message
         memory_engine.extract_and_save(db=db, message=message)
 
-        # Récupérer les mémoires sémantiquement proches du message
+        # Mémoires sémantiquement proches
         memories = memory_engine.get_relevant_memories(db=db, query=message)
         profile = memory_engine.get_user_profile(db=db)
 
-        # Construire le prompt système enrichi
+        # Système enrichi
         system = context_builder.build_system(user_memories=memories, user_profile=profile)
+
+        # Exécution automatique si le CyberAgent peut gérer la demande
+        tool_output = None
+        if cyber_agent.can_handle(message):
+            try:
+                agent_result = await cyber_agent.run(task=message)
+                if agent_result.get("success") and agent_result.get("output"):
+                    tool_output = agent_result["output"]
+            except Exception:
+                pass
+
+        # Injecter la sortie outil dans le system prompt
+        if tool_output:
+            system = (
+                system
+                + f"\n\n## SORTIE OUTIL (exécution réelle sur Kali Linux)\n"
+                + f"```\n{tool_output[:8000]}\n```\n"
+                + "Analyse et commente cette sortie de manière experte pour l'utilisateur."
+            )
 
         # Construire les messages (mémoire courte + nouveau message)
         messages = context_builder.build_messages(session_id, message)
@@ -35,7 +55,7 @@ class ChatService:
             context_used=len(memories),
         )
 
-        # Résumé automatique si l'historique est trop long (asynchrone, non bloquant)
+        # Résumé automatique si l'historique est trop long
         try:
             from core.memory.summarizer import summarizer
             import asyncio
@@ -43,11 +63,18 @@ class ChatService:
         except Exception:
             pass
 
+        try:
+            from core.memory.vector_store import vector_store
+            vb = vector_store.backend
+        except Exception:
+            vb = "unknown"
+
         return {
             "response": response,
             "session_id": session_id,
             "memories_used": len(memories),
-            "vector_backend": __import__("core.memory.vector_store", fromlist=["vector_store"]).vector_store.backend,
+            "tool_executed": tool_output is not None,
+            "vector_backend": vb,
         }
 
     def clear_session(self, session_id: str):
