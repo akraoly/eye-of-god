@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { sendMessage } from '../utils/api'
 
-const WELCOME = "Bonjour. Je suis L'Œil de Dieu, ton compagnon numérique personnel.\nParle-moi de toi, pose une question, ou donne-moi un ordre."
+const WELCOME = "Bonjour. Je suis **L'Œil de Dieu**, ton compagnon numérique personnel.\nParle-moi de toi, pose une question, ou donne-moi un ordre."
 
 export default function Chat({ sessionId }) {
   const [messages, setMessages] = useState([{ role: 'assistant', content: WELCOME }])
@@ -41,7 +42,13 @@ export default function Chat({ sessionId }) {
       <div className="messages">
         {messages.map((m, i) => (
           <div key={i} className={`msg ${m.role}`}>
-            <div className="bubble">{m.content}</div>
+            {m.role === 'assistant' ? (
+              <div className="bubble bubble-md">
+                <ReactMarkdown>{m.content}</ReactMarkdown>
+              </div>
+            ) : (
+              <div className="bubble">{m.content}</div>
+            )}
           </div>
         ))}
         {loading && (
