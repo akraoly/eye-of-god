@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Chat from './components/Chat'
 import Sidebar from './components/Sidebar'
 import StarField from './components/StarField'
+import SocView from './components/SocView'
 import './App.css'
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
         <Sidebar view={view} onNav={setView} theme={theme} onTheme={setTheme} />
         <main className="main">
           {view === 'chat'   && <Chat sessionId={sessionId} />}
+          {view === 'soc'    && <SocView />}
           {view === 'memory' && <MemoryView />}
         </main>
       </div>

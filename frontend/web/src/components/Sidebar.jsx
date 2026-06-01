@@ -10,6 +10,7 @@ const THEMES = [
 
 const NAV = [
   { id: 'chat',   icon: '💬', label: 'Chat' },
+  { id: 'soc',    icon: '🔴', label: 'SOC' },
   { id: 'memory', icon: '🧠', label: 'Mémoire' },
 ]
 
@@ -17,7 +18,6 @@ const CAPS = [
   { icon: '⚔️', label: 'OSEE'  },
   { icon: '🔬', label: 'RE'    },
   { icon: '🛠️', label: 'Dev'   },
-  { icon: '🔴', label: 'Kali'  },
   { icon: '📚', label: 'Know'  },
   { icon: '🎯', label: 'Life'  },
 ]
