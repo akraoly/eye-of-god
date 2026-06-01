@@ -39,29 +39,43 @@ function MemoryView() {
 
   return (
     <div className="memory-view">
-      <h2>Mémoires <span className="mem-count">{memories.length}</span></h2>
-      {memories.length === 0 ? (
-        <p className="empty">Aucune mémoire enregistrée. Commence à parler !</p>
-      ) : (
-        <div className="memory-list">
-          {memories.map(m => (
-            <div key={m.id} className="memory-card">
-              <span className="mem-type">{m.type}</span>
-              <span className="mem-key">{m.key}</span>
-              <span className="mem-value">{m.value}</span>
-              <span className="mem-score">{(m.importance * 100).toFixed(0)}%</span>
-              <button
-                className="mem-delete"
-                onClick={() => handleDelete(m.id)}
-                disabled={deleting === m.id}
-                title="Supprimer"
-              >
-                {deleting === m.id ? '…' : '✕'}
-              </button>
-            </div>
-          ))}
+      <div className="memory-header">
+        <div className="memory-title">
+          🧠 Mémoires
+          <span className="mem-badge">{memories.length}</span>
         </div>
-      )}
+      </div>
+      <div className="memory-scroll">
+        {memories.length === 0 ? (
+          <div className="mem-empty">
+            <div className="mem-empty-icon">🧠</div>
+            <div>Aucune mémoire enregistrée.<br />Commence à parler pour que je mémorise.</div>
+          </div>
+        ) : (
+          <div className="memory-grid">
+            {memories.map(m => (
+              <div key={m.id} className="memory-card">
+                <span className="mem-type-badge">{m.type}</span>
+                <div className="mem-body">
+                  <div className="mem-key-text">{m.key}</div>
+                  <div className="mem-value-text">{m.value}</div>
+                </div>
+                <div className="mem-right">
+                  <span className="mem-importance">{(m.importance * 100).toFixed(0)}%</span>
+                  <button
+                    className="mem-del-btn"
+                    onClick={() => handleDelete(m.id)}
+                    disabled={deleting === m.id}
+                    title="Supprimer"
+                  >
+                    {deleting === m.id ? '…' : '✕'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
