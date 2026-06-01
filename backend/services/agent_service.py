@@ -1,9 +1,11 @@
 from typing import Optional
 from core.agents.cyber_agent import cyber_agent
+from core.agents.code_agent import code_agent
 from core.agents.life_agent import life_agent
 from core.agents.system_agent import system_agent
+from core.agents.knowledge_agent import knowledge_agent
 
-AGENTS = [cyber_agent, life_agent, system_agent]
+AGENTS = [cyber_agent, code_agent, knowledge_agent, life_agent, system_agent]
 
 
 class AgentService:

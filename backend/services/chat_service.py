@@ -2,8 +2,7 @@ from sqlalchemy.orm import Session
 from core.llm.client import llm_client
 from core.llm.context import context_builder
 from core.memory.memory_engine import memory_engine
-from core.agents.cyber_agent import cyber_agent
-from core.agents.code_agent import code_agent
+from core.orchestrator import orchestrator
 
 
 class ChatService:
@@ -15,40 +14,36 @@ class ChatService:
         memories = memory_engine.get_relevant_memories(db=db, query=message)
         profile = memory_engine.get_user_profile(db=db)
 
-        # Système enrichi
+        # Système enrichi avec profil et mémoires
         system = context_builder.build_system(user_memories=memories, user_profile=profile)
 
-        tool_output = None
-        tool_label = ""
+        # ── Orchestrateur : classify intent + dispatch agents ─────────────────
+        orchestration = await orchestrator.process(
+            db=db,
+            message=message,
+            session_id=session_id,
+        )
 
-        # 1. CodeAgent en priorité pour les tâches de dev
-        if code_agent.can_handle(message):
-            try:
-                agent_result = await code_agent.run(task=message)
-                if agent_result.get("success") and agent_result.get("output"):
-                    tool_output = agent_result["output"]
-                    tool_label = "CODE AGENT"
-            except Exception:
-                pass
+        intent = orchestration.get("intent", "general")
+        agents_used = orchestration.get("agents_used", [])
+        tool_outputs = orchestration.get("tool_outputs", [])
+        system_context = orchestration.get("system_context", "")
 
-        # 2. CyberAgent pour les tâches offensives (si pas pris par CodeAgent)
-        if tool_output is None and cyber_agent.can_handle(message):
-            try:
-                agent_result = await cyber_agent.run(task=message)
-                if agent_result.get("success") and agent_result.get("output"):
-                    tool_output = agent_result["output"]
-                    tool_label = "CYBER AGENT (Kali)"
-            except Exception:
-                pass
-
-        # Injecter la sortie outil dans le system prompt
-        if tool_output:
-            system = (
-                system
-                + f"\n\n## SORTIE {tool_label} (exécution réelle)\n"
-                + f"```\n{tool_output[:8000]}\n```\n"
-                + "Analyse et commente cette sortie de manière experte pour Mr Vitch."
-            )
+        # Injecter les sorties des agents dans le system prompt
+        if system_context:
+            system = system + system_context
+        elif tool_outputs:
+            # Fallback : construction manuelle si system_context vide
+            for to in tool_outputs:
+                agent_label = to.get("agent", "AGENT").upper()
+                output = to.get("output", "")
+                if output:
+                    system = (
+                        system
+                        + f"\n\n## SORTIE {agent_label} (exécution réelle)\n"
+                        + f"```\n{output[:8000]}\n```\n"
+                        + "Analyse et commente cette sortie de manière experte."
+                    )
 
         # Construire les messages (mémoire courte + nouveau message)
         messages = context_builder.build_messages(session_id, message)
@@ -87,7 +82,9 @@ class ChatService:
             "response": response,
             "session_id": session_id,
             "memories_used": len(memories),
-            "tool_executed": tool_output is not None,
+            "tool_executed": len(tool_outputs) > 0,
+            "intent": intent,
+            "agents_used": agents_used,
             "vector_backend": vb,
         }
 
