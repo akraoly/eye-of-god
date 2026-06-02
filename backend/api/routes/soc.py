@@ -17,6 +17,10 @@ from core.soc.edr_engine          import edr_engine
 from core.soc.nta_engine          import nta_engine
 from core.soc.threat_intel_engine import threat_intel_engine
 from core.soc.ids_engine          import ids_engine
+from core.soc.dlp_engine          import dlp_engine
+from core.soc.ransomware_engine   import ransomware_engine
+from core.soc.phishing_engine     import phishing_engine
+from core.soc.osint_engine        import osint_engine
 
 router = APIRouter()
 
@@ -463,7 +467,148 @@ def ids_stats(db: Session = Depends(get_db)):
     return ids_engine.stats(db)
 
 
-# ── DASHBOARD PHASE 2 ─────────────────────────────────────────────────────────
+# ── DLP ──────────────────────────────────────────────────────────────────────
+
+class DlpScan(BaseModel):
+    text: str
+    source: str = "manual"
+    channel: str = "MANUAL"
+
+
+@router.post("/dlp/scan")
+def dlp_scan(body: DlpScan, db: Session = Depends(get_db)):
+    return dlp_engine.scan_text(db, body.text, body.source, body.channel)
+
+
+@router.get("/dlp/incidents")
+def dlp_incidents(status: Optional[str] = Query(None), policy: Optional[str] = Query(None),
+                  hours: int = Query(168), page: int = Query(1), per_page: int = Query(50),
+                  db: Session = Depends(get_db)):
+    return dlp_engine.get_incidents(db, status=status, policy=policy, hours=hours, page=page, per_page=per_page)
+
+
+@router.get("/dlp/stats")
+def dlp_stats(db: Session = Depends(get_db)):
+    return dlp_engine.stats(db)
+
+
+@router.get("/dlp/policies")
+def dlp_policies():
+    return {"policies": dlp_engine.list_policies()}
+
+
+# ── RANSOMWARE ────────────────────────────────────────────────────────────────
+
+class RansomwareDetect(BaseModel):
+    hostname: str
+    indicators: Optional[List[dict]] = None
+    family: Optional[str] = None
+    detection_type: str = "BEHAVIORAL"
+
+
+@router.post("/ransomware/detect")
+def ransomware_detect(body: RansomwareDetect, db: Session = Depends(get_db)):
+    return ransomware_engine.detect(db, **body.model_dump())
+
+
+@router.get("/ransomware/detections")
+def ransomware_detections(status: Optional[str] = Query(None),
+                          page: int = Query(1), per_page: int = Query(20),
+                          db: Session = Depends(get_db)):
+    return ransomware_engine.get_detections(db, status=status, page=page, per_page=per_page)
+
+
+@router.get("/ransomware/families")
+def ransomware_families():
+    return {"families": ransomware_engine.get_families()}
+
+
+@router.get("/ransomware/indicators")
+def ransomware_indicators():
+    return {"indicators": ransomware_engine.get_indicators()}
+
+
+@router.get("/ransomware/stats")
+def ransomware_stats(db: Session = Depends(get_db)):
+    return ransomware_engine.stats(db)
+
+
+# ── PHISHING ──────────────────────────────────────────────────────────────────
+
+class PhishingAnalyze(BaseModel):
+    sender: str
+    subject: str
+    body: str = ""
+    recipient: Optional[str] = None
+    headers: Optional[dict] = None
+    attachments: Optional[List[str]] = None
+    urls: Optional[List[str]] = None
+
+
+@router.post("/phishing/analyze")
+def phishing_analyze(body: PhishingAnalyze, db: Session = Depends(get_db)):
+    return phishing_engine.analyze(db, **body.model_dump())
+
+
+@router.get("/phishing/emails")
+def phishing_emails(verdict: Optional[str] = Query(None),
+                    page: int = Query(1), per_page: int = Query(50),
+                    db: Session = Depends(get_db)):
+    return phishing_engine.get_emails(db, verdict=verdict, page=page, per_page=per_page)
+
+
+@router.get("/phishing/stats")
+def phishing_stats(db: Session = Depends(get_db)):
+    return phishing_engine.stats(db)
+
+
+@router.get("/phishing/indicators")
+def phishing_indicators():
+    return {"indicators": phishing_engine.list_indicators()}
+
+
+# ── OSINT ─────────────────────────────────────────────────────────────────────
+
+@router.post("/osint/init")
+def osint_init(db: Session = Depends(get_db)):
+    n = osint_engine.init_actors(db)
+    return {"message": f"{n} acteurs APT chargés"}
+
+
+@router.get("/osint/actors")
+def osint_actors(active_only: bool = Query(False), country: Optional[str] = Query(None),
+                 sponsor: Optional[str] = Query(None),
+                 page: int = Query(1), per_page: int = Query(20),
+                 db: Session = Depends(get_db)):
+    return osint_engine.list_actors(db, active_only=active_only, country=country,
+                                    sponsor=sponsor, page=page, per_page=per_page)
+
+
+@router.post("/osint/search")
+def osint_search(body: dict, db: Session = Depends(get_db)):
+    q = body.get("q", "")
+    return {"results": osint_engine.search_actor(db, q)}
+
+
+@router.post("/osint/investigate")
+def osint_investigate(body: dict, db: Session = Depends(get_db)):
+    target = body.get("target", "")
+    target_type = body.get("type", "IP")
+    return osint_engine.investigate(db, target, target_type, body.get("notes"))
+
+
+@router.get("/osint/investigations")
+def osint_investigations(page: int = Query(1), per_page: int = Query(20),
+                         db: Session = Depends(get_db)):
+    return osint_engine.get_investigations(db, page=page, per_page=per_page)
+
+
+@router.get("/osint/stats")
+def osint_stats(db: Session = Depends(get_db)):
+    return osint_engine.stats(db)
+
+
+# ── DASHBOARD PHASE 1+2+3 ────────────────────────────────────────────────────
 
 @router.get("/dashboard")
 def get_dashboard(db: Session = Depends(get_db)):
@@ -480,4 +625,9 @@ def get_dashboard(db: Session = Depends(get_db)):
         "nta":       nta_engine.stats(db, hours=24),
         "threat_intel": threat_intel_engine.stats(db),
         "ids":       ids_engine.stats(db),
+        # Phase 3
+        "dlp":       dlp_engine.stats(db),
+        "ransomware": ransomware_engine.stats(db),
+        "phishing":  phishing_engine.stats(db),
+        "osint":     osint_engine.stats(db),
     }

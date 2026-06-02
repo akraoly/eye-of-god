@@ -307,6 +307,258 @@ KALI_TOOLS: List[KaliTool] = [
               "exiftool -all= {file}",
               "exiftool -Comment='test' {file}"],
              timeout=30),
+
+    # ── OSINT AVANCÉ ──────────────────────────────────────────────────────────
+    KaliTool("maltego", "osint", "Graphe de relations OSINT — personnes, domaines, IPs",
+             ["maltego"], interactive=True, timeout=0,
+             notes="Interface graphique, lancement manuel"),
+
+    KaliTool("recon-ng", "osint", "Framework OSINT modulaire — renseignement passif",
+             ["recon-ng", "recon-ng -m recon/domains-hosts/google_site_web -o SOURCE={domain}"],
+             interactive=True, timeout=0),
+
+    KaliTool("spiderfoot", "osint", "OSINT automatisé — 200+ modules, scan complet",
+             ["spiderfoot -s {target} -t IP_ADDRESS,DOMAIN_NAME -q",
+              "spiderfoot -l 127.0.0.1:5001"],
+             timeout=600),
+
+    KaliTool("sherlock", "osint", "Trouver un username sur 300+ réseaux sociaux",
+             ["sherlock {username}",
+              "sherlock {username} --timeout 10 --output results.txt"],
+             timeout=120),
+
+    KaliTool("social-engineer-toolkit", "osint", "SET — ingénierie sociale et phishing",
+             ["setoolkit"], interactive=True, timeout=0,
+             notes="Requiert root"),
+
+    # ── AD / WINDOWS ATTACK ───────────────────────────────────────────────────
+    KaliTool("bloodhound", "active-directory", "Cartographie et exploitation des relations Active Directory",
+             ["bloodhound-python -u {user} -p '{pass}' -d {domain} -c All",
+              "bloodhound-python -u {user} -H {nthash} -d {domain} -c All --zip"],
+             timeout=300),
+
+    KaliTool("certipy", "active-directory", "Attaques sur les certificats AD CS (ESC1-ESC8)",
+             ["certipy find -u {user}@{domain} -p '{pass}' -dc-ip {dc}",
+              "certipy req -u {user}@{domain} -p '{pass}' -ca {ca} -template {tpl}",
+              "certipy auth -pfx user.pfx -dc-ip {dc}"],
+             timeout=120),
+
+    KaliTool("netexec", "active-directory", "Swiss army knife réseau Windows (successor CME)",
+             ["netexec smb {target} -u users.txt -p passwords.txt",
+              "netexec winrm {target} -u {user} -p '{pass}' -x whoami",
+              "netexec ldap {target} -u '' -p '' --users"],
+             timeout=300),
+
+    KaliTool("ldapsearch", "active-directory", "Requêtes LDAP sur Active Directory",
+             ["ldapsearch -H ldap://{dc} -x -b 'DC={d1},DC={d2}' '(objectClass=user)'",
+              "ldapsearch -H ldap://{dc} -D '{user}@{domain}' -w '{pass}' -b 'DC=x,DC=y' '(objectClass=*)'"],
+             timeout=60),
+
+    KaliTool("rpcclient", "active-directory", "Enumération SMB/RPC — users, shares, policies",
+             ["rpcclient -U '{user}%{pass}' {target}",
+              "rpcclient -U '' -N {target} -c 'enumdomusers'",
+              "rpcclient -U '{user}%{pass}' {target} -c 'querydispinfo'"],
+             interactive=True, timeout=0),
+
+    # ── EXPLOITATION AVANCÉ ───────────────────────────────────────────────────
+    KaliTool("msfconsole", "exploitation", "Metasploit Framework console interactive",
+             ["msfconsole", "msfconsole -q -x 'use exploit/multi/handler; set payload ...; run'"],
+             interactive=True, timeout=0),
+
+    KaliTool("armitage", "exploitation", "Interface graphique Metasploit",
+             ["armitage"], interactive=True, timeout=0),
+
+    KaliTool("beef-xss", "exploitation", "Browser Exploitation Framework — XSS hooks",
+             ["beef-xss", "beef-xss -x"],
+             interactive=True, timeout=0),
+
+    KaliTool("commix", "exploitation", "Détection et exploitation injections de commandes OS",
+             ["commix --url='http://{target}?cmd=id'",
+              "commix -r request.txt --batch --os-shell"],
+             timeout=300),
+
+    KaliTool("sqlninja", "exploitation", "Exploitation SQL Server via injection SQL",
+             ["sqlninja -m t -f sqlninja.conf",
+              "sqlninja -m s -f sqlninja.conf"],
+             timeout=300),
+
+    # ── WEB AVANCÉ ────────────────────────────────────────────────────────────
+    KaliTool("feroxbuster", "web", "Fuzzer web rapide en Rust — récursif par défaut",
+             ["feroxbuster -u http://{target} -w /usr/share/seclists/Discovery/Web-Content/raft-large-files.txt",
+              "feroxbuster -u http://{target} -w wordlist.txt -x php,html,js --depth 3"],
+             timeout=300),
+
+    KaliTool("wapiti", "web", "Scanner de vulnérabilités web — XSS, SQLi, LFI, etc.",
+             ["wapiti -u http://{target} -o /tmp/report",
+              "wapiti -u http://{target} --modules sql,xss,lfi,rce"],
+             timeout=600),
+
+    KaliTool("xsstrike", "web", "Détection et exploitation XSS avancée",
+             ["xsstrike -u 'http://{target}?q=test'",
+              "xsstrike -u 'http://{target}' --crawl"],
+             timeout=300),
+
+    KaliTool("arjun", "web", "Découverte de paramètres HTTP cachés",
+             ["arjun -u http://{target}",
+              "arjun -u http://{target} -m GET,POST,JSON,XML"],
+             timeout=120),
+
+    KaliTool("nuclei", "web", "Scanner de vuln template-based — CVE, misconfigs, exposures",
+             ["nuclei -u http://{target}",
+              "nuclei -l targets.txt -t cves/ -severity critical,high",
+              "nuclei -u http://{target} -t exposures/"],
+             timeout=600),
+
+    # ── WIRELESS ─────────────────────────────────────────────────────────────
+    KaliTool("wifite", "wireless", "Attaque Wi-Fi automatisée — WPA/WPA2/WPS",
+             ["wifite", "wifite --wpa --dict /usr/share/wordlists/rockyou.txt"],
+             interactive=True, timeout=0),
+
+    KaliTool("hcxtools", "wireless", "Conversion captures Wi-Fi pour hashcat",
+             ["hcxpcapngtool capture.pcapng -o hash.hc22000",
+              "hcxdumptool -i wlan0 -o capture.pcapng --active_beacon"],
+             timeout=60),
+
+    # ── RÉSEAU AVANCÉ ──────────────────────────────────────────────────────────
+    KaliTool("proxychains4", "network", "Tunnelisation de connexions via proxies (Tor, SOCKS)",
+             ["proxychains4 nmap -sT {target}",
+              "proxychains4 sqlmap -u 'http://{target}?id=1' --dbs"],
+             timeout=300),
+
+    KaliTool("sshuttle", "network", "VPN transparent via SSH — tunnel réseau entier",
+             ["sshuttle -r {user}@{host} {subnet}/24",
+              "sshuttle -r {user}@{host} 0/0 --dns"],
+             timeout=0, interactive=True),
+
+    KaliTool("stunnel", "network", "Tunnel SSL/TLS pour encapsuler des connexions",
+             ["stunnel stunnel.conf"], timeout=0, interactive=True),
+
+    KaliTool("chisel", "network", "Tunnel HTTP/TCP rapide — pivoting réseau",
+             ["chisel server -p 8080 --reverse",
+              "chisel client {server}:8080 R:socks"],
+             timeout=0, interactive=True),
+
+    # ── STÉGANOGRAPHIE ────────────────────────────────────────────────────────
+    KaliTool("zsteg", "stego", "Détection de stéganographie dans les images PNG/BMP",
+             ["zsteg {image.png}",
+              "zsteg -a {image.png}"],
+             timeout=30),
+
+    KaliTool("stegsolve", "stego", "Analyse visuelle de stéganographie (GUI)",
+             ["stegsolve"], interactive=True, timeout=0),
+
+    KaliTool("steghide", "stego", "Cacher/extraire données dans images JPEG/BMP",
+             ["steghide embed -cf {image} -sf {secret}",
+              "steghide extract -sf {image}",
+              "steghide info {image}"],
+             timeout=30),
+
+    # ── PASSWORD AVANCÉ ───────────────────────────────────────────────────────
+    KaliTool("ophcrack", "passwords", "Crack LM/NTLM via rainbow tables",
+             ["ophcrack", "ophcrack -t tables/ -f hashes.txt"],
+             interactive=True, timeout=0),
+
+    KaliTool("hashid", "passwords", "Identifier le type de hash",
+             ["hashid '{hash}'",
+              "hashid -m '{hash}'"],
+             timeout=10),
+
+    KaliTool("crunch", "passwords", "Génération de wordlists personnalisées",
+             ["crunch 8 8 abc123 -o wordlist.txt",
+              "crunch 6 12 -t @@dog@@ -o list.txt"],
+             timeout=300),
+
+    KaliTool("cewl", "passwords", "Génération de wordlist depuis un site web",
+             ["cewl http://{target} -d 2 -m 5 -w wordlist.txt",
+              "cewl http://{target} -w words.txt --email"],
+             timeout=120),
+
+    # ── MOBILE ───────────────────────────────────────────────────────────────
+    KaliTool("apktool", "mobile", "Décompilation et recompilation d'APK Android",
+             ["apktool d {app.apk}",
+              "apktool b {decompiled_dir} -o new.apk"],
+             timeout=120),
+
+    KaliTool("jadx", "mobile", "Décompilateur APK Java/Kotlin",
+             ["jadx {app.apk} -d output/",
+              "jadx-gui {app.apk}"],
+             interactive=True, timeout=120),
+
+    # ── CLOUD ─────────────────────────────────────────────────────────────────
+    KaliTool("pacu", "cloud", "Framework d'exploitation AWS — énumération et attaques",
+             ["pacu", "pacu --module-name iam__enum_permissions"],
+             interactive=True, timeout=0),
+
+    KaliTool("cloudfox", "cloud", "Enumération de configuration cloud (AWS/Azure/GCP)",
+             ["cloudfox aws --profile {profile} all-checks",
+              "cloudfox azure --tenant {tenant} all-checks"],
+             timeout=300),
+
+    # ── FORENSICS AVANCÉ ──────────────────────────────────────────────────────
+    KaliTool("foremost", "forensics", "Récupération de fichiers par entête/pied de page",
+             ["foremost -i {image} -o output/",
+              "foremost -t jpg,png,pdf -i disk.img -o output/"],
+             timeout=300),
+
+    KaliTool("bulk_extractor", "forensics", "Extraction massive d'artefacts — emails, URLs, CC",
+             ["bulk_extractor -o output/ {image}",
+              "bulk_extractor -E email -o out/ {file}"],
+             timeout=300),
+
+    KaliTool("pdf-parser", "forensics", "Analyse de fichiers PDF malveillants",
+             ["pdf-parser.py {file.pdf}",
+              "pdf-parser.py --search=/JavaScript {file.pdf}"],
+             timeout=30),
+
+    KaliTool("oletools", "forensics", "Analyse de documents Office malveillants (macros, OLE)",
+             ["olevba {doc.docm}",
+              "oleobj {file.doc}",
+              "mraptor {file.xlsm}"],
+             timeout=60),
+
+    # ── RÉSEAU/SCAN ───────────────────────────────────────────────────────────
+    KaliTool("openvas", "recon", "Scanner de vulnérabilités réseau open source",
+             ["gvm-start",
+              "greenbone-security-assistant"],
+             interactive=True, timeout=0),
+
+    KaliTool("dnsx", "recon", "Résolution DNS rapide et bruteforce de sous-domaines",
+             ["dnsx -l domains.txt -a -resp",
+              "dnsx -d {domain} -w wordlist.txt -resp-only"],
+             timeout=120),
+
+    KaliTool("httpx", "web", "Probe HTTP rapide — détection services web",
+             ["httpx -l urls.txt -status-code -title -tech-detect",
+              "cat domains.txt | httpx -silent -sc 200,301,302"],
+             timeout=120),
+
+    KaliTool("catnip", "web", "Crawl et analyse de contenu web",
+             ["catnip -u http://{target} -d 2"],
+             timeout=120),
+
+    # ── ENCODE/DECODE ─────────────────────────────────────────────────────────
+    KaliTool("cyberchef", "misc", "Analyse et transformation de données (CLI/Web)",
+             ["node CyberChef.js -r recipe.json -i input.txt"],
+             timeout=30),
+
+    KaliTool("pwncat", "exploitation", "Shell handler amélioré avec post-exploitation intégrée",
+             ["pwncat-cs -lp {port}",
+              "pwncat-cs {target}:{port}"],
+             interactive=True, timeout=0),
+
+    KaliTool("ligolo-ng", "network", "Tunnel réseau inverse pour pivoting",
+             ["ligolo-ng -selfcert -laddr 0.0.0.0:443",
+              "ligolo-ng -connect {server}:443 -ignore-cert"],
+             timeout=0, interactive=True),
+
+    KaliTool("pspy", "reversing", "Surveiller processus sans root — découverte de cron jobs",
+             ["pspy64", "pspy32"],
+             timeout=60),
+
+    KaliTool("linpeas", "exploitation", "Enumération de privilege escalation Linux",
+             ["bash linpeas.sh",
+              "curl -L https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh | sh"],
+             timeout=60),
 ]
 
 # ── Indexation par nom et catégorie ──────────────────────────────────────────

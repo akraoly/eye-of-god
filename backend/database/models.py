@@ -319,3 +319,101 @@ class ThreatHit(Base):
     entity_type = Column(String(20), nullable=True)    # alert|flow|event
     entity_id   = Column(Integer, nullable=True)
     matched_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── Tables SOC Phase 3 ──────────────────────────────────────────────────────
+
+class DlpIncident(Base):
+    """Incident DLP — fuite de données détectée."""
+    __tablename__ = "dlp_incidents"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    policy_name = Column(String(100), nullable=False)        # CREDIT_CARD, AWS_KEY, PII…
+    severity    = Column(String(10), default="HIGH")
+    channel     = Column(String(30), nullable=True)          # EMAIL, HTTP_UPLOAD, GIT_COMMIT…
+    source      = Column(String(255), nullable=True)         # fichier, endpoint, user
+    data_type   = Column(String(50), nullable=True)          # carte, IBAN, token, clé privée…
+    match_count = Column(Integer, default=1)
+    snippet     = Column(Text, nullable=True)                # extrait masqué
+    status      = Column(String(20), default="OPEN")         # OPEN|REVIEWING|RESOLVED|FP
+    mitre_tech  = Column(String(15), nullable=True)
+    alert_id    = Column(Integer, nullable=True)
+    detected_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class RansomwareDetection(Base):
+    """Détection d'activité ransomware."""
+    __tablename__ = "ransomware_detections"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    family       = Column(String(50), nullable=True)          # LockBit 3.0, BlackCat/ALPHV…
+    threat_level = Column(String(10), default="CRITICAL")
+    detection_type= Column(String(30), nullable=False)        # CANARY_TRIGGER|BEHAVIORAL|IOC_MATCH|SIGNATURE
+    hostname     = Column(String(255), nullable=True)
+    affected_files= Column(Integer, default=0)
+    extension    = Column(String(20), nullable=True)          # .lockbit, .alphv…
+    ransom_note  = Column(String(100), nullable=True)
+    indicators   = Column(Text, nullable=True)               # JSON list
+    techniques   = Column(Text, nullable=True)               # JSON list MITRE
+    status       = Column(String(20), default="ACTIVE")      # ACTIVE|CONTAINED|REMEDIATED
+    alert_id     = Column(Integer, nullable=True)
+    detected_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class PhishingEmail(Base):
+    """Email analysé pour phishing/BEC."""
+    __tablename__ = "phishing_emails"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    sender       = Column(String(255), nullable=True)
+    sender_domain= Column(String(255), nullable=True)
+    subject      = Column(String(500), nullable=True)
+    recipient    = Column(String(255), nullable=True)
+    risk_score   = Column(Float, default=0.0)                # 0-100
+    verdict      = Column(String(20), default="CLEAN")       # CLEAN|SUSPICIOUS|PHISHING|BEC|MALWARE
+    indicators   = Column(Text, nullable=True)               # JSON list des indicateurs déclenchés
+    spf          = Column(String(10), nullable=True)         # PASS|FAIL|SOFTFAIL|NONE
+    dkim         = Column(String(10), nullable=True)         # PASS|FAIL|NONE
+    dmarc        = Column(String(10), nullable=True)         # PASS|FAIL|NONE
+    urls         = Column(Text, nullable=True)               # JSON list d'URLs extraites
+    attachments  = Column(Text, nullable=True)               # JSON list de pièces jointes
+    campaign_id  = Column(String(50), nullable=True)
+    alert_id     = Column(Integer, nullable=True)
+    analyzed_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class OsintActor(Base):
+    """Acteur de menace / groupe APT."""
+    __tablename__ = "osint_actors"
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    name              = Column(String(100), nullable=False, unique=True)
+    aliases           = Column(Text, nullable=True)          # JSON list
+    country           = Column(String(50), nullable=True)
+    sponsor           = Column(String(20), nullable=True)    # STATE|CRIMINAL|HACKTIVISM|UNKNOWN
+    motivation        = Column(Text, nullable=True)          # JSON list
+    threat_level      = Column(String(10), default="HIGH")
+    sophistication    = Column(String(20), default="INTERMEDIATE")
+    is_active         = Column(Boolean, default=True)
+    active_since      = Column(String(10), nullable=True)
+    target_sectors    = Column(Text, nullable=True)          # JSON list
+    target_countries  = Column(Text, nullable=True)          # JSON list
+    primary_ttps      = Column(Text, nullable=True)          # JSON list MITRE
+    description       = Column(Text, nullable=True)
+    source            = Column(String(100), default="MITRE ATT&CK")
+
+
+class OsintInvestigation(Base):
+    """Investigation OSINT sur un IOC."""
+    __tablename__ = "osint_investigations"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    target        = Column(String(500), nullable=False)      # IP, domaine, email, hash
+    target_type   = Column(String(20), nullable=False)       # IP|DOMAIN|EMAIL|HASH|ORG
+    reputation    = Column(Integer, default=50)              # 0=malveillant, 100=propre
+    verdict       = Column(String(20), default="UNKNOWN")    # CLEAN|SUSPICIOUS|MALICIOUS|UNKNOWN
+    sources       = Column(Text, nullable=True)              # JSON {source: résultat}
+    related_actors= Column(Text, nullable=True)              # JSON list d'acteurs liés
+    related_iocs  = Column(Text, nullable=True)              # JSON list d'IOCs liés
+    notes         = Column(Text, nullable=True)
+    investigated_at= Column(DateTime, default=datetime.utcnow, index=True)

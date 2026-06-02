@@ -647,16 +647,308 @@ function Ids() {
   )
 }
 
+// ── DLP ───────────────────────────────────────────────────────────────────────
+function Dlp() {
+  const [stats, setStats]   = useState(null)
+  const [policies, setPolicies] = useState(null)
+  const [scan, setScan]     = useState('')
+  const [result, setResult] = useState(null)
+  const [scanning, setScanning] = useState(false)
+
+  useEffect(() => {
+    f(`${BASE}/dlp/stats`).then(setStats)
+    f(`${BASE}/dlp/policies`).then(d => setPolicies(d.policies))
+  }, [])
+
+  const doScan = async () => {
+    if (!scan.trim()) return
+    setScanning(true)
+    const r = await fetch(`${BASE}/dlp/scan`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: scan, source: 'ui-manual', channel: 'MANUAL' }),
+    }).then(r => r.json()).catch(() => ({}))
+    setResult(r)
+    setScanning(false)
+    f(`${BASE}/dlp/stats`).then(setStats)
+  }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 12 }}>
+          <div className="soc-stat-card critical"><div className="soc-stat-val">{stats.critical}</div><div className="soc-stat-label">Incidents CRITICAL</div></div>
+          <div className="soc-stat-card high"><div className="soc-stat-val">{stats.open}</div><div className="soc-stat-label">Ouverts</div></div>
+          <div className="soc-stat-card incident"><div className="soc-stat-val">{stats.total}</div><div className="soc-stat-label">Total incidents</div></div>
+        </div>
+      )}
+
+      <div className="soc-panel" style={{ marginBottom: 12 }}>
+        <div className="soc-panel-title">Scanner un texte pour données sensibles</div>
+        <textarea className="soc-input" rows={4} style={{ width: '100%', resize: 'vertical', marginBottom: 8 }}
+          placeholder="Colle un texte, log ou code à analyser (API keys, IBAN, SSN, emails, mots de passe…)"
+          value={scan} onChange={e => setScan(e.target.value)} />
+        <button className="soc-search-btn" onClick={doScan} disabled={scanning}>
+          {scanning ? '⏳ Scan…' : '🔍 Scanner'}
+        </button>
+      </div>
+
+      {result && (
+        <div className="soc-rule-list" style={{ marginBottom: 12 }}>
+          <div className="soc-panel-title">
+            {result.total > 0 ? `⚠️ ${result.total} violation(s) détectée(s)` : '✅ Aucune donnée sensible détectée'}
+          </div>
+          {result.findings?.map((f, i) => (
+            <div key={i} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span className="soc-rule-name">{f.label}</span>
+                <Badge text={f.severity} color={SEV_COLOR[f.severity] || '#7c3aed'} />
+                <span className="soc-mitre-tag">{f.mitre}</span>
+              </div>
+              <div className="soc-rule-meta">
+                <span>{f.count} occurrence(s)</span>
+                <span style={{ fontFamily: 'monospace', color: '#f87171' }}>{f.snippet}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {policies && (
+        <div className="soc-rule-list">
+          <div className="soc-panel-title" style={{ marginBottom: 8 }}>{policies.length} politiques DLP</div>
+          {policies.map(p => (
+            <div key={p.name} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span className="soc-rule-name">{p.label}</span>
+                <Badge text={p.severity} color={SEV_COLOR[p.severity] || '#7c3aed'} />
+                <span className="soc-mitre-tag">{p.mitre}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── RANSOMWARE ────────────────────────────────────────────────────────────────
+function Ransomware() {
+  const [families, setFamilies] = useState(null)
+  const [stats, setStats]       = useState(null)
+  const [indicators, setInds]   = useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/ransomware/families`).then(d => setFamilies(d.families))
+    f(`${BASE}/ransomware/stats`).then(setStats)
+    f(`${BASE}/ransomware/indicators`).then(d => setInds(d.indicators))
+  }, [])
+
+  const THREAT_COLOR = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 12 }}>
+          <div className="soc-stat-card critical"><div className="soc-stat-val">{stats.active}</div><div className="soc-stat-label">Détections actives</div></div>
+          <div className="soc-stat-card high"><div className="soc-stat-val">{stats.known_families}</div><div className="soc-stat-label">Familles connues</div></div>
+          <div className="soc-stat-card incident"><div className="soc-stat-val">{stats.behavioral_indicators}</div><div className="soc-stat-label">Indicateurs comportementaux</div></div>
+        </div>
+      )}
+
+      {families && (
+        <div className="soc-rule-list" style={{ marginBottom: 16 }}>
+          <div className="soc-panel-title" style={{ marginBottom: 8 }}>Familles de ransomwares connus</div>
+          {families.map(fam => (
+            <div key={fam.name} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span className="soc-rule-name">{fam.name}</span>
+                {fam.aka && <span style={{ fontSize: '0.72rem', color: 'var(--text2)' }}>alias: {fam.aka}</span>}
+                <Badge text={fam.threat_level} color={THREAT_COLOR[fam.threat_level] || '#7c3aed'} />
+                <span style={{ fontSize: '0.68rem', color: 'var(--text3)' }}>{fam.known_victims}+ victimes</span>
+              </div>
+              <div className="soc-rule-meta">
+                <span>{fam.encryption}</span>
+                <span style={{ fontFamily: 'monospace', color: 'var(--elec)' }}>{fam.extension}</span>
+                <span>Dwell: {fam.avg_dwell_days}j</span>
+                <span style={{ color: '#34d399' }}>depuis {fam.first_seen}</span>
+              </div>
+              <div style={{ fontSize: '0.73rem', color: 'var(--text2)', marginTop: 4, paddingLeft: 4 }}>
+                {fam.description}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PHISHING ──────────────────────────────────────────────────────────────────
+function Phishing() {
+  const [stats, setStats]     = useState(null)
+  const [indicators, setInds] = useState(null)
+  const [form, setForm]       = useState({ sender: '', subject: '', body: '' })
+  const [result, setResult]   = useState(null)
+  const [analyzing, setAn]    = useState(false)
+
+  useEffect(() => {
+    f(`${BASE}/phishing/stats`).then(setStats)
+    f(`${BASE}/phishing/indicators`).then(d => setInds(d.indicators))
+  }, [])
+
+  const analyze = async () => {
+    if (!form.sender) return
+    setAn(true)
+    const r = await fetch(`${BASE}/phishing/analyze`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    }).then(r => r.json()).catch(() => ({}))
+    setResult(r)
+    setAn(false)
+  }
+
+  const VERDICT_COLOR = { PHISHING: '#ef4444', BEC: '#f97316', SUSPICIOUS: '#eab308', CLEAN: '#34d399' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 12 }}>
+          <div className="soc-stat-card critical"><div className="soc-stat-val">{stats.phishing}</div><div className="soc-stat-label">Emails phishing</div></div>
+          <div className="soc-stat-card high"><div className="soc-stat-val">{stats.bec}</div><div className="soc-stat-label">BEC détectés</div></div>
+          <div className="soc-stat-card incident"><div className="soc-stat-val">{stats.total}</div><div className="soc-stat-label">Emails analysés</div></div>
+        </div>
+      )}
+
+      <div className="soc-panel" style={{ marginBottom: 12 }}>
+        <div className="soc-panel-title">Analyser un email</div>
+        {['sender', 'subject', 'body'].map(field => (
+          <div key={field} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text3)', marginBottom: 3 }}>
+              {field === 'sender' ? 'Expéditeur' : field === 'subject' ? 'Objet' : 'Corps (optionnel)'}
+            </div>
+            {field === 'body' ? (
+              <textarea className="soc-input" rows={3} style={{ width: '100%', resize: 'vertical' }}
+                value={form[field]} onChange={e => setForm(p => ({...p, [field]: e.target.value}))} />
+            ) : (
+              <input className="soc-input" style={{ width: '100%' }}
+                value={form[field]} onChange={e => setForm(p => ({...p, [field]: e.target.value}))}
+                placeholder={field === 'sender' ? 'ex: ceo@company-secure.xyz' : 'ex: Urgent - Virement requis'} />
+            )}
+          </div>
+        ))}
+        <button className="soc-search-btn" onClick={analyze} disabled={analyzing || !form.sender}>
+          {analyzing ? '⏳ Analyse…' : '🔍 Analyser'}
+        </button>
+      </div>
+
+      {result && (
+        <div className="soc-rule-card" style={{ marginBottom: 12, borderLeft: `3px solid ${VERDICT_COLOR[result.verdict] || '#7c3aed'}` }}>
+          <div className="soc-rule-header">
+            <span className="soc-rule-name">Score : {result.score}/100</span>
+            <Badge text={result.verdict || 'CLEAN'} color={VERDICT_COLOR[result.verdict] || '#34d399'} />
+            <span style={{ fontSize: '0.7rem', color: 'var(--text3)' }}>
+              SPF:{result.spf} DKIM:{result.dkim} DMARC:{result.dmarc}
+            </span>
+          </div>
+          {result.indicators_detail?.map(ind => (
+            <div key={ind.code} className="soc-rule-meta" style={{ marginTop: 4 }}>
+              <span>⚠️ {ind.label}</span>
+              <span style={{ color: '#f97316' }}>+{ind.score}pts</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── OSINT APT ─────────────────────────────────────────────────────────────────
+function Osint() {
+  const [actors, setActors]   = useState(null)
+  const [stats, setStats]     = useState(null)
+  const [search, setSearch]   = useState('')
+  const [results, setResults] = useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/osint/stats`).then(setStats)
+    f(`${BASE}/osint/actors`).then(setActors)
+  }, [])
+
+  const doSearch = async () => {
+    const r = await fetch(`${BASE}/osint/search`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: search }),
+    }).then(r => r.json()).catch(() => ({}))
+    setResults(r.results || [])
+  }
+
+  const SPONSOR_COLOR = { STATE: '#ef4444', CRIMINAL: '#f97316', HACKTIVISM: '#eab308', UNKNOWN: '#64748b' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 12 }}>
+          <div className="soc-stat-card critical"><div className="soc-stat-val">{stats.active_actors}</div><div className="soc-stat-label">Groupes APT actifs</div></div>
+          <div className="soc-stat-card high"><div className="soc-stat-val">{stats.total_actors}</div><div className="soc-stat-label">Acteurs total</div></div>
+          <div className="soc-stat-card incident"><div className="soc-stat-val">{stats.investigations}</div><div className="soc-stat-label">Investigations</div></div>
+        </div>
+      )}
+
+      <div className="soc-search-bar">
+        <input className="soc-input"
+          placeholder="Rechercher un groupe (ex: APT28, Fancy Bear, Russie, ransomware…)"
+          value={search} onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && doSearch()} />
+        <button className="soc-search-btn" onClick={doSearch}>Rechercher</button>
+      </div>
+
+      <div className="soc-rule-list">
+        {(results || actors?.actors || []).map(a => (
+          <div key={a.id || a.name} className="soc-rule-card">
+            <div className="soc-rule-header">
+              <span className="soc-rule-name">{a.name}</span>
+              <Badge text={a.threat_level} color={SEV_COLOR[a.threat_level] || '#7c3aed'} />
+              {a.sponsor && <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 4,
+                background: `${SPONSOR_COLOR[a.sponsor] || '#64748b'}22`,
+                color: SPONSOR_COLOR[a.sponsor] || '#64748b', border: `1px solid ${SPONSOR_COLOR[a.sponsor] || '#64748b'}44` }}>
+                {a.sponsor}
+              </span>}
+              <span style={{ fontSize: '0.68rem', color: a.is_active ? '#34d399' : '#64748b' }}>
+                {a.is_active ? '● actif' : '● inactif'}
+              </span>
+            </div>
+            <div className="soc-rule-meta">
+              <span>{a.country}</span>
+              {a.aliases?.slice(0,2).map(al => <span key={al} style={{ color: 'var(--text3)' }}>{al}</span>)}
+              <span>{a.target_sectors?.slice(0,3).join(', ')}</span>
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text2)', marginTop: 4, paddingLeft: 4, lineHeight: 1.4 }}>
+              {a.description?.slice(0, 120)}{a.description?.length > 120 ? '…' : ''}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Onglets ───────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'dashboard', label: '📊 Dashboard' },
   { id: 'alerts',    label: '🔴 Alertes'   },
   { id: 'incidents', label: '🚨 Incidents'  },
-  { id: 'ml',        label: '🧠 ML Anomaly' },
+  // Phase 2
+  { id: 'ml',        label: '🧠 ML'         },
   { id: 'edr',       label: '🖥️ EDR'        },
   { id: 'nta',       label: '🌐 NTA'        },
   { id: 'ti',        label: '🔎 Threat Intel'},
   { id: 'ids',       label: '🛡️ IDS'        },
+  // Phase 3
+  { id: 'dlp',       label: '📋 DLP'        },
+  { id: 'ransom',    label: '💀 Ransomware'  },
+  { id: 'phish',     label: '🎣 Phishing'   },
+  { id: 'osint',     label: '🕵️ APT/OSINT'  },
+  // Fondation
   { id: 'siem',      label: '⚙️ SIEM'       },
   { id: 'soar',      label: '🤖 SOAR'       },
   { id: 'mitre',     label: '🗺️ MITRE'      },
@@ -688,6 +980,10 @@ export default function SocView() {
         {tab === 'nta'       && <Nta />}
         {tab === 'ti'        && <ThreatIntel />}
         {tab === 'ids'       && <Ids />}
+        {tab === 'dlp'       && <Dlp />}
+        {tab === 'ransom'    && <Ransomware />}
+        {tab === 'phish'     && <Phishing />}
+        {tab === 'osint'     && <Osint />}
         {tab === 'siem'      && <Siem />}
         {tab === 'soar'      && <Soar />}
         {tab === 'mitre'     && <Mitre />}
