@@ -18,9 +18,10 @@ const NAV = [
   { id: 'knowledge', icon: '📚', label: 'Know'      },
   { id: 'life',      icon: '🎯', label: 'Life'      },
   { id: 'vision',    icon: '👁️', label: 'Vision'    },
+  { id: 'autonomy',  icon: '⏰', label: 'Auto'      },
 ]
 
-export default function Sidebar({ view, onNav, theme, onTheme, onNewChat }) {
+export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertCount = 0 }) {
   const [showThemes,  setShowThemes]  = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef(null)
@@ -83,9 +84,13 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat }) {
             className={`nav-btn ${view === item.id ? 'active' : ''}`}
             onClick={() => onNav(item.id)}
             title={item.label}
+            style={{ position: 'relative' }}
           >
             <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
             <span className="nav-label">{item.label}</span>
+            {item.id === 'autonomy' && alertCount > 0 && (
+              <span className="sidebar-alert-badge">{alertCount > 9 ? '9+' : alertCount}</span>
+            )}
           </button>
         ))}
 

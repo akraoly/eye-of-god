@@ -1679,3 +1679,77 @@ kbd {
 .vis-analysis-body li { margin-bottom: 0.2em; }
 .vis-analysis-body strong { color: var(--gold); }
 .vis-analysis-body code { background: var(--glass2); border-radius: 4px; padding: 1px 5px; font-size: 0.8em; }
+
+/* ── Sidebar alert badge ──────────────────────────────────────────────────── */
+.sidebar-alert-badge {
+  position: absolute; top: 4px; right: 4px;
+  background: #ef4444; color: white; font-size: 0.5rem;
+  font-weight: 700; border-radius: 99px; min-width: 14px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px; line-height: 1; pointer-events: none;
+}
+
+/* ── AutonomyView ─────────────────────────────────────────────────────────── */
+.aut-badge {
+  background: #ef4444; color: white; font-size: 0.6rem; font-weight: 700;
+  border-radius: 99px; min-width: 16px; height: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 4px; margin-left: 4px; vertical-align: middle;
+}
+
+/* Tâches */
+.aut-task-card {
+  background: var(--glass2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+.aut-task-card.disabled { opacity: 0.5; }
+.aut-task-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.aut-task-info   { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
+.aut-task-name   { font-size:0.86rem; font-weight:600; color:var(--text);
+                   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.aut-kind-badge  { font-size:0.65rem; padding:2px 6px; border-radius:5px;
+                   background:var(--glow2); border:1px solid var(--border2); color:var(--accent); flex-shrink:0; }
+.aut-task-actions{ display:flex; gap:4px; flex-shrink:0; }
+.aut-run-btn     { color:var(--green); }
+.aut-task-meta   { display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap; }
+.aut-task-cmd    { font-size:0.72rem; color:var(--text2); font-family:monospace;
+                   background:var(--glass2); border-radius:4px; padding:1px 5px;
+                   max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aut-task-sched  { font-size:0.7rem; color:var(--text3); }
+.aut-task-next   { font-size:0.7rem; color:var(--text3); }
+.aut-presets     { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px; }
+
+/* Alertes */
+.aut-alert-card {
+  background: var(--glass2); border: 1px solid var(--border);
+  border-left: 3px solid #888; border-radius: 8px; padding: 10px 12px;
+}
+.aut-alert-card.unread { background: rgba(124,58,237,0.07); border-color: var(--border2); }
+.aut-alert-header { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.aut-alert-icon  { font-size:0.95rem; flex-shrink:0; }
+.aut-alert-title { flex:1; font-size:0.83rem; font-weight:600; color:var(--text); }
+.aut-alert-source{ font-size:0.65rem; color:var(--text3); background:var(--glass2);
+                   border:1px solid var(--border); border-radius:4px; padding:1px 6px; flex-shrink:0; }
+.aut-alert-body  { font-size:0.78rem; color:var(--text2); margin-bottom:4px; line-height:1.5; }
+.aut-alert-ts    { font-size:0.65rem; color:var(--text3); }
+
+/* Moniteurs */
+.aut-snap-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px; }
+.aut-snap-card { background:var(--glass2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+.aut-snap-label { font-size:0.65rem; color:var(--text3); text-transform:uppercase; letter-spacing:0.06em; }
+.aut-snap-val   { font-size:1.2rem; font-weight:700; color:var(--text); margin:2px 0 4px; }
+.aut-snap-sub   { font-size:0.65rem; color:var(--text3); margin-top:2px; }
+.aut-metric-bar { height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+.aut-metric-fill{ height:100%; border-radius:3px; transition:width 0.4s; }
+
+.aut-monitor-row { display:flex; align-items:center; gap:10px;
+                   padding:8px 10px; background:var(--glass2);
+                   border:1px solid var(--border); border-radius:8px; }
+.aut-monitor-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.aut-monitor-dot.on  { background:var(--green); box-shadow:0 0 6px var(--green); }
+.aut-monitor-dot.off { background:var(--text3); }
+.aut-monitor-info { flex:1; }
+.aut-monitor-name { font-size:0.82rem; font-weight:600; color:var(--text); }
+.aut-monitor-desc { font-size:0.7rem; color:var(--text3); }
+.aut-monitor-next { font-size:0.7rem; color:var(--text3); flex-shrink:0; }

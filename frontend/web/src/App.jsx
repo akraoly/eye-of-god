@@ -8,6 +8,7 @@ import CodeView from './components/CodeView'
 import KnowledgeView from './components/KnowledgeView'
 import LifeView from './components/LifeView'
 import VisionView from './components/VisionView'
+import AutonomyView from './components/AutonomyView'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -19,6 +20,7 @@ export default function App() {
 }
 
 function MainApp() {
+  const [alertCount, setAlertCount] = useState(0)
   const [sessionId, setSessionId] = useState(() => {
     const stored = localStorage.getItem('eye_session_id')
     if (stored) return stored
@@ -48,6 +50,7 @@ function MainApp() {
           view={view} onNav={setView}
           theme={theme} onTheme={setTheme}
           onNewChat={handleNewChat}
+          alertCount={alertCount}
         />
         <main className="main">
           {view === 'chat'      && <Chat sessionId={sessionId} onNewChat={handleNewChat} />}
@@ -58,6 +61,7 @@ function MainApp() {
           {view === 'knowledge' && <KnowledgeView />}
           {view === 'life'      && <LifeView />}
           {view === 'vision'    && <VisionView />}
+          {view === 'autonomy'  && <AutonomyView onUnreadChange={setAlertCount} />}
         </main>
       </div>
     </>

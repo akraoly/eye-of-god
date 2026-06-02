@@ -7,6 +7,26 @@ import uuid
 Base = declarative_base()
 
 
+class ScheduledTask(Base):
+    """Tâche planifiée — shell, http_check, etc."""
+    __tablename__ = "scheduled_tasks"
+
+    id               = Column(String(36), primary_key=True, default=lambda: str(_uuid.uuid4()))
+    name             = Column(String(255), nullable=False)
+    description      = Column(Text, nullable=True)
+    kind             = Column(String(30), default="shell")        # shell | http_check
+    command          = Column(Text, nullable=True)                # pour kind=shell
+    url              = Column(String(500), nullable=True)         # pour kind=http_check
+    schedule_type    = Column(String(20), default="interval")     # interval | cron | once
+    interval_seconds = Column(Integer, default=3600)
+    cron             = Column(String(100), nullable=True)
+    run_at           = Column(String(50), nullable=True)          # ISO datetime pour once
+    enabled          = Column(Boolean, default=True)
+    last_run         = Column(DateTime, nullable=True)
+    run_count        = Column(Integer, default=0)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+
+
 class AppUser(Base):
     """Utilisateur de l'application — auth locale."""
     __tablename__ = "app_users"
