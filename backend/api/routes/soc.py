@@ -28,6 +28,7 @@ from core.soc.sso_engine          import sso_engine
 from core.soc.reports_engine      import reports_engine
 from core.soc.hunt_engine         import hunt_engine
 from core.soc.correlation_engine  import correlation_engine
+from core.soc.uba_engine          import uba_engine
 
 router = APIRouter()
 
@@ -911,3 +912,68 @@ def correlation_timeline(hours: int = Query(24), db: Session = Depends(get_db)):
 @router.get("/correlation/sources")
 def correlation_sources(db: Session = Depends(get_db)):
     return correlation_engine.get_source_stats(db)
+
+
+# ── UBA ───────────────────────────────────────────────────────────────────────
+
+class UBAEventCreate(BaseModel):
+    username: str
+    action: str
+    success: bool = True
+    ip_address: Optional[str] = None
+    resource: Optional[str] = None
+    method: Optional[str] = None
+    user_id: Optional[str] = None
+    details: Optional[dict] = None
+
+
+class UBAStatusUpdate(BaseModel):
+    status: str   # OPEN|INVESTIGATING|FALSE_POSITIVE|CONFIRMED
+
+
+@router.post("/uba/events")
+def uba_log_event(body: UBAEventCreate, db: Session = Depends(get_db)):
+    return uba_engine.log_event(db, **body.model_dump())
+
+
+@router.post("/uba/analyze")
+async def uba_analyze():
+    result = await uba_engine.analyze()
+    return result
+
+
+@router.get("/uba/anomalies")
+def uba_anomalies(
+    status: Optional[str]   = Query(None),
+    severity: Optional[str] = Query(None),
+    atype: Optional[str]    = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, le=200),
+    db: Session = Depends(get_db),
+):
+    return uba_engine.list_anomalies(db, status=status, severity=severity,
+                                      atype=atype, page=page, per_page=per_page)
+
+
+@router.patch("/uba/anomalies/{anomaly_id}")
+def uba_update_anomaly(anomaly_id: int, body: UBAStatusUpdate,
+                        db: Session = Depends(get_db)):
+    a = uba_engine.update_anomaly(db, anomaly_id, body.status)
+    if not a:
+        return {"error": "Anomalie introuvable"}
+    return a
+
+
+@router.get("/uba/profiles")
+def uba_profiles(
+    risk_min: float = Query(0),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, le=200),
+    db: Session = Depends(get_db),
+):
+    return uba_engine.list_profiles(db, risk_min=risk_min, page=page, per_page=per_page)
+
+
+@router.get("/uba/stats")
+def uba_stats(db: Session = Depends(get_db)):
+    return uba_engine.stats(db)

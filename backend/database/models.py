@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, Floa
 from sqlalchemy.orm import declarative_base
 from datetime import datetime
 import uuid as _uuid
+import uuid
 
 Base = declarative_base()
 
@@ -589,3 +590,60 @@ class HuntFinding(Base):
     ioc_value   = Column(String(500), nullable=True)
     host        = Column(String(255), nullable=True)
     found_at    = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── User Behavior Analytics ─────────────────────────────────────────────────
+
+class UBAEventLog(Base):
+    """Journal d'activité utilisateur — source principale du moteur UBA."""
+    __tablename__ = "uba_events"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    username   = Column(String(100), nullable=False, index=True)
+    user_id    = Column(String(50), nullable=True, index=True)
+    action     = Column(String(100), nullable=False)            # LOGIN|LOGOUT|READ|WRITE|DELETE|ADMIN|EXPORT…
+    resource   = Column(String(255), nullable=True)
+    method     = Column(String(10), nullable=True)              # GET|POST|PUT|DELETE
+    ip_address = Column(String(45), nullable=True, index=True)
+    success    = Column(Boolean, default=True)
+    details    = Column(JSON, nullable=True)
+    timestamp  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class UBAAnomaly(Base):
+    """Anomalie comportementale détectée sur un utilisateur."""
+    __tablename__ = "uba_anomalies"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    anomaly_uuid = Column(String(36), nullable=False, unique=True,
+                          default=lambda: str(uuid.uuid4()))
+    user_id      = Column(String(50), nullable=True, index=True)
+    username     = Column(String(100), nullable=True, index=True)
+    anomaly_type = Column(String(30), nullable=False, index=True)   # ODD_HOUR_LOGIN|HIGH_VELOCITY|NEW_IP|…
+    severity     = Column(String(10), default="MEDIUM", index=True)
+    score        = Column(Float, default=0.0)                       # 0-100
+    description  = Column(Text, nullable=True)
+    details      = Column(JSON, nullable=True)
+    source_ip    = Column(String(45), nullable=True)
+    status       = Column(String(20), default="OPEN", index=True)   # OPEN|INVESTIGATING|FALSE_POSITIVE|CONFIRMED
+    alert_created= Column(Boolean, default=False)
+    detected_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class UBAProfile(Base):
+    """Profil comportemental de référence par utilisateur."""
+    __tablename__ = "uba_profiles"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    user_id       = Column(String(50), nullable=False, unique=True, index=True)
+    username      = Column(String(100), nullable=True)
+    risk_score    = Column(Float, default=0.0)                      # 0-100
+    total_events  = Column(Integer, default=0)
+    failed_logins = Column(Integer, default=0)
+    known_ips     = Column(JSON, nullable=True)                     # liste des IPs connues
+    usual_hours   = Column(JSON, nullable=True)                     # distribution horaire {heure: count}
+    last_seen     = Column(DateTime, nullable=True)
+    last_ip       = Column(String(45), nullable=True)
+    anomaly_count = Column(Integer, default=0)
+    is_high_risk  = Column(Boolean, default=False, index=True)
+    created_at    = Column(DateTime, default=datetime.utcnow)
