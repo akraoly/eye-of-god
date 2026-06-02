@@ -9,9 +9,10 @@ const THEMES = [
 ]
 
 const NAV = [
-  { id: 'chat',   icon: '💬', label: 'Chat' },
-  { id: 'soc',    icon: '🔴', label: 'SOC' },
-  { id: 'memory', icon: '🧠', label: 'Mémoire' },
+  { id: 'chat',      icon: '💬', label: 'Chat' },
+  { id: 'soc',       icon: '🔴', label: 'SOC' },
+  { id: 'offensive', icon: '⚔️', label: 'Offensive' },
+  { id: 'memory',    icon: '🧠', label: 'Mémoire' },
 ]
 
 const CAPS = [

