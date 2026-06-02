@@ -26,6 +26,8 @@ from core.soc.compliance_engine   import compliance_engine
 from core.soc.zero_trust_engine   import zero_trust_engine
 from core.soc.sso_engine          import sso_engine
 from core.soc.reports_engine      import reports_engine
+from core.soc.hunt_engine         import hunt_engine
+from core.soc.correlation_engine  import correlation_engine
 
 router = APIRouter()
 
@@ -821,3 +823,91 @@ def report_types():
 @router.post("/reports/generate/{report_type}")
 def generate_report(report_type: str, hours: int = Query(168), db: Session = Depends(get_db)):
     return reports_engine.generate(db, report_type, hours=hours)
+
+
+# ── THREAT HUNTING ────────────────────────────────────────────────────────────
+
+import asyncio as _asyncio
+
+class HuntCreate(BaseModel):
+    hypothesis: str
+    query_type: str = "IOC"     # IOC|BEHAVIOR|NETWORK|USER|CUSTOM
+    query_value: Optional[str] = None
+
+
+@router.post("/hunt")
+def create_hunt(body: HuntCreate, db: Session = Depends(get_db)):
+    from database.models import ThreatHunt
+    hunt = ThreatHunt(
+        hypothesis  = body.hypothesis,
+        query_type  = body.query_type,
+        query_value = body.query_value,
+        status      = "PENDING",
+    )
+    db.add(hunt)
+    db.commit()
+    db.refresh(hunt)
+
+    def _run():
+        _asyncio.run(hunt_engine.run_hunt(hunt.id))
+
+    import threading
+    threading.Thread(target=_run, daemon=True).start()
+    return {"id": hunt.id, "status": "PENDING", "message": "Chasse lancée en arrière-plan"}
+
+
+@router.get("/hunt")
+def list_hunts(page: int = Query(1, ge=1), per_page: int = Query(20, le=100),
+               db: Session = Depends(get_db)):
+    return hunt_engine.list_hunts(db, page=page, per_page=per_page)
+
+
+@router.get("/hunt/stats")
+def hunt_stats(db: Session = Depends(get_db)):
+    return hunt_engine.stats(db)
+
+
+@router.get("/hunt/{hunt_id}")
+def get_hunt(hunt_id: int, db: Session = Depends(get_db)):
+    h = hunt_engine.get_hunt(db, hunt_id)
+    if not h:
+        return {"error": "Chasse introuvable"}
+    return h
+
+
+@router.delete("/hunt/{hunt_id}")
+def delete_hunt(hunt_id: int, db: Session = Depends(get_db)):
+    return {"success": hunt_engine.delete_hunt(db, hunt_id)}
+
+
+# ── CORRELATION ───────────────────────────────────────────────────────────────
+
+@router.get("/correlation/run")
+def correlation_run(db: Session = Depends(get_db)):
+    incidents = correlation_engine.run_all(db)
+    return {"total": len(incidents), "incidents": incidents}
+
+
+@router.get("/correlation/stats")
+def correlation_stats(db: Session = Depends(get_db)):
+    return correlation_engine.stats(db)
+
+
+@router.get("/correlation/killchain")
+def correlation_killchain(db: Session = Depends(get_db)):
+    return correlation_engine.get_killchain_status(db)
+
+
+@router.get("/correlation/clusters")
+def correlation_clusters(window: int = Query(60), db: Session = Depends(get_db)):
+    return {"clusters": correlation_engine.cluster_alerts(db, window_minutes=window)}
+
+
+@router.get("/correlation/timeline")
+def correlation_timeline(hours: int = Query(24), db: Session = Depends(get_db)):
+    return {"events": correlation_engine.get_timeline(db, hours=hours)}
+
+
+@router.get("/correlation/sources")
+def correlation_sources(db: Session = Depends(get_db)):
+    return correlation_engine.get_source_stats(db)

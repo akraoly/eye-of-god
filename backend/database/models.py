@@ -550,3 +550,42 @@ class SsoProvider(Base):
     user_count     = Column(Integer, default=0)
     last_sync      = Column(DateTime, nullable=True)
     created_at     = Column(DateTime, default=datetime.utcnow)
+
+
+# ── Threat Hunting ──────────────────────────────────────────────────────────
+
+class ThreatHunt(Base):
+    """Campagne de Threat Hunting."""
+    __tablename__ = "threat_hunts"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    hypothesis     = Column(Text, nullable=False)               # "L'attaquant utilise C2 via DNS"
+    query_type     = Column(String(20), nullable=False)         # IOC|BEHAVIOR|NETWORK|USER|CUSTOM
+    query_value    = Column(String(500), nullable=True)         # IP, hash, pattern…
+    status         = Column(String(20), default="PENDING")      # PENDING|RUNNING|COMPLETED|FAILED
+    verdict        = Column(String(20), nullable=True)          # CONFIRMED|LIKELY|UNLIKELY|BENIGN|UNKNOWN
+    confidence     = Column(Float, default=0.0)                 # 0-100
+    findings_count = Column(Integer, default=0)
+    ai_analysis    = Column(JSON, nullable=True)                # rapport Claude
+    duration_sec   = Column(Integer, nullable=True)
+    started_at     = Column(DateTime, nullable=True)
+    finished_at    = Column(DateTime, nullable=True)
+    created_at     = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class HuntFinding(Base):
+    """Indicateur individuel trouvé lors d'une chasse."""
+    __tablename__ = "hunt_findings"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    hunt_id     = Column(Integer, nullable=False, index=True)
+    severity    = Column(String(10), default="MEDIUM")          # CRITICAL|HIGH|MEDIUM|LOW|INFO
+    source      = Column(String(30), nullable=True)             # alerts|intel|network|edr|nta
+    category    = Column(String(50), nullable=True)
+    title       = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    evidence    = Column(Text, nullable=True)
+    ioc_type    = Column(String(20), nullable=True)             # IP|DOMAIN|HASH|PATTERN|HOST
+    ioc_value   = Column(String(500), nullable=True)
+    host        = Column(String(255), nullable=True)
+    found_at    = Column(DateTime, default=datetime.utcnow, index=True)
