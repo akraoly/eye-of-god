@@ -417,3 +417,136 @@ class OsintInvestigation(Base):
     related_iocs  = Column(Text, nullable=True)              # JSON list d'IOCs liés
     notes         = Column(Text, nullable=True)
     investigated_at= Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── Tables SOC Phase 4 ──────────────────────────────────────────────────────
+
+class IamAccount(Base):
+    """Compte IAM — utilisateur, service, admin, partagé."""
+    __tablename__ = "iam_accounts"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    username        = Column(String(100), nullable=False, unique=True)
+    display_name    = Column(String(255), nullable=True)
+    email           = Column(String(255), nullable=True)
+    department      = Column(String(100), nullable=True)
+    job_title       = Column(String(100), nullable=True)
+    account_type    = Column(String(20), default="USER")       # USER|ADMIN|SERVICE|SHARED
+    is_privileged   = Column(Boolean, default=False)
+    is_admin        = Column(Boolean, default=False)
+    privilege_level = Column(String(30), default="STANDARD")   # STANDARD|PRIVILEGED|SUPER_ADMIN
+    groups          = Column(Text, nullable=True)              # JSON list
+    mfa_enabled     = Column(Boolean, default=False)
+    mfa_type        = Column(String(20), nullable=True)        # TOTP|FIDO2|SMS|NONE
+    password_age_days = Column(Integer, default=0)
+    failed_logins   = Column(Integer, default=0)
+    is_locked       = Column(Boolean, default=False)
+    is_dormant      = Column(Boolean, default=False)
+    risk_score      = Column(Float, default=0.0)
+    risk_reasons    = Column(Text, nullable=True)              # JSON list
+    status          = Column(String(20), default="ACTIVE")     # ACTIVE|DISABLED|LOCKED
+    source_system   = Column(String(50), default="manual")
+    last_login_ip   = Column(String(45), nullable=True)
+    last_login_at   = Column(DateTime, nullable=True)
+    created_at      = Column(DateTime, default=datetime.utcnow)
+    updated_at      = Column(DateTime, default=datetime.utcnow)
+
+
+class ComplianceControl(Base):
+    """Contrôle de conformité — état vérifié ou non."""
+    __tablename__ = "compliance_controls"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    control_id  = Column(String(20), nullable=False, unique=True)  # AC-1, AL-2…
+    category    = Column(String(50), nullable=False)
+    severity    = Column(String(10), default="MEDIUM")
+    title       = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    requirement = Column(Text, nullable=True)
+    status      = Column(String(20), default="NOT_ASSESSED")   # PASS|FAIL|PARTIAL|NOT_ASSESSED
+    score       = Column(Integer, default=0)                   # 0-100
+    evidence    = Column(Text, nullable=True)
+    remediation = Column(Text, nullable=True)
+    last_checked= Column(DateTime, nullable=True)
+
+
+class ComplianceAssessment(Base):
+    """Évaluation de conformité globale."""
+    __tablename__ = "compliance_assessments"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    framework      = Column(String(100), default="AEGIS Security Baseline")
+    total_controls = Column(Integer, default=0)
+    passed         = Column(Integer, default=0)
+    failed         = Column(Integer, default=0)
+    partial        = Column(Integer, default=0)
+    score_pct      = Column(Float, default=0.0)
+    notes          = Column(Text, nullable=True)
+    assessed_at    = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ZeroTrustPolicy(Base):
+    """Politique Zero Trust / NAC."""
+    __tablename__ = "zt_policies"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    name        = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    action      = Column(String(20), default="DENY")           # ALLOW|DENY|MFA_REQUIRED|AUDIT
+    conditions  = Column(Text, nullable=True)                  # JSON: {ip_range, user_groups, time_window, …}
+    priority    = Column(Integer, default=100)
+    enabled     = Column(Boolean, default=True)
+    hit_count   = Column(Integer, default=0)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+
+class ZeroTrustSession(Base):
+    """Session d'accès Zero Trust évaluée."""
+    __tablename__ = "zt_sessions"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    user         = Column(String(100), nullable=False, index=True)
+    source_ip    = Column(String(45), nullable=True)
+    resource     = Column(String(255), nullable=True)
+    device_id    = Column(String(100), nullable=True)
+    trust_score  = Column(Float, default=50.0)                 # 0-100
+    decision     = Column(String(20), default="PENDING")       # ALLOW|DENY|MFA|AUDIT
+    policy_id    = Column(Integer, nullable=True)
+    mfa_verified = Column(Boolean, default=False)
+    risk_factors = Column(Text, nullable=True)                 # JSON list
+    status       = Column(String(20), default="ACTIVE")        # ACTIVE|EXPIRED|REVOKED
+    created_at   = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at   = Column(DateTime, nullable=True)
+
+
+class ZeroTrustAccessLog(Base):
+    """Journal des décisions d'accès Zero Trust."""
+    __tablename__ = "zt_access_logs"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    user        = Column(String(100), nullable=False, index=True)
+    source_ip   = Column(String(45), nullable=True)
+    resource    = Column(String(255), nullable=True)
+    decision    = Column(String(20), nullable=False)
+    reason      = Column(Text, nullable=True)
+    trust_score = Column(Float, nullable=True)
+    policy_id   = Column(Integer, nullable=True)
+    session_id  = Column(Integer, nullable=True)
+    logged_at   = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class SsoProvider(Base):
+    """Configuration provider SSO — OAuth2/OIDC/SAML."""
+    __tablename__ = "sso_providers"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    name           = Column(String(100), nullable=False, unique=True)
+    provider_type  = Column(String(20), nullable=False)        # oauth2_google|oauth2_azure|oauth2_github|saml|oidc
+    client_id      = Column(String(500), nullable=True)
+    client_secret  = Column(String(500), nullable=True)        # stocké chiffré en prod
+    tenant_id      = Column(String(100), nullable=True)        # Azure AD
+    issuer_url     = Column(String(500), nullable=True)
+    enabled        = Column(Boolean, default=False)
+    user_count     = Column(Integer, default=0)
+    last_sync      = Column(DateTime, nullable=True)
+    created_at     = Column(DateTime, default=datetime.utcnow)

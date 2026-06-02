@@ -932,6 +932,302 @@ function Osint() {
   )
 }
 
+// ── IAM ───────────────────────────────────────────────────────────────────────
+function Iam() {
+  const [stats, setStats] = useState(null)
+  const [accounts, setAccounts] = useState(null)
+  const [mfa, setMfa] = useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/iam/stats`).then(setStats)
+    f(`${BASE}/iam/accounts?risk_min=50`).then(setAccounts)
+    f(`${BASE}/iam/mfa-audit`).then(setMfa)
+  }, [])
+
+  const RISK_COLOR = s => s >= 80 ? '#ef4444' : s >= 60 ? '#f97316' : s >= 40 ? '#eab308' : '#34d399'
+  const TYPE_ICON  = { ADMIN: '👑', SERVICE: '⚙️', SHARED: '👥', USER: '👤' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: 12 }}>
+          <div className="soc-stat-card critical"><div className="soc-stat-val">{stats.high_risk}</div><div className="soc-stat-label">Comptes à risque</div></div>
+          <div className="soc-stat-card high"><div className="soc-stat-val">{stats.no_mfa}</div><div className="soc-stat-label">Sans MFA</div></div>
+          <div className="soc-stat-card incident"><div className="soc-stat-val">{stats.dormant}</div><div className="soc-stat-label">Dormants</div></div>
+          <div className="soc-stat-card mitre"><div className="soc-stat-val">{stats.mfa_coverage_pct}%</div><div className="soc-stat-label">Couverture MFA</div></div>
+        </div>
+      )}
+
+      {mfa && mfa.privileged_without_mfa?.length > 0 && (
+        <div className="soc-panel" style={{ marginBottom: 12, borderLeft: '3px solid #ef4444' }}>
+          <div className="soc-panel-title">⚠️ Comptes privilégiés sans MFA ({mfa.privileged_without_mfa.length})</div>
+          {mfa.privileged_without_mfa.map(a => (
+            <div key={a.username} className="soc-bar-row">
+              <span className="soc-bar-label" style={{ color: '#ef4444' }}>{a.username}</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text2)' }}>{a.privilege_level}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {accounts && accounts.accounts?.length > 0 && (
+        <div>
+          <div className="soc-panel-title" style={{ margin: '8px 0' }}>Comptes à risque élevé</div>
+          <div className="soc-table">
+            <div className="soc-table-header" style={{ gridTemplateColumns: '28px 1fr 70px 80px 60px 80px' }}>
+              <span></span><span>Compte</span><span>Type</span><span>MFA</span><span>Risk</span><span>Statut</span>
+            </div>
+            {accounts.accounts.slice(0, 10).map(a => (
+              <div key={a.id} className="soc-table-row" style={{ gridTemplateColumns: '28px 1fr 70px 80px 60px 80px' }}>
+                <span>{TYPE_ICON[a.account_type] || '👤'}</span>
+                <span>
+                  <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{a.username}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text2)' }}>{a.department}</div>
+                </span>
+                <span style={{ fontSize: '0.7rem' }}>{a.account_type}</span>
+                <span style={{ fontSize: '0.72rem', color: a.mfa_enabled ? '#34d399' : '#ef4444' }}>
+                  {a.mfa_enabled ? `✅ ${a.mfa_type || 'activé'}` : '❌ aucun'}
+                </span>
+                <span style={{ fontWeight: 700, color: RISK_COLOR(a.risk_score) }}>{a.risk_score?.toFixed(0)}</span>
+                <span style={{ fontSize: '0.68rem', color: a.is_dormant ? '#f97316' : 'var(--text3)' }}>
+                  {a.is_dormant ? '💤 dormant' : a.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── COMPLIANCE ────────────────────────────────────────────────────────────────
+function Compliance() {
+  const [stats, setStats]     = useState(null)
+  const [controls, setControls] = useState(null)
+  const [assessing, setAssessing] = useState(false)
+
+  const load = () => {
+    f(`${BASE}/compliance/stats`).then(setStats)
+    f(`${BASE}/compliance/controls`).then(setControls)
+  }
+  useEffect(() => { load() }, [])
+
+  const assess = async () => {
+    setAssessing(true)
+    await fetch(`${BASE}/compliance/assess`, { method: 'POST' })
+    load()
+    setAssessing(false)
+  }
+
+  const STATUS_COLOR = { PASS: '#34d399', FAIL: '#ef4444', PARTIAL: '#eab308', NOT_ASSESSED: '#64748b' }
+  const STATUS_ICON  = { PASS: '✅', FAIL: '❌', PARTIAL: '⚠️', NOT_ASSESSED: '○' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-row" style={{ marginBottom: 12 }}>
+          <div className="soc-panel">
+            <div className="soc-panel-title">Score de conformité</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: stats.score_pct >= 70 ? '#34d399' : stats.score_pct >= 50 ? '#eab308' : '#ef4444' }}>
+              {stats.score_pct}%
+            </div>
+            <div className="soc-sub">{stats.framework}</div>
+            {[['Passés', stats.passed, '#34d399'], ['Échoués', stats.failed, '#ef4444'],
+              ['Partiels', stats.partial, '#eab308'], ['Non évalués', stats.not_assessed, '#64748b']
+            ].map(([label, val, color]) => (
+              <div key={label} className="soc-bar-row">
+                <span className="soc-bar-label">{label}</span>
+                <span className="soc-bar-count" style={{ color }}>{val}</span>
+              </div>
+            ))}
+            <button className="soc-link-btn" onClick={assess} disabled={assessing} style={{ marginTop: 10 }}>
+              {assessing ? '⏳ Évaluation…' : '▶ Lancer l\'évaluation'}
+            </button>
+          </div>
+          <div className="soc-panel">
+            <div className="soc-panel-title">Par catégorie</div>
+            {Object.entries(stats.by_category || {}).map(([cat, data]) => (
+              <div key={cat} className="soc-bar-row">
+                <span className="soc-bar-label" style={{ fontSize: '0.68rem' }}>{cat}</span>
+                <div className="soc-bar-track">
+                  <div className="soc-bar-fill" style={{
+                    width: `${(data.passed / (data.total || 1)) * 100}%`,
+                    background: data.passed / data.total >= 0.7 ? '#34d399' : '#eab308',
+                  }} />
+                </div>
+                <span className="soc-bar-count">{data.passed}/{data.total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {controls && (
+        <div className="soc-rule-list">
+          {controls.controls?.filter(c => c.status === 'FAIL' || c.status === 'NOT_ASSESSED').slice(0, 15).map(c => (
+            <div key={c.id} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span className="soc-mitre-id">{c.id}</span>
+                <span className="soc-rule-name">{c.title}</span>
+                <Badge text={c.severity} color={SEV_COLOR[c.severity] || '#7c3aed'} />
+                <span style={{ fontSize: '0.7rem', color: STATUS_COLOR[c.status] }}>
+                  {STATUS_ICON[c.status]} {c.status}
+                </span>
+              </div>
+              <div className="soc-rule-meta"><span>{c.category}</span><span style={{ color: 'var(--text2)' }}>{c.requirement?.slice(0,80)}</span></div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── ZERO TRUST ────────────────────────────────────────────────────────────────
+function ZeroTrust() {
+  const [policies, setPolicies] = useState(null)
+  const [stats, setStats]       = useState(null)
+  const [form, setForm]         = useState({ user: '', source_ip: '', resource: '/' })
+  const [evalResult, setEval]   = useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/zero-trust/policies`).then(d => setPolicies(d.policies))
+    f(`${BASE}/zero-trust/stats`).then(setStats)
+  }, [])
+
+  const evaluate = async () => {
+    const r = await fetch(`${BASE}/zero-trust/evaluate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    }).then(r => r.json()).catch(() => ({}))
+    setEval(r)
+    f(`${BASE}/zero-trust/stats`).then(setStats)
+  }
+
+  const DECISION_COLOR = { ALLOW: '#34d399', DENY: '#ef4444', MFA_REQUIRED: '#eab308', AUDIT: '#818cf8' }
+  const ACTION_COLOR   = { ALLOW: '#34d399', DENY: '#ef4444', MFA_REQUIRED: '#eab308', AUDIT: '#818cf8' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 12 }}>
+          <div className="soc-stat-card high"><div className="soc-stat-val">{stats.active_sessions}</div><div className="soc-stat-label">Sessions actives</div></div>
+          <div className="soc-stat-card critical"><div className="soc-stat-val">{stats.denied_sessions}</div><div className="soc-stat-label">Accès refusés</div></div>
+          <div className="soc-stat-card incident"><div className="soc-stat-val">{stats.active_policies}</div><div className="soc-stat-label">Politiques actives</div></div>
+        </div>
+      )}
+
+      <div className="soc-panel" style={{ marginBottom: 12 }}>
+        <div className="soc-panel-title">Évaluer un accès</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+          {[['user','Utilisateur','alice@company.local'],['source_ip','IP source','192.168.1.50'],['resource','Ressource','/admin/dashboard']].map(([key,label,ph]) => (
+            <div key={key}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text3)', marginBottom: 3 }}>{label}</div>
+              <input className="soc-input" style={{ width: '100%' }} placeholder={ph}
+                value={form[key]} onChange={e => setForm(p => ({...p, [key]: e.target.value}))} />
+            </div>
+          ))}
+        </div>
+        <button className="soc-search-btn" onClick={evaluate} disabled={!form.user}>Évaluer</button>
+        {evalResult && (
+          <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8,
+            background: `${DECISION_COLOR[evalResult.decision] || '#7c3aed'}18`,
+            border: `1px solid ${DECISION_COLOR[evalResult.decision] || '#7c3aed'}44` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: DECISION_COLOR[evalResult.decision] }}>
+                {evalResult.decision}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text2)' }}>Score de confiance: {evalResult.trust_score}/100</span>
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text2)' }}>
+              Facteurs: {evalResult.risk_factors?.join(', ') || 'aucun'}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {policies && (
+        <div className="soc-rule-list">
+          <div className="soc-panel-title" style={{ marginBottom: 8 }}>Politiques Zero Trust ({policies.length})</div>
+          {policies.map(p => (
+            <div key={p.id} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span style={{ fontSize: '0.68rem', color: 'var(--text3)', width: 30 }}>P{p.priority}</span>
+                <span className="soc-rule-name">{p.name}</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 5,
+                  background: `${ACTION_COLOR[p.action] || '#7c3aed'}22`,
+                  color: ACTION_COLOR[p.action] || '#7c3aed' }}>{p.action}</span>
+                <span style={{ fontSize: '0.65rem', color: p.enabled ? '#34d399' : '#64748b' }}>
+                  {p.enabled ? '● actif' : '● inactif'}
+                </span>
+              </div>
+              <div className="soc-rule-meta"><span>{p.description}</span></div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── REPORTS ───────────────────────────────────────────────────────────────────
+function Reports() {
+  const [types, setTypes]   = useState(null)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(null)
+
+  useEffect(() => { f(`${BASE}/reports/types`).then(d => setTypes(d.types)) }, [])
+
+  const generate = async (type) => {
+    setLoading(type)
+    const r = await fetch(`${BASE}/reports/generate/${type}`, { method: 'POST' })
+      .then(r => r.json()).catch(() => ({}))
+    setResult(r)
+    setLoading(null)
+  }
+
+  return (
+    <div className="soc-section">
+      {types && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+          {types.map(t => (
+            <button key={t.type} className="soc-stat-card high"
+              style={{ cursor: 'pointer', textAlign: 'left' }}
+              onClick={() => generate(t.type)} disabled={loading === t.type}>
+              <div className="soc-stat-val" style={{ fontSize: '1.8rem' }}>{t.icon}</div>
+              <div className="soc-stat-label" style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: 4 }}>
+                {loading === t.type ? '⏳ Génération…' : t.label}
+              </div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text3)', marginTop: 2 }}>{t.desc}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {result && !result.error && (
+        <div className="soc-panel" style={{ marginTop: 12 }}>
+          <div className="soc-panel-title">📄 {result.label}</div>
+          <div className="soc-sub">Généré le {new Date(result.generated_at).toLocaleString('fr-FR')} · Période: {result.period_hours}h</div>
+          <pre style={{ marginTop: 12, fontSize: '0.75rem', color: 'var(--text2)', lineHeight: 1.5,
+            background: 'var(--bg)', padding: '12px 14px', borderRadius: 8,
+            border: '1px solid var(--border)', overflow: 'auto', maxHeight: 300 }}>
+            {JSON.stringify(result.summary || result, null, 2)}
+          </pre>
+          {result.recommendations?.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Recommandations</div>
+              {result.recommendations.map((r, i) => (
+                <div key={i} style={{ fontSize: '0.75rem', color: 'var(--text2)', marginBottom: 3 }}>{r}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Onglets ───────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'dashboard', label: '📊 Dashboard' },
@@ -948,6 +1244,11 @@ const TABS = [
   { id: 'ransom',    label: '💀 Ransomware'  },
   { id: 'phish',     label: '🎣 Phishing'   },
   { id: 'osint',     label: '🕵️ APT/OSINT'  },
+  // Phase 4
+  { id: 'iam',       label: '👤 IAM'        },
+  { id: 'compliance',label: '✅ Compliance'  },
+  { id: 'zt',        label: '🔒 Zero Trust'  },
+  { id: 'reports',   label: '📄 Rapports'   },
   // Fondation
   { id: 'siem',      label: '⚙️ SIEM'       },
   { id: 'soar',      label: '🤖 SOAR'       },
@@ -972,21 +1273,25 @@ export default function SocView() {
         </div>
       </div>
       <div className="soc-content">
-        {tab === 'dashboard' && <Dashboard onTab={setTab} />}
-        {tab === 'alerts'    && <Alerts />}
-        {tab === 'incidents' && <Incidents />}
-        {tab === 'ml'        && <MlAnomaly />}
-        {tab === 'edr'       && <Edr />}
-        {tab === 'nta'       && <Nta />}
-        {tab === 'ti'        && <ThreatIntel />}
-        {tab === 'ids'       && <Ids />}
-        {tab === 'dlp'       && <Dlp />}
-        {tab === 'ransom'    && <Ransomware />}
-        {tab === 'phish'     && <Phishing />}
-        {tab === 'osint'     && <Osint />}
-        {tab === 'siem'      && <Siem />}
-        {tab === 'soar'      && <Soar />}
-        {tab === 'mitre'     && <Mitre />}
+        {tab === 'dashboard'  && <Dashboard onTab={setTab} />}
+        {tab === 'alerts'     && <Alerts />}
+        {tab === 'incidents'  && <Incidents />}
+        {tab === 'ml'         && <MlAnomaly />}
+        {tab === 'edr'        && <Edr />}
+        {tab === 'nta'        && <Nta />}
+        {tab === 'ti'         && <ThreatIntel />}
+        {tab === 'ids'        && <Ids />}
+        {tab === 'dlp'        && <Dlp />}
+        {tab === 'ransom'     && <Ransomware />}
+        {tab === 'phish'      && <Phishing />}
+        {tab === 'osint'      && <Osint />}
+        {tab === 'iam'        && <Iam />}
+        {tab === 'compliance' && <Compliance />}
+        {tab === 'zt'         && <ZeroTrust />}
+        {tab === 'reports'    && <Reports />}
+        {tab === 'siem'       && <Siem />}
+        {tab === 'soar'       && <Soar />}
+        {tab === 'mitre'      && <Mitre />}
       </div>
     </div>
   )

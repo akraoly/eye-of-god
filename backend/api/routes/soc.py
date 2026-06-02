@@ -21,6 +21,11 @@ from core.soc.dlp_engine          import dlp_engine
 from core.soc.ransomware_engine   import ransomware_engine
 from core.soc.phishing_engine     import phishing_engine
 from core.soc.osint_engine        import osint_engine
+from core.soc.iam_engine          import iam_engine
+from core.soc.compliance_engine   import compliance_engine
+from core.soc.zero_trust_engine   import zero_trust_engine
+from core.soc.sso_engine          import sso_engine
+from core.soc.reports_engine      import reports_engine
 
 router = APIRouter()
 
@@ -630,4 +635,189 @@ def get_dashboard(db: Session = Depends(get_db)):
         "ransomware": ransomware_engine.stats(db),
         "phishing":  phishing_engine.stats(db),
         "osint":     osint_engine.stats(db),
+        # Phase 4
+        "iam":       iam_engine.stats(db),
+        "compliance": compliance_engine.stats(db),
+        "zero_trust": zero_trust_engine.stats(db),
+        "sso":       sso_engine.stats(db),
     }
+
+
+# ── IAM ───────────────────────────────────────────────────────────────────────
+
+class IamAccountCreate(BaseModel):
+    username: str
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+    department: Optional[str] = None
+    job_title: Optional[str] = None
+    account_type: str = "USER"
+    is_privileged: bool = False
+    mfa_enabled: bool = False
+    mfa_type: Optional[str] = None
+    groups: Optional[List[str]] = None
+
+
+@router.post("/iam/init")
+def iam_init(db: Session = Depends(get_db)):
+    n = iam_engine.init_accounts(db)
+    return {"message": f"{n} comptes IAM chargés"}
+
+
+@router.get("/iam/accounts")
+def iam_accounts(account_type: Optional[str] = Query(None),
+                 risk_min: float = Query(0),
+                 page: int = Query(1), per_page: int = Query(50),
+                 db: Session = Depends(get_db)):
+    return iam_engine.list_accounts(db, account_type=account_type, risk_min=risk_min, page=page, per_page=per_page)
+
+
+@router.post("/iam/accounts")
+def iam_create_account(body: IamAccountCreate, db: Session = Depends(get_db)):
+    return iam_engine.create_account(db, **body.model_dump())
+
+
+@router.get("/iam/stats")
+def iam_stats(db: Session = Depends(get_db)):
+    return iam_engine.stats(db)
+
+
+@router.get("/iam/mfa-audit")
+def iam_mfa_audit(db: Session = Depends(get_db)):
+    return iam_engine.mfa_audit(db)
+
+
+# ── COMPLIANCE ────────────────────────────────────────────────────────────────
+
+@router.post("/compliance/init")
+def compliance_init(db: Session = Depends(get_db)):
+    n = compliance_engine.init_controls(db)
+    return {"message": f"{n} contrôles initialisés"}
+
+
+@router.get("/compliance/controls")
+def compliance_controls(category: Optional[str] = Query(None),
+                         status: Optional[str] = Query(None),
+                         severity: Optional[str] = Query(None),
+                         db: Session = Depends(get_db)):
+    return compliance_engine.get_controls(db, category=category, status=status, severity=severity)
+
+
+@router.post("/compliance/assess")
+def compliance_assess(db: Session = Depends(get_db)):
+    return compliance_engine.run_assessment(db)
+
+
+@router.patch("/compliance/controls/{control_id}")
+def compliance_update(control_id: str, body: dict, db: Session = Depends(get_db)):
+    return compliance_engine.update_control(db, control_id,
+                                             body.get("status", "NOT_ASSESSED"),
+                                             body.get("evidence"), body.get("remediation"))
+
+
+@router.get("/compliance/stats")
+def compliance_stats(db: Session = Depends(get_db)):
+    return compliance_engine.stats(db)
+
+
+# ── ZERO TRUST ────────────────────────────────────────────────────────────────
+
+class ZtEvaluate(BaseModel):
+    user: str
+    source_ip: Optional[str] = None
+    resource: str = "/"
+    device_id: Optional[str] = None
+    account: Optional[dict] = None
+
+
+@router.post("/zero-trust/init")
+def zt_init(db: Session = Depends(get_db)):
+    n = zero_trust_engine.init_policies(db)
+    return {"message": f"{n} politiques Zero Trust chargées"}
+
+
+@router.post("/zero-trust/evaluate")
+def zt_evaluate(body: ZtEvaluate, db: Session = Depends(get_db)):
+    return zero_trust_engine.evaluate(db, **body.model_dump())
+
+
+@router.get("/zero-trust/sessions")
+def zt_sessions(status: Optional[str] = Query(None),
+                page: int = Query(1), per_page: int = Query(50),
+                db: Session = Depends(get_db)):
+    return zero_trust_engine.list_sessions(db, status=status, page=page, per_page=per_page)
+
+
+@router.post("/zero-trust/sessions/{session_id}/revoke")
+def zt_revoke(session_id: int, db: Session = Depends(get_db)):
+    ok = zero_trust_engine.revoke_session(db, session_id)
+    return {"success": ok}
+
+
+@router.get("/zero-trust/policies")
+def zt_policies(db: Session = Depends(get_db)):
+    return {"policies": zero_trust_engine.list_policies(db)}
+
+
+@router.get("/zero-trust/access-logs")
+def zt_logs(hours: int = Query(24), page: int = Query(1), per_page: int = Query(50),
+            db: Session = Depends(get_db)):
+    return zero_trust_engine.access_logs(db, hours=hours, page=page, per_page=per_page)
+
+
+@router.get("/zero-trust/stats")
+def zt_stats(db: Session = Depends(get_db)):
+    return zero_trust_engine.stats(db)
+
+
+# ── SSO ───────────────────────────────────────────────────────────────────────
+
+class SsoCreate(BaseModel):
+    name: str
+    provider_type: str
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    tenant_id: Optional[str] = None
+    issuer_url: Optional[str] = None
+
+
+@router.get("/sso/providers")
+def sso_providers(db: Session = Depends(get_db)):
+    return {"providers": sso_engine.list_providers(db)}
+
+
+@router.get("/sso/presets")
+def sso_presets():
+    return {"presets": sso_engine.get_presets()}
+
+
+@router.post("/sso/providers")
+def sso_create(body: SsoCreate, db: Session = Depends(get_db)):
+    return sso_engine.create_provider(db, **body.model_dump())
+
+
+@router.patch("/sso/providers/{provider_id}/toggle")
+def sso_toggle(provider_id: int, body: dict, db: Session = Depends(get_db)):
+    return sso_engine.toggle_provider(db, provider_id, body.get("enabled", False))
+
+
+@router.delete("/sso/providers/{provider_id}")
+def sso_delete(provider_id: int, db: Session = Depends(get_db)):
+    return {"success": sso_engine.delete_provider(db, provider_id)}
+
+
+@router.get("/sso/stats")
+def sso_stats(db: Session = Depends(get_db)):
+    return sso_engine.stats(db)
+
+
+# ── REPORTS ───────────────────────────────────────────────────────────────────
+
+@router.get("/reports/types")
+def report_types():
+    return {"types": reports_engine.list_types()}
+
+
+@router.post("/reports/generate/{report_type}")
+def generate_report(report_type: str, hours: int = Query(168), db: Session = Depends(get_db)):
+    return reports_engine.generate(db, report_type, hours=hours)
