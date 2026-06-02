@@ -3,6 +3,8 @@ CyberAgent OSEE — dispatch intelligent vers les outils Kali.
 Détecte la catégorie de tâche, sélectionne l'outil, exécute, parse et analyse.
 """
 import re
+import os
+import tempfile
 from typing import Optional
 from core.agents.base_agent import BaseAgent
 from core.tools.terminal import terminal
@@ -41,11 +43,10 @@ _TRIGGER_MAP = {
     ],
     "reversing": [
         "gdb", "r2", "radare2", "objdump", "readelf", "nm", "strings",
-        "désassemble", "desassemble", "disassemble", "reverse", "re",
+        "désassemble", "desassemble", "disassemble", "reverse engineering",
         "rop", "gadget", "gadgets", "rop chain", "chaîne rop",
         "binwalk", "checksec", "protections", "mitigations", "pie", "aslr", "nx", "canary",
-        "ltrace", "strace", "binaire", "binary", "elf", "pe", "dll",
-        "pwndbg", "peda", "gef",
+        "ltrace", "strace", "binaire", "binary", "fichier elf", "pwndbg", "peda", "gef",
     ],
     "exploit_engine": [
         "cyclic", "pattern", "offset", "cyclic_find", "de bruijn",
@@ -151,16 +152,26 @@ class CyberAgent(BaseAgent):
         ])
 
     def _extract_direct_command(self, task: str) -> Optional[str]:
-        """Si la tâche commence par un outil reconnu, la traite comme commande directe."""
+        """
+        Si la tâche commence par un outil connu ET ressemble à une vraie commande
+        shell (2ème token = flag '-' ou chemin '/' ou IP), la traite directement.
+        Sinon, laisse les handlers catégorie interpréter le langage naturel.
+        """
         parts = task.strip().split()
-        if not parts:
+        if len(parts) < 2:
             return None
         tool = get_tool(parts[0].split("/")[-1])
-        if tool:
-            if tool.interactive:
-                return None  # Pas d'exécution non-interactive
-            return task.strip()
-        return None
+        if not tool or tool.interactive:
+            return None
+        second = parts[1]
+        # Reconnaître une vraie CLI : flag (-x), chemin (/tmp), IP (10.x), URL (http)
+        is_cli = (
+            second.startswith("-")
+            or second.startswith("/")
+            or second.startswith("http")
+            or re.match(r"^\d{1,3}\.\d{1,3}", second)
+        )
+        return task.strip() if is_cli else None
 
     # ── Exécution générique ───────────────────────────────────────────────────
 
@@ -262,22 +273,57 @@ class CyberAgent(BaseAgent):
 
         return self._run_command(cmd, task)
 
+    # ── Wordlist par défaut (rockyou décompressé ou fallback) ─────────────────
+
+    @staticmethod
+    def _best_wordlist() -> str:
+        for path in ["/tmp/rockyou.txt", "/usr/share/wordlists/rockyou.txt"]:
+            if os.path.isfile(path):
+                return path
+        return "/usr/share/wordlists/fasttrack.txt"
+
     def _handle_passwords(self, task: str) -> dict:
         t = task.lower()
         target = self._extract_target(task)
+        wordlist = self._best_wordlist()
 
-        if any(kw in t for kw in ["hashcat", "hash"]):
-            # Chercher un hash dans la tâche
-            hash_match = re.search(r"([a-fA-F0-9]{32,})", task)
+        if any(kw in t for kw in ["hashcat", "john", "hash", "crack"]):
+            hash_match = re.search(r"\b([a-fA-F0-9]{32,})\b", task)
             if hash_match:
                 hash_val = hash_match.group(1)
-                cmd = f"hashcat -a 0 {hash_val} /usr/share/wordlists/rockyou.txt"
+                hash_file = f"/tmp/hash_{hash_val[:8]}.txt"
+                with open(hash_file, "w") as f:
+                    f.write(hash_val + "\n")
+                length = len(hash_val)
+                # John the Ripper (CPU — fonctionne sans GPU)
+                fmt_map = {32: "raw-md5", 40: "raw-sha1", 64: "raw-sha256", 128: "raw-sha512"}
+                fmt = fmt_map.get(length, "raw-md5")
+                if "hashcat" in t:
+                    # Informe que hashcat nécessite GPU, propose john
+                    mode = {32: "0", 40: "100", 64: "1400", 128: "1700"}.get(length, "0")
+                    return self._result(True,
+                        f"Hash détecté : {hash_val} (longueur {length} → mode {mode})\n\n"
+                        f"hashcat (requiert GPU) :\n"
+                        f"  hashcat -m {mode} -a 0 {hash_file} {wordlist} --force\n\n"
+                        f"john (CPU, lance maintenant) :\n"
+                        f"  john {hash_file} --format={fmt} --wordlist={wordlist}\n\n"
+                        f"Lancement john...",
+                        {"hash": hash_val, "hash_file": hash_file})
+                cmd = f"john {hash_file} --format={fmt} --wordlist={wordlist}"
+            elif self._extract_file_path(task):
+                file_path = self._extract_file_path(task)
+                cmd = f"john {file_path} --wordlist={wordlist}"
             else:
                 return self._result(False, "Fournis le hash à cracker.",
-                                    {"hint": "Ex: hashcat -m 0 <hash> /usr/share/wordlists/rockyou.txt"})
+                                    {"hint": "Ex: crack 5f4dcc3b5aa765d61d8327deb882cf99 | john hash.txt"})
         elif any(kw in t for kw in ["john"]):
-            return self._result(False, "john nécessite un fichier. Ex: john hash.txt --wordlist=/usr/share/wordlists/rockyou.txt")
-        elif any(kw in t for kw in ["crackmapexec", "cme", "smb"]):
+            file_path = self._extract_file_path(task)
+            if not file_path:
+                return self._result(False,
+                    "john nécessite un fichier de hashes.\n"
+                    f"Ex: john hash.txt --wordlist={wordlist}")
+            cmd = f"john {file_path} --wordlist={wordlist}"
+        elif any(kw in t for kw in ["crackmapexec", "cme"]):
             if not target:
                 return self._result(False, "Spécifie une cible pour crackmapexec.")
             cmd = f"crackmapexec smb {target} -u users.txt -p passwords.txt"
@@ -285,10 +331,19 @@ class CyberAgent(BaseAgent):
             if not target:
                 return self._result(False, "Spécifie le DC pour kerbrute.")
             cmd = f"kerbrute userenum --dc {target} -d domain.local /usr/share/seclists/Usernames/Names/names.txt"
-        elif any(kw in t for kw in ["hydra", "ssh"]):
+        elif any(kw in t for kw in ["hydra"]):
             if not target:
                 return self._result(False, "Spécifie une cible pour hydra.")
-            cmd = f"hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://{target}"
+            if any(kw in t for kw in ["ftp"]):
+                cmd = f"hydra -l admin -P {wordlist} ftp://{target}"
+            elif any(kw in t for kw in ["http", "web", "login"]):
+                cmd = f"hydra -l admin -P {wordlist} {target} http-get /"
+            elif any(kw in t for kw in ["rdp"]):
+                cmd = f"hydra -l administrator -P {wordlist} rdp://{target}"
+            elif any(kw in t for kw in ["smb"]):
+                cmd = f"hydra -l administrator -P {wordlist} smb://{target}"
+            else:
+                cmd = f"hydra -l root -P {wordlist} ssh://{target}"
         else:
             return self._result(False, "Précise l'outil (hydra/hashcat/john/crackmapexec/kerbrute) et la cible.")
 
@@ -530,7 +585,17 @@ class CyberAgent(BaseAgent):
                 cmd = "airmon-ng check kill"
             else:
                 cmd = f"airmon-ng start {raw_iface}"
-            return self._run_command(cmd, task)
+            result = self._run_command(cmd, task)
+            if not result.get("success"):
+                out = result.get("output", "")
+                if not out.strip():
+                    result["output"] = (
+                        f"[airmon-ng] Interface {raw_iface} introuvable ou permissions insuffisantes.\n\n"
+                        "Interfaces disponibles : ip link show\n"
+                        "Lancer en root : sudo airmon-ng start wlan0\n\n"
+                        "Note : en VM, une clé Wi-Fi USB en passthrough est nécessaire."
+                    )
+            return result
 
         # airodump-ng — capture et découverte
         if any(kw in t for kw in ["airodump", "scanner wifi", "découvrir réseau", "capture wifi"]):
