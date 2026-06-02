@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from api.routes import chat, memory, user, system, exploit, code, knowledge, life, observe, soc, offensive
+from api.routes import chat, memory, user, system, exploit, code, knowledge, life, observe, soc, offensive, c2
 
 router = APIRouter()
 
@@ -14,3 +14,4 @@ router.include_router(life.router,      prefix="/life",      tags=["Life / Perso
 router.include_router(observe.router,   prefix="/observe",   tags=["Self Observation"])
 router.include_router(soc.router,       prefix="/soc",       tags=["SOC"])
 router.include_router(offensive.router, prefix="/offensive", tags=["Offensive — 4 Niveaux"])
+router.include_router(c2.router,        prefix="/c2",        tags=["C2 — Frameworks"])

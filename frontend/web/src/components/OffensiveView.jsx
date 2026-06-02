@@ -1,6 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 const API = '/api/offensive'
+const C2_API = '/api/c2'
+
+const C2_META = {
+  sliver:   { icon: '🐍', color: '#10b981', port: 31337, label: 'Sliver C2' },
+  havoc:    { icon: '🔥', color: '#f97316', port: 40056, label: 'Havoc C2' },
+  gophish:  { icon: '🎣', color: '#38bdf8', port: 3333,  label: 'Gophish' },
+  evilginx: { icon: '👁',  color: '#a78bfa', port: 443,   label: 'Evilginx' },
+}
 
 const LEVEL_STYLES = {
   1: { border: '#38bdf8', glow: 'rgba(56,189,248,0.25)', badge: '#0369a1' },
@@ -23,6 +31,11 @@ export default function OffensiveView() {
   const [running, setRunning]     = useState(false)
   const [binary, setBinary]       = useState('')
   const [target, setTarget]       = useState('')
+  const [c2Status, setC2Status]   = useState({})
+  const [c2Logs, setC2Logs]       = useState({})
+  const [c2Loading, setC2Loading] = useState({})
+  const [activeC2Log, setActiveC2Log] = useState(null)
+  const c2PollRef = useRef(null)
   const [pipeStage, setPipe]      = useState(null)
   const termRef = useRef(null)
 
@@ -36,6 +49,66 @@ export default function OffensiveView() {
   useEffect(() => {
     if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight
   }, [terminal])
+
+  // Charge l'état initial des C2
+  const refreshC2Status = useCallback(() => {
+    fetch(`${C2_API}/`)
+      .then(r => r.json())
+      .then(d => {
+        const map = {}
+        ;(d.c2s || []).forEach(s => { map[s.name] = s })
+        setC2Status(map)
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    refreshC2Status()
+  }, [refreshC2Status])
+
+  // Polling des logs pour les C2 actifs
+  useEffect(() => {
+    c2PollRef.current = setInterval(() => {
+      Object.values(c2Status).forEach(s => {
+        if (s.running) {
+          fetch(`${C2_API}/logs/${s.name}?n=60`)
+            .then(r => r.json())
+            .then(d => setC2Logs(prev => ({ ...prev, [s.name]: d.lines || [] })))
+            .catch(() => {})
+        }
+      })
+      // Refresh statuts
+      refreshC2Status()
+    }, 2000)
+    return () => clearInterval(c2PollRef.current)
+  }, [c2Status, refreshC2Status])
+
+  const startC2 = async (name) => {
+    setC2Loading(prev => ({ ...prev, [name]: true }))
+    try {
+      const r = await fetch(`${C2_API}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const d = await r.json()
+      log(`\n[C2] ${name.toUpperCase()} : ${d.message || d.error}`)
+      refreshC2Status()
+      if (d.success) setActiveC2Log(name)
+    } catch (e) { log(`[!] ${e.message}`) }
+    setC2Loading(prev => ({ ...prev, [name]: false }))
+  }
+
+  const stopC2 = async (name) => {
+    setC2Loading(prev => ({ ...prev, [name]: true }))
+    try {
+      const r = await fetch(`${C2_API}/stop/${name}`, { method: 'POST' })
+      const d = await r.json()
+      log(`\n[C2] ${name.toUpperCase()} : ${d.message || d.error}`)
+      refreshC2Status()
+    } catch (e) { log(`[!] ${e.message}`) }
+    setC2Loading(prev => ({ ...prev, [name]: false }))
+  }
 
   const log = (msg) => setTerminal(prev => prev + msg + '\n')
 
@@ -132,6 +205,95 @@ export default function OffensiveView() {
           style={{ ...btnStyle, background: 'rgba(255,255,255,0.06)', minWidth: 80 }}>
           Effacer
         </button>
+      </div>
+
+      {/* C2 Control Panel */}
+      <div style={c2PanelStyle}>
+        <div style={{ color: '#a78bfa', fontWeight: 600, fontSize: '0.8rem', marginBottom: 10, letterSpacing: 2 }}>
+          🧠 C2 FRAMEWORKS — CONTRÔLE EN TEMPS RÉEL
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {Object.entries(C2_META).map(([name, meta]) => {
+            const status = c2Status[name] || {}
+            const running = status.running
+            const loading = c2Loading[name]
+            const isLogOpen = activeC2Log === name
+            return (
+              <div key={name} style={{
+                background: running ? `${meta.color}18` : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${running ? meta.color : 'rgba(255,255,255,0.08)'}`,
+                borderRadius: 8, padding: '8px 10px',
+                transition: 'all 0.3s',
+                boxShadow: running ? `0 0 12px ${meta.color}40` : 'none',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: '1rem' }}>{meta.icon}</span>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: running ? '#10b981' : '#6b7280',
+                    boxShadow: running ? '0 0 6px #10b981' : 'none',
+                    display: 'inline-block',
+                  }} />
+                </div>
+                <div style={{ color: meta.color, fontWeight: 700, fontSize: '0.72rem', marginBottom: 1 }}>
+                  {meta.label}
+                </div>
+                <div style={{ color: 'var(--text-dim)', fontSize: '0.6rem', marginBottom: 4 }}>
+                  {running
+                    ? `PID ${status.pid} · port ${meta.port} · ${status.uptime || '...'}`
+                    : `port ${meta.port}`}
+                </div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {!running ? (
+                    <button
+                      onClick={() => startC2(name)}
+                      disabled={loading}
+                      style={{ ...c2BtnStyle, borderColor: meta.color, color: meta.color, flex: 1 }}
+                    >
+                      {loading ? '...' : '▶ Start'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => stopC2(name)}
+                      disabled={loading}
+                      style={{ ...c2BtnStyle, borderColor: '#ef4444', color: '#ef4444', flex: 1 }}
+                    >
+                      {loading ? '...' : '■ Stop'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setActiveC2Log(isLogOpen ? null : name)}
+                    style={{ ...c2BtnStyle, borderColor: 'rgba(255,255,255,0.15)', color: 'var(--text-dim)' }}
+                  >
+                    📋
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Viewer de logs C2 */}
+        {activeC2Log && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.65rem', marginBottom: 4, letterSpacing: 1 }}>
+              LOGS — {activeC2Log.toUpperCase()}
+              {c2Status[activeC2Log]?.running && (
+                <span style={{ color: '#10b981', marginLeft: 6 }}>● LIVE</span>
+              )}
+            </div>
+            <pre style={{
+              background: 'rgba(0,0,0,0.7)',
+              border: `1px solid ${C2_META[activeC2Log]?.color || '#333'}40`,
+              borderRadius: 6, padding: 10,
+              color: C2_META[activeC2Log]?.color || '#7fffb0',
+              fontSize: '0.65rem', fontFamily: 'monospace',
+              maxHeight: 160, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+            }}>
+              {(c2Logs[activeC2Log] || []).join('\n') || `(${activeC2Log} non démarré ou aucun log)`}
+            </pre>
+          </div>
+        )}
       </div>
 
       {/* Pipeline fuzzing → exploit */}
@@ -304,4 +466,22 @@ const pipelineBox = {
   border: '1px solid rgba(249,115,22,0.2)',
   borderRadius: 10,
   padding: 12,
+}
+
+const c2PanelStyle = {
+  background: 'rgba(167,139,250,0.04)',
+  border: '1px solid rgba(167,139,250,0.2)',
+  borderRadius: 10,
+  padding: 12,
+}
+
+const c2BtnStyle = {
+  background: 'transparent',
+  border: '1px solid',
+  borderRadius: 6,
+  padding: '3px 6px',
+  cursor: 'pointer',
+  fontSize: '0.65rem',
+  fontFamily: 'monospace',
+  transition: 'opacity 0.2s',
 }

