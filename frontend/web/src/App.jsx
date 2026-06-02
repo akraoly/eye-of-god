@@ -4,6 +4,9 @@ import Sidebar from './components/Sidebar'
 import StarField from './components/StarField'
 import SocView from './components/SocView'
 import OffensiveView from './components/OffensiveView'
+import CodeView from './components/CodeView'
+import KnowledgeView from './components/KnowledgeView'
+import LifeView from './components/LifeView'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -50,6 +53,9 @@ function MainApp() {
           {view === 'soc'       && <SocView />}
           {view === 'offensive' && <OffensiveView />}
           {view === 'memory'    && <MemoryView />}
+          {view === 'code'      && <CodeView />}
+          {view === 'knowledge' && <KnowledgeView />}
+          {view === 'life'      && <LifeView />}
         </main>
       </div>
     </>

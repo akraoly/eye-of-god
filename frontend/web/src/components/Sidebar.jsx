@@ -10,18 +10,13 @@ const THEMES = [
 ]
 
 const NAV = [
-  { id: 'chat',      icon: '💬', label: 'Chat' },
-  { id: 'soc',       icon: '🔴', label: 'SOC' },
-  { id: 'offensive', icon: '⚔️', label: 'Offensif' },
-  { id: 'memory',    icon: '🧠', label: 'Mémoire' },
-]
-
-const CAPS = [
-  { icon: '⚔️', label: 'OSEE' },
-  { icon: '🔬', label: 'RE'   },
-  { icon: '🛠️', label: 'Dev'  },
-  { icon: '📚', label: 'Know' },
-  { icon: '🎯', label: 'Life' },
+  { id: 'chat',      icon: '💬', label: 'Chat'      },
+  { id: 'soc',       icon: '🔴', label: 'SOC'       },
+  { id: 'offensive', icon: '⚔️', label: 'Offensif'  },
+  { id: 'memory',    icon: '🧠', label: 'Mémoire'   },
+  { id: 'code',      icon: '🛠️', label: 'Code'      },
+  { id: 'knowledge', icon: '📚', label: 'Know'      },
+  { id: 'life',      icon: '🎯', label: 'Life'      },
 ]
 
 export default function Sidebar({ view, onNav, theme, onTheme, onNewChat }) {
@@ -91,17 +86,6 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat }) {
             <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
             <span className="nav-label">{item.label}</span>
           </button>
-        ))}
-
-        <div className="sidebar-divider" />
-
-        {/* Capacités (non-cliquables) */}
-        {CAPS.map(c => (
-          <div key={c.label} className="nav-btn" title={c.label}
-            style={{ cursor: 'default', opacity: 0.35, pointerEvents: 'none' }}>
-            <span style={{ fontSize: '1rem' }}>{c.icon}</span>
-            <span className="nav-label">{c.label}</span>
-          </div>
         ))}
 
         <div className="sidebar-spacer" />
