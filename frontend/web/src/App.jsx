@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Chat from './components/Chat'
 import Sidebar from './components/Sidebar'
 import StarField from './components/StarField'
@@ -10,16 +10,12 @@ import './App.css'
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(auth.isLoggedIn())
-
-  if (!loggedIn) {
-    return <LoginPage onLogin={() => setLoggedIn(true)} />
-  }
-
+  if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />
   return <MainApp />
 }
 
 function MainApp() {
-  const [sessionId] = useState(() => {
+  const [sessionId, setSessionId] = useState(() => {
     const stored = localStorage.getItem('eye_session_id')
     if (stored) return stored
     const id = crypto.randomUUID()
@@ -33,13 +29,24 @@ function MainApp() {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
+  const handleNewChat = useCallback(() => {
+    const id = crypto.randomUUID()
+    localStorage.setItem('eye_session_id', id)
+    setSessionId(id)
+    setView('chat')
+  }, [])
+
   return (
     <>
       <StarField theme={theme} />
       <div className="app">
-        <Sidebar view={view} onNav={setView} theme={theme} onTheme={setTheme} />
+        <Sidebar
+          view={view} onNav={setView}
+          theme={theme} onTheme={setTheme}
+          onNewChat={handleNewChat}
+        />
         <main className="main">
-          {view === 'chat'      && <Chat sessionId={sessionId} />}
+          {view === 'chat'      && <Chat sessionId={sessionId} onNewChat={handleNewChat} />}
           {view === 'soc'       && <SocView />}
           {view === 'offensive' && <OffensiveView />}
           {view === 'memory'    && <MemoryView />}

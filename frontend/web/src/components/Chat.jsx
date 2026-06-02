@@ -75,7 +75,7 @@ function AssistantBubble({ msg, isLast }) {
   )
 }
 
-export default function Chat({ sessionId }) {
+export default function Chat({ sessionId, onNewChat }) {
   const [messages,      setMessages]      = useState([])
   const [input,         setInput]         = useState('')
   const [loading,       setLoading]       = useState(false)
@@ -133,7 +133,6 @@ export default function Chat({ sessionId }) {
 
   const onKey = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
   const onVoiceTranscript = text => { setInput(text); send(text) }
-  const handleNewChat = () => { resetSession(); window.location.reload() }
 
   // ── Spinner ───────────────────────────────────────────────────────────
   if (!historyLoaded) {
@@ -169,7 +168,7 @@ export default function Chat({ sessionId }) {
   // ── Vue conversation ──────────────────────────────────────────────────
   return (
     <div className="chat">
-      <ChatHeader eyeState={eyeState} msgCount={messages.length} onNew={handleNewChat} />
+      <ChatHeader eyeState={eyeState} msgCount={messages.length} onNew={onNewChat} />
 
       <div className="messages">
         {messages.map((m, i) => {

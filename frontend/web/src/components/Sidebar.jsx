@@ -1,46 +1,58 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { logout, auth } from '../utils/auth'
 
 const THEMES = [
-  { id: 'galactic', icon: '🌌', label: 'Galactique' },
-  { id: 'divine',   icon: '✨', label: 'Divin'      },
-  { id: 'cyberpunk',icon: '⚡', label: 'Cyberpunk'  },
-  { id: 'alien',    icon: '🛸', label: 'Civilisation extraterrestre' },
-  { id: 'temple',   icon: '🔥', label: 'Temple numérique' },
+  { id: 'galactic',  icon: '🌌', label: 'Galactique' },
+  { id: 'divine',    icon: '✨', label: 'Divin'      },
+  { id: 'cyberpunk', icon: '⚡', label: 'Cyberpunk'  },
+  { id: 'alien',     icon: '🛸', label: 'Civilisation extraterrestre' },
+  { id: 'temple',    icon: '🔥', label: 'Temple numérique' },
 ]
 
 const NAV = [
   { id: 'chat',      icon: '💬', label: 'Chat' },
   { id: 'soc',       icon: '🔴', label: 'SOC' },
-  { id: 'offensive', icon: '⚔️', label: 'Offensive' },
+  { id: 'offensive', icon: '⚔️', label: 'Offensif' },
   { id: 'memory',    icon: '🧠', label: 'Mémoire' },
 ]
 
 const CAPS = [
-  { icon: '⚔️', label: 'OSEE'  },
-  { icon: '🔬', label: 'RE'    },
-  { icon: '🛠️', label: 'Dev'   },
-  { icon: '📚', label: 'Know'  },
-  { icon: '🎯', label: 'Life'  },
+  { icon: '⚔️', label: 'OSEE' },
+  { icon: '🔬', label: 'RE'   },
+  { icon: '🛠️', label: 'Dev'  },
+  { icon: '📚', label: 'Know' },
+  { icon: '🎯', label: 'Life' },
 ]
 
-export default function Sidebar({ view, onNav, theme, onTheme }) {
-  const [showThemes, setShowThemes] = useState(false)
+export default function Sidebar({ view, onNav, theme, onTheme, onNewChat }) {
+  const [showThemes,  setShowThemes]  = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const userMenuRef = useRef(null)
+  const user = auth.getUser()
+  const initials = (user?.display_name || user?.username || '?')
+    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+
+  // Fermer le menu user en cliquant ailleurs
+  useEffect(() => {
+    const close = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false)
+      }
+    }
+    if (showUserMenu) document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [showUserMenu])
 
   return (
     <>
       {/* Panel thème */}
       {showThemes && (
         <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-            onClick={() => setShowThemes(false)}
-          />
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowThemes(false)} />
           <div className="theme-overlay">
             <div className="theme-panel">
               {THEMES.map(t => (
-                <button
-                  key={t.id}
+                <button key={t.id}
                   className={`theme-option ${theme === t.id ? 'selected' : ''}`}
                   onClick={() => { onTheme(t.id); setShowThemes(false) }}
                 >
@@ -58,10 +70,20 @@ export default function Sidebar({ view, onNav, theme, onTheme }) {
         <div className="sidebar-logo">👁️</div>
         <div className="status-dot-sidebar" title="En ligne" />
 
+        {/* ── Nouveau chat ── */}
+        <button className="sidebar-new-chat" onClick={onNewChat} title="Nouveau chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          <span className="nav-label">Nouveau</span>
+        </button>
+
+        <div className="sidebar-divider" style={{ margin: '6px 0' }} />
+
         {/* Navigation principale */}
         {NAV.map(item => (
-          <button
-            key={item.id}
+          <button key={item.id}
             className={`nav-btn ${view === item.id ? 'active' : ''}`}
             onClick={() => onNav(item.id)}
             title={item.label}
@@ -75,8 +97,8 @@ export default function Sidebar({ view, onNav, theme, onTheme }) {
 
         {/* Capacités (non-cliquables) */}
         {CAPS.map(c => (
-          <div key={c.icon} className="nav-btn" title={c.label}
-            style={{ cursor: 'default', opacity: 0.45, pointerEvents: 'none' }}>
+          <div key={c.label} className="nav-btn" title={c.label}
+            style={{ cursor: 'default', opacity: 0.35, pointerEvents: 'none' }}>
             <span style={{ fontSize: '1rem' }}>{c.icon}</span>
             <span className="nav-label">{c.label}</span>
           </div>
@@ -89,16 +111,31 @@ export default function Sidebar({ view, onNav, theme, onTheme }) {
           {THEMES.find(t => t.id === theme)?.icon || '🌌'}
         </button>
 
-        {/* Logout */}
-        <button
-          className="nav-btn"
-          onClick={logout}
-          title={`Déconnexion (${auth.getUser()?.username || ''})`}
-          style={{ marginTop: '0.25rem', opacity: 0.7, fontSize: '1rem' }}
-        >
-          <span style={{ fontSize: '1rem' }}>🚪</span>
-          <span className="nav-label">Quitter</span>
-        </button>
+        {/* ── Zone utilisateur ── */}
+        <div className="sidebar-user-zone" ref={userMenuRef}>
+          {showUserMenu && (
+            <div className="sidebar-user-menu">
+              <div className="sidebar-user-menu-name">
+                {user?.display_name || user?.username}
+              </div>
+              <button className="sidebar-user-menu-logout" onClick={logout}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Se déconnecter
+              </button>
+            </div>
+          )}
+          <button
+            className="sidebar-user-btn"
+            onClick={() => setShowUserMenu(v => !v)}
+            title={user?.username}
+          >
+            <div className="sidebar-user-avatar">{initials}</div>
+          </button>
+        </div>
       </aside>
     </>
   )

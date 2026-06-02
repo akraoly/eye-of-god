@@ -1332,3 +1332,100 @@ kbd {
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Sidebar — Nouveau chat ───────────────────────────────────────────────── */
+.sidebar-new-chat {
+  width: 44px; height: 44px;
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.4);
+  border-radius: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  color: var(--accent);
+  transition: all 0.2s;
+  margin-bottom: 2px;
+}
+.sidebar-new-chat:hover {
+  background: rgba(124,58,237,0.28);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(124,58,237,0.25);
+  transform: scale(1.04);
+}
+.sidebar-new-chat .nav-label { font-size: 0.44rem; color: var(--accent); }
+
+/* ── Sidebar — Zone utilisateur ──────────────────────────────────────────── */
+.sidebar-user-zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.sidebar-user-btn {
+  width: 44px; height: 44px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+.sidebar-user-btn:hover {
+  border-color: var(--border2);
+  background: var(--glow2);
+}
+.sidebar-user-avatar {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700;
+  color: white; letter-spacing: 0.04em;
+}
+
+/* Menu popup utilisateur */
+.sidebar-user-menu {
+  position: fixed;
+  bottom: 12px;
+  left: 76px;
+  min-width: 170px;
+  background: var(--surface, #12101f);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex; flex-direction: column; gap: 4px;
+  animation: menuPop 0.12s ease;
+}
+@keyframes menuPop {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sidebar-user-menu-name {
+  font-size: 0.78rem;
+  color: var(--text2);
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-menu-logout {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; background: transparent;
+  border: none; border-radius: 8px;
+  color: var(--text2); font-size: 0.82rem;
+  padding: 7px 10px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+  text-align: left;
+}
+.sidebar-user-menu-logout:hover {
+  background: rgba(239,68,68,0.12);
+  color: #fca5a5;
+}
