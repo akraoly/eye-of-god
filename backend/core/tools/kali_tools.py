@@ -248,6 +248,13 @@ KALI_TOOLS: List[KaliTool] = [
               "tcpdump -i eth0 host {target} -w out.pcap"],
              timeout=60),
 
+    KaliTool("wireshark", "network", "Analyseur de trafic réseau graphique — capture et dissection",
+             ["wireshark",
+              "wireshark -i eth0",
+              "wireshark -r capture.pcap"],
+             interactive=True, timeout=0,
+             notes="GUI — préférer tshark pour la CLI"),
+
     KaliTool("tshark", "network", "Wireshark en ligne de commande — analyse de captures",
              ["tshark -r capture.pcap",
               "tshark -r capture.pcap -Y 'http.request'",
@@ -383,6 +390,20 @@ KALI_TOOLS: List[KaliTool] = [
              timeout=300),
 
     # ── WEB AVANCÉ ────────────────────────────────────────────────────────────
+    KaliTool("burpsuite", "web", "Proxy/scanner sécurité web Burp Suite (GUI + REST API)",
+             ["burpsuite",
+              "java -jar /usr/share/burpsuite/burpsuite.jar",
+              "curl -s 'http://localhost:1337/v0.1/scan' -d '{\"urls\":[\"http://{target}\"]}'"],
+             interactive=True, timeout=0,
+             notes="GUI — lancer manuellement. API REST disponible sur port 1337 si activée"),
+
+    KaliTool("zaproxy", "web", "OWASP ZAP — scanner web automatisé avec mode daemon CLI",
+             ["zaproxy -cmd -quickurl http://{target} -quickout /tmp/zap_report.html",
+              "zaproxy -daemon -port 8090 -config api.key=changeme",
+              "zaproxy -cmd -quickurl http://{target} -quickprogress"],
+             timeout=600,
+             notes="Mode -cmd pour scan rapide, -daemon pour API REST"),
+
     KaliTool("feroxbuster", "web", "Fuzzer web rapide en Rust — récursif par défaut",
              ["feroxbuster -u http://{target} -w /usr/share/seclists/Discovery/Web-Content/raft-large-files.txt",
               "feroxbuster -u http://{target} -w wordlist.txt -x php,html,js --depth 3"],
@@ -410,6 +431,30 @@ KALI_TOOLS: List[KaliTool] = [
              timeout=600),
 
     # ── WIRELESS ─────────────────────────────────────────────────────────────
+    KaliTool("airmon-ng", "wireless", "Active/désactive le mode monitor sur les interfaces Wi-Fi",
+             ["airmon-ng start wlan0",
+              "airmon-ng stop wlan0mon",
+              "airmon-ng check kill"],
+             timeout=30),
+
+    KaliTool("airodump-ng", "wireless", "Capture de paquets Wi-Fi et découverte des réseaux",
+             ["airodump-ng wlan0mon",
+              "airodump-ng --bssid {bssid} --channel {ch} --write /tmp/capture wlan0mon",
+              "airodump-ng -c {ch} --bssid {bssid} -w /tmp/cap wlan0mon"],
+             timeout=300),
+
+    KaliTool("aireplay-ng", "wireless", "Injection de paquets Wi-Fi — deauth, ARP replay",
+             ["aireplay-ng --deauth 10 -a {bssid} wlan0mon",
+              "aireplay-ng --deauth 0 -a {bssid} -c {client} wlan0mon",
+              "aireplay-ng -3 -b {bssid} wlan0mon"],
+             timeout=120),
+
+    KaliTool("aircrack-ng", "wireless", "Cracking de clés WPA/WEP à partir de captures réseau",
+             ["aircrack-ng -w /usr/share/wordlists/rockyou.txt /tmp/capture-01.cap",
+              "aircrack-ng -w wordlist.txt -b {bssid} capture.cap",
+              "aircrack-ng *.cap"],
+             timeout=3600),
+
     KaliTool("wifite", "wireless", "Attaque Wi-Fi automatisée — WPA/WPA2/WPS",
              ["wifite", "wifite --wpa --dict /usr/share/wordlists/rockyou.txt"],
              interactive=True, timeout=0),

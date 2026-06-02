@@ -109,6 +109,9 @@ ALLOWED_COMMANDS = {
     "msf", "msfrpc",
     "searchsploit",
 
+    # ── Burp Suite / OWASP ZAP ─────────────────────────────────────────────
+    "burpsuite", "zaproxy", "java",
+
     # ── Impacket ────────────────────────────────────────────────────────────
     "impacket-smbclient", "impacket-psexec", "impacket-wmiexec",
     "impacket-secretsdump", "impacket-ntlmrelayx", "impacket-smbserver",
@@ -191,7 +194,11 @@ TOOL_TIMEOUTS = {
     # Metasploit
     "msfvenom": 120,
     # Wireless
-    "airodump-ng": 300, "aireplay-ng": 300,
+    "airodump-ng": 300, "aireplay-ng": 300, "aircrack-ng": 3600, "airmon-ng": 30,
+    # Web scanners
+    "zaproxy": 600, "burpsuite": 0,
+    # Metasploit console
+    "msfconsole": 300,
 }
 
 DEFAULT_TIMEOUT = 60
