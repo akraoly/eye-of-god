@@ -17,6 +17,7 @@ const NAV = [
   { id: 'code',      icon: '🛠️', label: 'Code'      },
   { id: 'knowledge', icon: '📚', label: 'Know'      },
   { id: 'life',      icon: '🎯', label: 'Life'      },
+  { id: 'vision',    icon: '👁️', label: 'Vision'    },
 ]
 
 export default function Sidebar({ view, onNav, theme, onTheme, onNewChat }) {

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from api.routes import chat, memory, user, system, exploit, code, knowledge, life, observe, soc, offensive, c2, auth
+from api.routes import chat, memory, user, system, exploit, code, knowledge, life, observe, soc, offensive, c2, auth, vision
 from core.auth.dependencies import get_current_user
 
 router = APIRouter()
@@ -22,3 +22,4 @@ router.include_router(observe.router,   prefix="/observe",   tags=["Self Observa
 router.include_router(soc.router,       prefix="/soc",       tags=["SOC"],                        **_protected)
 router.include_router(offensive.router, prefix="/offensive", tags=["Offensive — 4 Niveaux"],     **_protected)
 router.include_router(c2.router,        prefix="/c2",        tags=["C2 — Frameworks"],            **_protected)
+router.include_router(vision.router,    prefix="/vision",    tags=["Vision"],                     **_protected)

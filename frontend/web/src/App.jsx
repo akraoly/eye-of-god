@@ -7,6 +7,7 @@ import OffensiveView from './components/OffensiveView'
 import CodeView from './components/CodeView'
 import KnowledgeView from './components/KnowledgeView'
 import LifeView from './components/LifeView'
+import VisionView from './components/VisionView'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -56,6 +57,7 @@ function MainApp() {
           {view === 'code'      && <CodeView />}
           {view === 'knowledge' && <KnowledgeView />}
           {view === 'life'      && <LifeView />}
+          {view === 'vision'    && <VisionView />}
         </main>
       </div>
     </>
