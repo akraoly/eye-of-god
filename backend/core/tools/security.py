@@ -116,6 +116,7 @@ ALLOWED_COMMANDS = {
     "sliver", "sliver-server", "sliver-client",
     "havoc",
     "gophish", "gophish-start",
+    "evilginx", "evilginx2",
 
     # ── AD / Post-exploitation ─────────────────────────────────────────────
     "netexec", "mimikatz",
