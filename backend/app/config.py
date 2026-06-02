@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # App
     APP_NAME: str = "L'Œil de Dieu"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "8.0.0"
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
     PORT: int = 8001
