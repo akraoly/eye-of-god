@@ -38,9 +38,10 @@ C2_CONFIGS = {
         "needs_sudo": False,
     },
     "gophish": {
-        "systemd": "gophish",          # géré via systemctl
-        "description": "Gophish — campagnes phishing (UI https://127.0.0.1:3333)",
-        "port": 3333,
+        "cmd": "/usr/lib/gophish/gophish --config /tmp/gophish_local/config.json",
+        "cwd": "/usr/lib/gophish",     # les migrations sont relatives à ce répertoire
+        "description": "Gophish — campagnes phishing (UI https://127.0.0.1:3334)",
+        "port": 3334,
         "color": "#38bdf8",
         "needs_sudo": False,
     },
@@ -52,6 +53,30 @@ C2_CONFIGS = {
         "needs_sudo": True,
     },
 }
+
+# Config Gophish — lance en mode direct (sans systemd, sans sudo)
+# Admin sur 3333 si libre, sinon 3334 pour éviter conflit avec le service système Kali
+_GOPHISH_CONFIG = """\
+{
+  "admin_server": {
+    "listen_url": "0.0.0.0:3334",
+    "use_tls": true,
+    "cert_path": "/tmp/gophish_local/gophish_admin.crt",
+    "key_path": "/tmp/gophish_local/gophish_admin.key"
+  },
+  "phish_server": {
+    "listen_url": "0.0.0.0:8080",
+    "use_tls": false,
+    "cert_path": "",
+    "key_path": ""
+  },
+  "db_name": "sqlite3",
+  "db_path": "/tmp/gophish_local/gophish.db",
+  "migrations_prefix": "db/db_",
+  "contact_address": "",
+  "logging": {"filename": "", "level": ""}
+}
+"""
 
 # Profil Havoc minimal généré automatiquement si absent
 _HAVOC_PROFILE = """\
@@ -177,6 +202,7 @@ class C2Manager:
             cmd_parts = shlex.split(cfg["cmd"])
             env = os.environ.copy()
             env["TERM"] = "xterm-256color"
+            work_dir = cfg.get("cwd", "/tmp")
             proc = subprocess.Popen(
                 cmd_parts,
                 stdout=subprocess.PIPE,
@@ -185,7 +211,7 @@ class C2Manager:
                 text=True,
                 bufsize=1,
                 env=env,
-                cwd="/tmp",
+                cwd=work_dir,
                 preexec_fn=os.setsid,
             )
             c2.process = proc
@@ -387,6 +413,16 @@ class C2Manager:
                         f.write(_HAVOC_PROFILE)
                 except Exception as e:
                     return f"Impossible de créer le profil Havoc : {e}"
+        if name == "gophish":
+            config_dir = "/tmp/gophish_local"
+            config_path = f"{config_dir}/config.json"
+            os.makedirs(config_dir, exist_ok=True)
+            if not os.path.exists(config_path):
+                try:
+                    with open(config_path, "w") as f:
+                        f.write(_GOPHISH_CONFIG)
+                except Exception as e:
+                    return f"Impossible de créer la config Gophish : {e}"
         return None
 
 
