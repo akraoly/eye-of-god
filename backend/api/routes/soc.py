@@ -1,31 +1,27 @@
 """
-Routes /api/soc — SOC complet : alertes, incidents, SIEM, SOAR, MITRE, dashboard.
+Routes /api/soc — SOC complet Phase 1 + 2 :
+  alertes, incidents, SIEM, SOAR, MITRE, ML anomaly, EDR, NTA, threat intel, IDS, dashboard.
 """
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.orm import Session
 from database.db import get_db
-from core.soc.alert_engine    import alert_engine
-from core.soc.incident_engine import incident_engine
-from core.soc.siem_engine     import siem_engine
-from core.soc.soar_engine     import soar_engine
-from core.soc.mitre_engine    import mitre_engine
+from core.soc.alert_engine        import alert_engine
+from core.soc.incident_engine     import incident_engine
+from core.soc.siem_engine         import siem_engine
+from core.soc.soar_engine         import soar_engine
+from core.soc.mitre_engine        import mitre_engine
+from core.soc.ml_engine           import ml_engine
+from core.soc.edr_engine          import edr_engine
+from core.soc.nta_engine          import nta_engine
+from core.soc.threat_intel_engine import threat_intel_engine
+from core.soc.ids_engine          import ids_engine
 
 router = APIRouter()
 
 
-# ── Dashboard ────────────────────────────────────────────────────────────────
-
-@router.get("/dashboard")
-def get_dashboard(db: Session = Depends(get_db)):
-    return {
-        "alerts":    alert_engine.stats(db, hours=24),
-        "incidents": incident_engine.stats(db),
-        "mitre":     mitre_engine.stats(),
-        "soar":      {"playbooks": len(soar_engine.list_playbooks())},
-        "siem":      {"rules": len(siem_engine.get_rules(db))},
-    }
+# ── Dashboard (Phase 1+2 — défini en bas du fichier) ─────────────────────────
 
 
 # ── Alertes ──────────────────────────────────────────────────────────────────
@@ -255,3 +251,233 @@ def search_mitre(body: dict):
     query = body.get("q", "")
     if not query: return {"error": "Paramètre 'q' requis"}
     return {"results": mitre_engine.search(query)}
+
+
+# ── ML ANOMALY ───────────────────────────────────────────────────────────────
+
+@router.post("/ml/train")
+def ml_train(db: Session = Depends(get_db)):
+    return ml_engine.train(db)
+
+
+@router.get("/ml/anomalies")
+def ml_anomalies(
+    hours: int = Query(24), min_score: float = Query(0),
+    page: int = Query(1), per_page: int = Query(50, le=200),
+    db: Session = Depends(get_db),
+):
+    return ml_engine.get_anomalies(db, hours=hours, min_score=min_score, page=page, per_page=per_page)
+
+
+@router.get("/ml/stats")
+def ml_stats(db: Session = Depends(get_db)):
+    return ml_engine.stats(db)
+
+
+# ── EDR ──────────────────────────────────────────────────────────────────────
+
+class EdrAgentCreate(BaseModel):
+    hostname: str
+    ip: Optional[str] = None
+    os: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+class EdrEventCreate(BaseModel):
+    hostname: str
+    event_type: str
+    severity: str = "MEDIUM"
+    process: Optional[str] = None
+    cmdline: Optional[str] = None
+    mitre_tactic: Optional[str] = None
+    mitre_tech: Optional[str] = None
+    description: Optional[str] = None
+    alert_id: Optional[int] = None
+
+
+@router.get("/edr/agents")
+def list_edr_agents(page: int = Query(1), per_page: int = Query(20),
+                    db: Session = Depends(get_db)):
+    return edr_engine.list_agents(db, page=page, per_page=per_page)
+
+
+@router.post("/edr/agents")
+def create_edr_agent(body: EdrAgentCreate, db: Session = Depends(get_db)):
+    a = edr_engine.create_agent(db, hostname=body.hostname, ip=body.ip,
+                                 os=body.os, tags=body.tags)
+    return edr_engine._agent_dict(a)
+
+
+@router.patch("/edr/agents/{agent_id}/status")
+def update_edr_status(agent_id: int, body: dict, db: Session = Depends(get_db)):
+    a = edr_engine.update_status(db, agent_id, body.get("status", "online"))
+    if not a: return {"error": "Agent introuvable"}
+    return edr_engine._agent_dict(a)
+
+
+@router.get("/edr/events")
+def list_edr_events(hours: int = Query(24), agent_id: Optional[int] = Query(None),
+                    page: int = Query(1), per_page: int = Query(50),
+                    db: Session = Depends(get_db)):
+    return edr_engine.list_events(db, agent_id=agent_id, hours=hours, page=page, per_page=per_page)
+
+
+@router.post("/edr/events")
+def create_edr_event(body: EdrEventCreate, db: Session = Depends(get_db)):
+    evt = edr_engine.ingest_event(db, **body.model_dump())
+    return edr_engine._evt_dict(evt)
+
+
+@router.get("/edr/stats")
+def edr_stats(db: Session = Depends(get_db)):
+    return edr_engine.stats(db)
+
+
+# ── NTA ──────────────────────────────────────────────────────────────────────
+
+class FlowCreate(BaseModel):
+    src_ip: str
+    dst_ip: str
+    src_port: int = 0
+    dst_port: int = 0
+    protocol: str = "TCP"
+    bytes_out: int = 0
+    bytes_in:  int = 0
+    packets:   int = 0
+    duration_s: float = 0.0
+    direction: str = "out"
+    alert_id: Optional[int] = None
+
+
+@router.post("/nta/flows")
+def ingest_flow(body: FlowCreate, db: Session = Depends(get_db)):
+    return nta_engine.ingest_flow(db, **body.model_dump())
+
+
+@router.get("/nta/flows")
+def get_nta_flows(hours: int = Query(24), threat_only: bool = Query(False),
+                  page: int = Query(1), per_page: int = Query(50),
+                  db: Session = Depends(get_db)):
+    return nta_engine.get_flows(db, hours=hours, threat_only=threat_only, page=page, per_page=per_page)
+
+
+@router.get("/nta/beaconing")
+def detect_beaconing(hours: int = Query(6), db: Session = Depends(get_db)):
+    return {"beaconing": nta_engine.detect_beaconing(db, hours=hours)}
+
+
+@router.get("/nta/top-talkers")
+def top_talkers(hours: int = Query(24), limit: int = Query(10),
+                db: Session = Depends(get_db)):
+    return {"top_talkers": nta_engine.top_talkers(db, hours=hours, limit=limit)}
+
+
+@router.get("/nta/stats")
+def nta_stats(hours: int = Query(24), db: Session = Depends(get_db)):
+    return nta_engine.stats(db, hours=hours)
+
+
+# ── THREAT INTELLIGENCE ───────────────────────────────────────────────────────
+
+class IocCreate(BaseModel):
+    ioc_type:    str
+    value:       str
+    threat_type: Optional[str] = None
+    severity:    str = "MEDIUM"
+    confidence:  int = 70
+    source:      str = "manual"
+    description: Optional[str] = None
+
+
+@router.post("/threat-intel/init")
+def init_iocs(db: Session = Depends(get_db)):
+    n = threat_intel_engine.init_iocs(db)
+    return {"message": f"{n} IOCs chargés"}
+
+
+@router.get("/threat-intel/iocs")
+def list_iocs(ioc_type: Optional[str] = Query(None),
+              threat_type: Optional[str] = Query(None),
+              page: int = Query(1), per_page: int = Query(50),
+              db: Session = Depends(get_db)):
+    return threat_intel_engine.list_iocs(db, ioc_type=ioc_type, threat_type=threat_type,
+                                          page=page, per_page=per_page)
+
+
+@router.post("/threat-intel/iocs")
+def add_ioc(body: IocCreate, db: Session = Depends(get_db)):
+    ioc = threat_intel_engine.add_ioc(db, **body.model_dump())
+    return threat_intel_engine._ioc_dict(ioc)
+
+
+@router.get("/threat-intel/check/ip/{ip}")
+def check_ip(ip: str, db: Session = Depends(get_db)):
+    result = threat_intel_engine.check_ip(db, ip)
+    return result or {"status": "clean", "ip": ip}
+
+
+@router.get("/threat-intel/check/domain/{domain}")
+def check_domain(domain: str, db: Session = Depends(get_db)):
+    result = threat_intel_engine.check_domain(db, domain)
+    return result or {"status": "clean", "domain": domain}
+
+
+@router.post("/threat-intel/scan")
+def scan_alerts(hours: int = Query(24), db: Session = Depends(get_db)):
+    return threat_intel_engine.scan_all_alerts(db, hours=hours)
+
+
+@router.get("/threat-intel/hits")
+def recent_hits(hours: int = Query(24), limit: int = Query(20),
+                db: Session = Depends(get_db)):
+    return {"hits": threat_intel_engine.get_recent_hits(db, hours=hours, limit=limit)}
+
+
+@router.get("/threat-intel/stats")
+def ti_stats(db: Session = Depends(get_db)):
+    return threat_intel_engine.stats(db)
+
+
+# ── IDS ──────────────────────────────────────────────────────────────────────
+
+class IdsAnalyze(BaseModel):
+    event_type: str
+    src_ip: Optional[str] = None
+    dst_port: Optional[int] = None
+    data: Optional[dict] = None
+
+
+@router.get("/ids/signatures")
+def get_ids_signatures():
+    return {"signatures": ids_engine.get_signatures()}
+
+
+@router.post("/ids/analyze")
+def ids_analyze(body: IdsAnalyze, db: Session = Depends(get_db)):
+    triggered = ids_engine.analyze_event(db, **body.model_dump())
+    return {"triggered": triggered, "count": len(triggered)}
+
+
+@router.get("/ids/stats")
+def ids_stats(db: Session = Depends(get_db)):
+    return ids_engine.stats(db)
+
+
+# ── DASHBOARD PHASE 2 ─────────────────────────────────────────────────────────
+
+@router.get("/dashboard")
+def get_dashboard(db: Session = Depends(get_db)):
+    return {
+        # Phase 1
+        "alerts":    alert_engine.stats(db, hours=24),
+        "incidents": incident_engine.stats(db),
+        "mitre":     mitre_engine.stats(),
+        "soar":      {"playbooks": len(soar_engine.list_playbooks())},
+        "siem":      {"rules": len(siem_engine.get_rules(db))},
+        # Phase 2
+        "ml":        ml_engine.stats(db),
+        "edr":       edr_engine.stats(db),
+        "nta":       nta_engine.stats(db, hours=24),
+        "threat_intel": threat_intel_engine.stats(db),
+        "ids":       ids_engine.stats(db),
+    }

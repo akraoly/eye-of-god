@@ -315,13 +315,351 @@ function Mitre() {
 }
 
 // ── Vue principale SOC ────────────────────────────────────────────────────────
+// ── ML Anomaly ───────────────────────────────────────────────────────────────
+function MlAnomaly() {
+  const [stats, setStats] = useState(null)
+  const [anomalies, setAnomalies] = useState(null)
+  const [training, setTraining] = useState(false)
+
+  useEffect(() => {
+    f(`${BASE}/ml/stats`).then(setStats)
+    f(`${BASE}/ml/anomalies?hours=168`).then(setAnomalies)
+  }, [])
+
+  const train = async () => {
+    setTraining(true)
+    const r = await fetch(`${BASE}/ml/train`, { method: 'POST' }).then(r => r.json()).catch(() => ({}))
+    setTraining(false)
+    f(`${BASE}/ml/stats`).then(setStats)
+    f(`${BASE}/ml/anomalies?hours=168`).then(setAnomalies)
+  }
+
+  return (
+    <div className="soc-section">
+      <div className="soc-row">
+        <div className="soc-panel">
+          <div className="soc-panel-title">Statut ML</div>
+          {stats && <>
+            <div className="soc-bar-row">
+              <span className="soc-bar-label">Entraîné</span>
+              <span className="soc-bar-count">{stats.trained ? '✅ Oui' : '❌ Non'}</span>
+            </div>
+            <div className="soc-bar-row">
+              <span className="soc-bar-label">Total anomalies</span>
+              <span className="soc-bar-count">{stats.total_anomalies}</span>
+            </div>
+            <div className="soc-bar-row">
+              <span className="soc-bar-label">CRITICAL</span>
+              <span className="soc-bar-count" style={{ color: '#ef4444' }}>{stats.critical}</span>
+            </div>
+          </>}
+          <button className="soc-link-btn" onClick={train} disabled={training} style={{ marginTop: 10 }}>
+            {training ? '⏳ Entraînement…' : '🧠 Entraîner le modèle'}
+          </button>
+        </div>
+        <div className="soc-panel">
+          <div className="soc-panel-title">Algorithmes</div>
+          <div className="soc-sub">K-Means (k=5) — clustering comportemental</div>
+          <div className="soc-sub">Isolation Forest — détection anomalies</div>
+          <div className="soc-sub">Score 0–100 · Seuil anomalie : 70</div>
+        </div>
+      </div>
+      {anomalies && anomalies.anomalies?.length > 0 && (
+        <div className="soc-rule-list">
+          <div className="soc-panel-title" style={{ marginBottom: 8 }}>Anomalies détectées ({anomalies.total})</div>
+          {anomalies.anomalies.slice(0, 10).map(a => (
+            <div key={a.id} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span className="soc-rule-name">{a.cluster}</span>
+                <Badge text={a.severity} color={SEV_COLOR[a.severity] || '#7c3aed'} />
+                <span style={{ fontSize: '0.75rem', color: 'var(--elec)', fontWeight: 700 }}>{a.score.toFixed(0)}/100</span>
+              </div>
+              <div className="soc-rule-meta"><span>{a.explanation}</span></div>
+            </div>
+          ))}
+        </div>
+      )}
+      {(!anomalies || anomalies.anomalies?.length === 0) && (
+        <div className="soc-empty">Aucune anomalie détectée — Lance l'entraînement avec des alertes en base.</div>
+      )}
+    </div>
+  )
+}
+
+// ── EDR ───────────────────────────────────────────────────────────────────────
+function Edr() {
+  const [agents, setAgents] = useState(null)
+  const [events, setEvents] = useState(null)
+  const [stats, setStats]   = useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/edr/agents`).then(setAgents)
+    f(`${BASE}/edr/events?hours=24`).then(setEvents)
+    f(`${BASE}/edr/stats`).then(setStats)
+  }, [])
+
+  const STATUS_COLOR = { online: '#34d399', compromised: '#ef4444', isolated: '#f97316', offline: '#64748b' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+          <div className="soc-stat-card high">
+            <div className="soc-stat-val">{stats.total_agents}</div>
+            <div className="soc-stat-label">Agents EDR</div>
+          </div>
+          <div className="soc-stat-card critical">
+            <div className="soc-stat-val">{stats.compromised}</div>
+            <div className="soc-stat-label">Compromis</div>
+          </div>
+          <div className="soc-stat-card incident">
+            <div className="soc-stat-val">{stats.events_24h}</div>
+            <div className="soc-stat-label">Événements 24h</div>
+          </div>
+        </div>
+      )}
+
+      {agents && agents.agents?.length > 0 && (
+        <div>
+          <div className="soc-panel-title" style={{ margin: '12px 0 8px' }}>Endpoints ({agents.total})</div>
+          <div className="soc-table">
+            <div className="soc-table-header" style={{ gridTemplateColumns: '1fr 100px 80px 60px' }}>
+              <span>Hostname</span><span>IP</span><span>OS</span><span>Risk</span>
+            </div>
+            {agents.agents.slice(0, 10).map(a => (
+              <div key={a.id} className="soc-table-row" style={{ gridTemplateColumns: '1fr 100px 80px 60px' }}>
+                <span style={{ fontWeight: 600 }}>
+                  <span style={{ color: STATUS_COLOR[a.status] || '#64748b', marginRight: 6 }}>●</span>
+                  {a.hostname}
+                </span>
+                <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--elec)' }}>{a.ip || '—'}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text2)' }}>{a.os?.split(' ')[0] || '—'}</span>
+                <span style={{ color: a.risk_score >= 70 ? '#ef4444' : a.risk_score >= 40 ? '#f97316' : '#34d399', fontWeight: 700 }}>
+                  {a.risk_score?.toFixed(0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── NTA ───────────────────────────────────────────────────────────────────────
+function Nta() {
+  const [stats, setStats]   = useState(null)
+  const [flows, setFlows]   = useState(null)
+  const [beaconing, setBeac]= useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/nta/stats`).then(setStats)
+    f(`${BASE}/nta/flows?threat_only=true`).then(setFlows)
+    f(`${BASE}/nta/beaconing`).then(d => setBeac(d.beaconing || []))
+  }, [])
+
+  const THREAT_COLOR = { C2: '#ef4444', EXFILTRATION: '#f97316', BEACONING: '#eab308',
+                         DNS_TUNNEL: '#8b5cf6', IRC_C2: '#ef4444', FTP_EXFIL: '#f97316' }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-row">
+          <div className="soc-panel">
+            <div className="soc-panel-title">Trafic réseau (24h)</div>
+            {[['Total flux', stats.total_flows, 'var(--text)'],
+              ['Flux suspects', stats.threat_flows, '#f97316'],
+              ['C2 détectés', stats.c2_flows, '#ef4444'],
+              ['Exfiltrations', stats.exfil_flows, '#f97316'],
+              ['Haut risque', stats.high_risk, '#ef4444']
+            ].map(([label, val, color]) => (
+              <div key={label} className="soc-bar-row">
+                <span className="soc-bar-label">{label}</span>
+                <span className="soc-bar-count" style={{ color }}>{val}</span>
+              </div>
+            ))}
+          </div>
+          <div className="soc-panel">
+            <div className="soc-panel-title">Top IPs menaçantes</div>
+            {stats.top_threat_ips?.length > 0 ? stats.top_threat_ips.map(t => (
+              <div key={t.ip} className="soc-bar-row">
+                <span className="soc-bar-label" style={{ fontFamily: 'monospace', color: 'var(--elec)' }}>{t.ip}</span>
+                <span className="soc-bar-count">{t.count} flux</span>
+              </div>
+            )) : <div className="soc-empty" style={{ padding: '8px 0' }}>Aucune IP suspecte</div>}
+          </div>
+        </div>
+      )}
+
+      {beaconing?.length > 0 && (
+        <div>
+          <div className="soc-panel-title" style={{ margin: '12px 0 8px' }}>🔔 Beaconing détecté</div>
+          <div className="soc-rule-list">
+            {beaconing.map((b, i) => (
+              <div key={i} className="soc-rule-card">
+                <div className="soc-rule-meta">
+                  <span style={{ fontFamily: 'monospace', color: 'var(--elec)' }}>{b.src_ip}</span>
+                  <span>→</span>
+                  <span style={{ fontFamily: 'monospace' }}>{b.dst_ip}</span>
+                  <span>{b.flow_count} connexions</span>
+                  <Badge text="BEACONING" color="#eab308" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Threat Intel ──────────────────────────────────────────────────────────────
+function ThreatIntel() {
+  const [stats, setStats] = useState(null)
+  const [iocs, setIocs]   = useState(null)
+  const [check, setCheck] = useState('')
+  const [checkResult, setCheckResult] = useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/threat-intel/stats`).then(setStats)
+    f(`${BASE}/threat-intel/iocs?per_page=20`).then(setIocs)
+  }, [])
+
+  const doCheck = () => {
+    const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(check)
+    const url  = isIp ? `${BASE}/threat-intel/check/ip/${check}` : `${BASE}/threat-intel/check/domain/${check}`
+    f(url).then(setCheckResult)
+  }
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-cards" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+          <div className="soc-stat-card high">
+            <div className="soc-stat-val">{stats.total_iocs}</div>
+            <div className="soc-stat-label">IOCs actifs</div>
+          </div>
+          <div className="soc-stat-card critical">
+            <div className="soc-stat-val">{stats.critical_iocs}</div>
+            <div className="soc-stat-label">IOCs CRITICAL</div>
+          </div>
+          <div className="soc-stat-card incident">
+            <div className="soc-stat-val">{stats.total_hits}</div>
+            <div className="soc-stat-label">Hits totaux</div>
+          </div>
+        </div>
+      )}
+
+      <div className="soc-search-bar">
+        <input className="soc-input" placeholder="Vérifier une IP ou domaine (ex: 45.33.32.156)"
+          value={check} onChange={e => setCheck(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && doCheck()} />
+        <button className="soc-search-btn" onClick={doCheck}>Vérifier</button>
+      </div>
+
+      {checkResult && (
+        <div className="soc-rule-card" style={{ marginBottom: 12 }}>
+          {checkResult.status === 'clean' ? (
+            <div style={{ color: '#34d399' }}>✅ Propre — non présent dans la base IOC</div>
+          ) : (
+            <>
+              <div className="soc-rule-header">
+                <span className="soc-rule-name">{checkResult.value}</span>
+                <Badge text={checkResult.severity} color={SEV_COLOR[checkResult.severity] || '#7c3aed'} />
+                <span style={{ color: '#f97316', fontSize: '0.75rem' }}>{checkResult.threat_type}</span>
+              </div>
+              <div className="soc-rule-meta">
+                <span>Confiance: {checkResult.confidence}%</span>
+                <span>Source: {checkResult.source}</span>
+                <span>{checkResult.description}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {iocs && (
+        <div className="soc-rule-list">
+          {iocs.iocs?.slice(0, 12).map(i => (
+            <div key={i.id} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span className="soc-mitre-id">{i.type}</span>
+                <span className="soc-rule-name" style={{ fontFamily: i.type?.includes('HASH') ? 'monospace' : 'inherit', fontSize: i.type?.includes('HASH') ? '0.7rem' : '0.82rem' }}>{i.value}</span>
+                <Badge text={i.severity} color={SEV_COLOR[i.severity] || '#7c3aed'} />
+              </div>
+              <div className="soc-rule-meta">
+                <span>{i.threat_type}</span>
+                <span>Conf: {i.confidence}%</span>
+                <span>{i.source}</span>
+                <span>{i.description}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── IDS ───────────────────────────────────────────────────────────────────────
+function Ids() {
+  const [sigs, setSigs] = useState(null)
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    f(`${BASE}/ids/signatures`).then(d => setSigs(d.signatures))
+    f(`${BASE}/ids/stats`).then(setStats)
+  }, [])
+
+  return (
+    <div className="soc-section">
+      {stats && (
+        <div className="soc-panel" style={{ marginBottom: 12 }}>
+          <div className="soc-bar-row">
+            <span className="soc-bar-label">Signatures actives</span>
+            <span className="soc-bar-count">{stats.total_signatures}</span>
+          </div>
+          <div className="soc-bar-row">
+            <span className="soc-bar-label">Alertes IDS (24h)</span>
+            <span className="soc-bar-count">{stats.ids_alerts_24h}</span>
+          </div>
+        </div>
+      )}
+      {sigs && (
+        <div className="soc-rule-list">
+          {sigs.map(s => (
+            <div key={s.sid} className="soc-rule-card">
+              <div className="soc-rule-header">
+                <span className="soc-mitre-id">SID:{s.sid}</span>
+                <span className="soc-rule-name">{s.name}</span>
+                <Badge text={s.severity} color={SEV_COLOR[s.severity] || '#7c3aed'} />
+              </div>
+              <div className="soc-rule-meta">
+                <span>{s.description}</span>
+                <span>{s.mitre_tactic}/{s.mitre_tech}</span>
+                <span>seuil: {s.threshold}×/{s.window_s}s</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Onglets ───────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'dashboard', label: '📊 Dashboard' },
   { id: 'alerts',    label: '🔴 Alertes'   },
   { id: 'incidents', label: '🚨 Incidents'  },
-  { id: 'siem',      label: '⚙️ SIEM'      },
-  { id: 'soar',      label: '🤖 SOAR'      },
-  { id: 'mitre',     label: '🗺️ MITRE'     },
+  { id: 'ml',        label: '🧠 ML Anomaly' },
+  { id: 'edr',       label: '🖥️ EDR'        },
+  { id: 'nta',       label: '🌐 NTA'        },
+  { id: 'ti',        label: '🔎 Threat Intel'},
+  { id: 'ids',       label: '🛡️ IDS'        },
+  { id: 'siem',      label: '⚙️ SIEM'       },
+  { id: 'soar',      label: '🤖 SOAR'       },
+  { id: 'mitre',     label: '🗺️ MITRE'      },
 ]
 
 export default function SocView() {
@@ -345,6 +683,11 @@ export default function SocView() {
         {tab === 'dashboard' && <Dashboard onTab={setTab} />}
         {tab === 'alerts'    && <Alerts />}
         {tab === 'incidents' && <Incidents />}
+        {tab === 'ml'        && <MlAnomaly />}
+        {tab === 'edr'       && <Edr />}
+        {tab === 'nta'       && <Nta />}
+        {tab === 'ti'        && <ThreatIntel />}
+        {tab === 'ids'       && <Ids />}
         {tab === 'siem'      && <Siem />}
         {tab === 'soar'      && <Soar />}
         {tab === 'mitre'     && <Mitre />}

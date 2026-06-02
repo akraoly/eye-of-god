@@ -199,3 +199,123 @@ class SiemEvent(Base):
     data         = Column(Text, nullable=True)                      # JSON raw
     correlated   = Column(Boolean, default=False)
     alert_id     = Column(Integer, nullable=True)
+
+
+# ── Tables SOC Phase 2 ──────────────────────────────────────────────────────
+
+class MLAnomaly(Base):
+    """Anomalie détectée par le moteur ML."""
+    __tablename__ = "ml_anomalies"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    entity_type = Column(String(20), nullable=False)      # alert | host
+    entity_id   = Column(Integer, nullable=True)
+    score       = Column(Float, nullable=False)           # 0-100
+    severity    = Column(String(10), nullable=False)      # LOW|MEDIUM|HIGH|CRITICAL
+    cluster_id  = Column(Integer, nullable=True)
+    cluster_name= Column(String(100), nullable=True)
+    explanation = Column(Text, nullable=True)
+    features    = Column(Text, nullable=True)             # JSON array
+    detected_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class MLTrainingRun(Base):
+    """Historique des entraînements ML."""
+    __tablename__ = "ml_training_runs"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    status        = Column(String(20), default="running")  # running|success|failed
+    n_samples     = Column(Integer, default=0)
+    n_anomalies   = Column(Integer, default=0)
+    inertia       = Column(Float, nullable=True)
+    silhouette    = Column(Float, nullable=True)
+    duration_s    = Column(Float, nullable=True)
+    error_msg     = Column(Text, nullable=True)
+    triggered_by  = Column(String(30), default="auto")
+    trained_at    = Column(DateTime, default=datetime.utcnow)
+
+
+class EdrAgent(Base):
+    """Agent EDR sur un endpoint."""
+    __tablename__ = "edr_agents"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    hostname    = Column(String(255), nullable=False, index=True)
+    ip_address  = Column(String(45), nullable=True)
+    os          = Column(String(50), nullable=True)
+    status      = Column(String(20), default="online")  # online|offline|compromised|isolated
+    risk_score  = Column(Float, default=0.0)            # 0-100
+    last_seen   = Column(DateTime, default=datetime.utcnow)
+    first_seen  = Column(DateTime, default=datetime.utcnow)
+    tags        = Column(Text, nullable=True)           # JSON list
+
+
+class EdrEvent(Base):
+    """Événement de sécurité EDR sur un endpoint."""
+    __tablename__ = "edr_events"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    agent_id     = Column(Integer, nullable=True, index=True)
+    hostname     = Column(String(255), nullable=True)
+    event_type   = Column(String(50), nullable=False)   # PROCESS_CREATE|NETWORK_CONNECT|MALWARE_DETECT|…
+    severity     = Column(String(10), default="LOW")
+    process_name = Column(String(255), nullable=True)
+    command_line = Column(Text, nullable=True)
+    mitre_tactic = Column(String(10), nullable=True)
+    mitre_tech   = Column(String(10), nullable=True)
+    description  = Column(Text, nullable=True)
+    raw_data     = Column(Text, nullable=True)
+    alert_id     = Column(Integer, nullable=True)
+    timestamp    = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class NetworkFlow(Base):
+    """Flux réseau analysé par le moteur NTA."""
+    __tablename__ = "network_flows"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    src_ip       = Column(String(45), nullable=True, index=True)
+    dst_ip       = Column(String(45), nullable=True)
+    src_port     = Column(Integer, nullable=True)
+    dst_port     = Column(Integer, nullable=True)
+    protocol     = Column(String(10), nullable=True)
+    bytes_out    = Column(Integer, default=0)
+    bytes_in     = Column(Integer, default=0)
+    packets      = Column(Integer, default=0)
+    duration_s   = Column(Float, default=0.0)
+    direction    = Column(String(10), default="out")    # in|out|lateral
+    threat_type  = Column(String(30), nullable=True)    # C2|EXFIL|BEACONING|DNS_TUNNEL|…
+    risk_score   = Column(Float, default=0.0)
+    country      = Column(String(50), nullable=True)
+    alert_id     = Column(Integer, nullable=True)
+    detected_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ThreatIOC(Base):
+    """Indicateur de compromission (IOC)."""
+    __tablename__ = "threat_iocs"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    ioc_type    = Column(String(20), nullable=False, index=True)  # IP|DOMAIN|HASH_MD5|HASH_SHA256|URL|CVE|EMAIL
+    value       = Column(String(500), nullable=False, index=True)
+    threat_type = Column(String(50), nullable=True)               # C2|BOTNET|RANSOMWARE|PHISHING|SCANNER|…
+    severity    = Column(String(10), default="MEDIUM")
+    confidence  = Column(Integer, default=70)                     # 0-100
+    source      = Column(String(100), nullable=True)
+    description = Column(Text, nullable=True)
+    active      = Column(Boolean, default=True)
+    first_seen  = Column(DateTime, default=datetime.utcnow)
+    last_seen   = Column(DateTime, default=datetime.utcnow)
+    hit_count   = Column(Integer, default=0)
+
+
+class ThreatHit(Base):
+    """Match IOC sur une alerte ou un flux."""
+    __tablename__ = "threat_hits"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    ioc_id      = Column(Integer, nullable=False)
+    ioc_value   = Column(String(500), nullable=True)
+    entity_type = Column(String(20), nullable=True)    # alert|flow|event
+    entity_id   = Column(Integer, nullable=True)
+    matched_at  = Column(DateTime, default=datetime.utcnow, index=True)
