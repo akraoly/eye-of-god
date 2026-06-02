@@ -4,10 +4,21 @@ import Sidebar from './components/Sidebar'
 import StarField from './components/StarField'
 import SocView from './components/SocView'
 import OffensiveView from './components/OffensiveView'
+import LoginPage from './pages/Login'
+import { auth } from './utils/auth'
 import './App.css'
 
 export default function App() {
-  // Session persistante — survit aux rechargements de page
+  const [loggedIn, setLoggedIn] = useState(auth.isLoggedIn())
+
+  if (!loggedIn) {
+    return <LoginPage onLogin={() => setLoggedIn(true)} />
+  }
+
+  return <MainApp />
+}
+
+function MainApp() {
   const [sessionId] = useState(() => {
     const stored = localStorage.getItem('eye_session_id')
     if (stored) return stored

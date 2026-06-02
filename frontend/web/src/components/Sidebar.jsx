@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { logout, auth } from '../utils/auth'
 
 const THEMES = [
   { id: 'galactic', icon: '🌌', label: 'Galactique' },
@@ -86,6 +87,17 @@ export default function Sidebar({ view, onNav, theme, onTheme }) {
         {/* Theme switcher */}
         <button className="theme-btn" onClick={() => setShowThemes(v => !v)} title="Changer de thème">
           {THEMES.find(t => t.id === theme)?.icon || '🌌'}
+        </button>
+
+        {/* Logout */}
+        <button
+          className="nav-btn"
+          onClick={logout}
+          title={`Déconnexion (${auth.getUser()?.username || ''})`}
+          style={{ marginTop: '0.25rem', opacity: 0.7, fontSize: '1rem' }}
+        >
+          <span style={{ fontSize: '1rem' }}>🚪</span>
+          <span className="nav-label">Quitter</span>
         </button>
       </aside>
     </>
