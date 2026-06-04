@@ -10,7 +10,7 @@ from typing import Optional
 from collections import defaultdict
 from sqlalchemy.orm import Session
 
-from database.models import ActionLog, KnowledgeEntry, LearningEvent, LifeGoal, LifeHabit
+from database.models import ActionLog, Conversation, KnowledgeEntry, LearningEvent, LifeGoal, LifeHabit, Memory
 
 
 class SelfObserver:
@@ -231,6 +231,176 @@ class SelfObserver:
             }
         except Exception as e:
             return {"error": str(e)}
+
+    # ── Analyse IA (Claude) ───────────────────────────────────────────────────
+
+    async def ai_analysis(self, db: Session, days: int = 7) -> dict:
+        """
+        Analyse approfondie par Claude — détecte les patterns, évalue la santé
+        globale et génère des recommandations priorisées.
+        """
+        from core.llm.client import LLMClient
+
+        try:
+            # Collecte des données brutes
+            analysis = self.analyze(db=db, days=days)
+            global_stats = self.get_global_stats(db=db)
+            recent_actions = self.get_recent_actions(db=db, limit=100)
+            stats = analysis.get("stats", {})
+
+            # Erreurs récentes groupées par agent
+            errors_by_agent: dict = defaultdict(list)
+            for a in recent_actions:
+                if a["status"] == "error":
+                    errors_by_agent[a["agent"]].append(a["description"][:120])
+
+            # Patterns de messages utilisateur (dernières conversations)
+            try:
+                convs = db.query(Conversation).order_by(
+                    Conversation.timestamp.desc()
+                ).limit(20).all()
+                user_topics = [c.user_message[:100] for c in convs]
+            except Exception:
+                user_topics = []
+
+            # Mémoires existantes
+            try:
+                memories = db.query(Memory).order_by(Memory.importance.desc()).limit(10).all()
+                mem_keys = [f"{m.memory_type}:{m.key}" for m in memories]
+            except Exception:
+                mem_keys = []
+
+            # Construction du contexte pour Claude
+            agents_summary = []
+            for agent, data in sorted(stats.get("agents", {}).items(),
+                                       key=lambda x: x[1].get("total", 0), reverse=True):
+                total = data.get("total", 0)
+                errors = data.get("error", 0)
+                skipped = data.get("skipped", 0)
+                success = data.get("success", 0)
+                rate = errors / total if total > 0 else 0
+                agents_summary.append(
+                    f"- {agent}: {total} actions, {success} succès, {errors} erreurs "
+                    f"({rate:.0%}), {skipped} skippés"
+                )
+
+            errors_summary = []
+            for agent, msgs in errors_by_agent.items():
+                sample = msgs[:3]
+                errors_summary.append(f"- {agent}: {', '.join(repr(m) for m in sample)}")
+
+            prompt_data = f"""Tu es l'auto-analyste de L'Œil de Dieu, un assistant IA personnel sous Linux.
+Voici les données du système sur les {days} derniers jours :
+
+## STATISTIQUES GLOBALES
+- Actions totales (toutes périodes) : {global_stats.get('actions', 0)}
+- Base de connaissances : {global_stats.get('knowledge_entries', 0)} entrées
+- Événements d'apprentissage : {global_stats.get('learning_events', 0)}
+- Objectifs de vie actifs : {global_stats.get('goals_active', 0)}/{global_stats.get('goals_total', 0)}
+- Habitudes trackées : {global_stats.get('habits_active', 0)}
+
+## ACTIVITÉ SUR {days} JOURS
+- Actions totales : {stats.get('total_actions', 0)}
+- Erreurs : {stats.get('total_errors', 0)} ({stats.get('error_rate', 0):.1%})
+- Types d'action : {stats.get('top_action_types', {})}
+
+## PAR AGENT
+{chr(10).join(agents_summary) or '(aucun)'}
+
+## ERREURS RÉCENTES PAR AGENT
+{chr(10).join(errors_summary) or '(aucune erreur)'}
+
+## SUJETS ABORDÉS PAR L'UTILISATEUR (20 derniers)
+{chr(10).join(f'- {t}' for t in user_topics[:15]) or '(aucun)'}
+
+## MÉMOIRES IMPORTANTES
+{chr(10).join(mem_keys) or '(aucune)'}
+
+## ANALYSE RÈGLES (déjà calculée)
+Points positifs : {analysis.get('healthy', [])}
+Problèmes : {analysis.get('issues', [])}
+Suggestions règles : {analysis.get('suggestions', [])}"""
+
+            system = """Tu es l'introspection de L'Œil de Dieu, assistant IA personnel.
+IMPORTANT : Réponds UNIQUEMENT avec du JSON valide, sans aucun texte avant ou après.
+Pas de markdown, pas de commentaires, pas de trailing commas.
+
+Format exact :
+{"health_score":75,"health_label":"Bon","summary":"2-3 phrases sur l'état général.","agent_analysis":[{"agent":"orchestrator","status":"ok","insight":"Observation concrète sur cet agent."}],"patterns":["Pattern comportemental observé"],"critical_issues":["Problème critique si présent"],"recommendations":[{"priority":1,"category":"Performance","action":"Action concrète à faire","impact":"Bénéfice attendu"}],"growth_opportunities":["Opportunité non urgente"]}
+
+Labels health_label : "Critique"(0-20) "Dégradé"(21-40) "Stable"(41-60) "Bon"(61-80) "Excellent"(81-100)
+Status agents : "ok" "warning" "critical"
+Priorité recommandations : 1=critique 2=élevé 3=moyen 4=faible 5=info
+Catégories : Performance, Utilisation, Mémoire, Sécurité, Workflow, Apprentissage"""
+
+            llm = LLMClient()
+            raw = await llm.complete(
+                messages=[{"role": "user", "content": prompt_data}],
+                system=system,
+                max_tokens=2000,
+            )
+
+            # Parser le JSON (stratégies progressives)
+            import re as _re
+
+            def _try_parse(text: str):
+                """Tente de parser le JSON avec nettoyage progressif."""
+                # 1. Parse direct
+                try: return json.loads(text)
+                except Exception: pass
+                # 2. Nettoyer trailing commas
+                cleaned = _re.sub(r',\s*([}\]])', r'\1', text)
+                try: return json.loads(cleaned)
+                except Exception: pass
+                # 3. Enlever les retours à la ligne dans les strings
+                cleaned2 = _re.sub(r'(?<=")([^"]*?)\n([^"]*?)(?=")', r'\1 \2', cleaned)
+                try: return json.loads(cleaned2)
+                except Exception: pass
+                return None
+
+            result = None
+            # Chercher le JSON entre ```json ... ``` ou { ... }
+            code_block = _re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', raw)
+            if code_block:
+                result = _try_parse(code_block.group(1))
+
+            if not result:
+                brace_match = _re.search(r'\{[\s\S]*\}', raw)
+                if brace_match:
+                    result = _try_parse(brace_match.group(0))
+
+            if not result:
+                # Fallback: extraire les champs critiques via regex
+                result = {"health_score": 50, "health_label": "Analyse partielle",
+                          "summary": "Format JSON invalide — données partielles extraites.",
+                          "agent_analysis": [], "patterns": [], "critical_issues": [],
+                          "recommendations": [], "growth_opportunities": []}
+                for field, is_int in [("health_score", True), ("health_label", False)]:
+                    m = _re.search(rf'"{field}"\s*:\s*"?([^",\n}}]+)"?', raw)
+                    if m:
+                        v = m.group(1).strip().strip('"')
+                        result[field] = int(v) if is_int and v.isdigit() else v
+                # Extraire summary entre guillemets
+                sm = _re.search(r'"summary"\s*:\s*"([^"]{10,})"', raw)
+                if sm: result["summary"] = sm.group(1)
+
+            result["generated_at"] = datetime.utcnow().isoformat()
+            result["period_days"] = days
+            return result
+
+        except Exception as e:
+            return {
+                "health_score": 0,
+                "health_label": "Erreur",
+                "summary": f"Erreur lors de l'analyse IA : {e}",
+                "agent_analysis": [],
+                "patterns": [],
+                "critical_issues": [str(e)],
+                "recommendations": [],
+                "growth_opportunities": [],
+                "generated_at": datetime.utcnow().isoformat(),
+                "period_days": days,
+            }
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 

@@ -52,3 +52,12 @@ async def get_analysis(
 ):
     """Analyse brute des logs (healthy/issues/suggestions + stats)."""
     return self_observer.analyze(db=db, days=days)
+
+
+@router.post("/ai-analysis")
+async def get_ai_analysis(
+    days: int = Query(7, ge=1, le=90, description="Période d'analyse"),
+    db: Session = Depends(get_db),
+):
+    """Analyse approfondie par Claude — score de santé, patterns, recommandations IA."""
+    return await self_observer.ai_analysis(db=db, days=days)
