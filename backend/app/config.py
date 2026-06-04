@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     SUMMARY_THRESHOLD: int = 50   # résume après N échanges
     SUMMARY_BATCH: int = 20       # nombre d'échanges résumés à la fois
 
+    # Mode opérateur — désactive les guardrails agent (pas ceux de Claude API)
+    OPERATOR_MODE: bool = False
+
     # Auth JWT
     JWT_SECRET: str = "change-me-in-production-use-a-long-random-string"
     JWT_EXPIRE_HOURS: int = 24

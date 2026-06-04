@@ -290,7 +290,12 @@ class CyberAgent(BaseAgent):
         Vérifie les guardrails légaux.
         Retourne un message éducatif si la requête est hors périmètre légal,
         None si tout est ok.
+        OPERATOR_MODE=true dans .env désactive complètement ces guardrails agents.
         """
+        from app.config import settings
+        if settings.OPERATOR_MODE:
+            return None  # Opérateur confirmé — plein accès
+
         t = task.lower().strip()
 
         # Contexte d'autorisation universelle → bypass guardrails
