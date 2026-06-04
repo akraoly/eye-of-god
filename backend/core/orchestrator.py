@@ -98,8 +98,6 @@ class Orchestrator:
                     "output": result["output"],
                     "data": result.get("data", {}),
                 })
-            elif not result.get("success"):
-                errors.append(f"{agent_name}: {result.get('output', 'Erreur inconnue')}")
         elif len(selected_agents) > 1:
             # Parallèle si agents indépendants (knowledge + autres)
             tasks = []
@@ -173,9 +171,6 @@ class Orchestrator:
             agent = self.AGENTS[intent]
             if agent.can_handle(message):
                 selected.append(intent)
-            elif intent != "general":
-                # Intent détecté mais can_handle False → on l'inclut quand même
-                selected.append(intent)
 
         # KnowledgeAgent : toujours consulter si des infos mémorisables sont présentes
         if intent != "knowledge" and knowledge_agent.can_handle(message):
@@ -208,7 +203,7 @@ class Orchestrator:
                 agent_name=agent.name,
                 action_type="run",
                 description=message[:200],
-                status="success" if result.get("success") else "error",
+                status="success" if result.get("success") else "skipped",
                 output_data={"output_preview": (result.get("output") or "")[:300]},
             )
             return result

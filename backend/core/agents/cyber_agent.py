@@ -165,8 +165,16 @@ class CyberAgent(BaseAgent):
         if any(kw in t for kw in ["liste", "list", "catalogue", "quels outils", "what tools", "available"]):
             return self._result(True, catalog_summary())
 
-        return self._result(False, f"Je n'ai pas pu déterminer l'action pour : {task!r}. "
-                                   f"Passe par /chat pour que l'IA interprète ta demande.")
+        return self._result(True,
+            "⚔️ CYBER AGENT — Je n'ai pas reconnu de commande spécifique.\n\n"
+            "Utilise une commande explicite, ex :\n"
+            "  scan <IP>               → reconnaissance nmap\n"
+            "  gobuster http://<IP>    → enumération web\n"
+            "  crack <hash>            → hashcat/john\n"
+            "  exploit <binaire>       → template pwntools\n"
+            "  privesc linux           → checklist élévation\n"
+            "  niveau 1 / niveau 4     → guides Red Team\n\n"
+            "Ou passe par le Chat pour une question en langage naturel.")
 
     # ── Dispatch niveaux offensifs ────────────────────────────────────────────
 
@@ -510,7 +518,7 @@ class CyberAgent(BaseAgent):
                 {"level": 4, "tool": "meterpreter"})
 
         # ── Phishing ──────────────────────────────────────────────────────────
-        if any(kw in t for kw in ["phishing", "gophish", "campagne phishing"]):
+        if any(kw in t for kw in ["phishing", "fishing", "gophish", "campagne phishing"]):
             s = c2_manager.status("gophish")
             state = "🟢 EN COURS" if s["running"] else "🔴 ARRÊTÉ"
             return self._result(True,
@@ -765,8 +773,16 @@ class CyberAgent(BaseAgent):
 
         target = self._extract_target(task)
         if not target:
-            return self._result(False, "Spécifie une cible (IP, domaine ou plage réseau).",
-                                {"hint": "Ex: scan 192.168.1.1 | nmap -sV 10.0.0.1"})
+            return self._result(True,
+                "🔍 RECON — Spécifie une cible pour lancer le scan.\n\n"
+                "Exemples :\n"
+                "  scan 192.168.1.1          → nmap -sV -sC\n"
+                "  scan 10.0.0.0/24          → découverte réseau\n"
+                "  nmap -sV -p- 10.0.0.1     → commande directe\n"
+                "  dns subdomain exemple.com  → énumération sous-domaines\n"
+                "  arp-scan local            → scan réseau local\n\n"
+                "Outils disponibles : nmap, masscan, rustscan, dnsrecon, amass, subfinder",
+                {"hint": "Précise l'IP, domaine ou plage CIDR"})
 
         # Choisir l'outil selon le contexte
         if any(kw in task.lower() for kw in ["dns", "sous-domaine", "subdomain"]):
@@ -815,8 +831,16 @@ class CyberAgent(BaseAgent):
 
         target = self._extract_url_or_target(task)
         if not target:
-            return self._result(False, "Spécifie une URL cible.",
-                                {"hint": "Ex: gobuster dir http://10.0.0.1 | nikto -h http://target"})
+            return self._result(True,
+                "🌐 WEB — Spécifie une URL cible pour lancer le scan.\n\n"
+                "Exemples :\n"
+                "  gobuster http://10.0.0.1   → énumération répertoires\n"
+                "  nikto http://10.0.0.1      → scan de vulnérabilités\n"
+                "  sqlmap http://site/?id=1   → injection SQL\n"
+                "  ffuf http://site/FUZZ      → fuzzing\n"
+                "  whatweb http://site        → fingerprinting\n"
+                "  wpscan http://site         → audit WordPress",
+                {"hint": "Précise l'URL cible (http://...)"})
 
         if "sqlmap" in t:
             cmd = f"sqlmap -u '{target}' --dbs --batch"
@@ -877,8 +901,12 @@ class CyberAgent(BaseAgent):
                 file_path = self._extract_file_path(task)
                 cmd = f"john {file_path} --wordlist={wordlist}"
             else:
-                return self._result(False, "Fournis le hash à cracker.",
-                                    {"hint": "Ex: crack 5f4dcc3b5aa765d61d8327deb882cf99 | john hash.txt"})
+                return self._result(True,
+                    "🔑 CRACK — Fournis le hash à cracker.\n\n"
+                    "Exemples :\n"
+                    "  crack 5f4dcc3b5aa765d61d8327deb882cf99   (MD5)\n"
+                    "  john hash.txt                            (fichier)\n"
+                    "  hashcat <hash>                           (GPU)")
         elif any(kw in t for kw in ["john"]):
             file_path = self._extract_file_path(task)
             if not file_path:
@@ -908,7 +936,14 @@ class CyberAgent(BaseAgent):
             else:
                 cmd = f"hydra -l root -P {wordlist} ssh://{target}"
         else:
-            return self._result(False, "Précise l'outil (hydra/hashcat/john/crackmapexec/kerbrute) et la cible.")
+            return self._result(True,
+                "🔑 PASSWORDS — Précise l'outil et la cible.\n\n"
+                "Exemples :\n"
+                "  hydra ssh://10.0.0.1         → brute-force SSH\n"
+                "  crack <hash_md5>             → cracker un hash\n"
+                "  john hash.txt                → john the ripper\n"
+                "  crackmapexec 10.0.0.1        → spray SMB\n"
+                "  kerbrute 10.0.0.1            → enum Kerberos")
 
         return self._run_command(cmd, task)
 
@@ -980,7 +1015,13 @@ class CyberAgent(BaseAgent):
                 "Ex: impacket-secretsdump domain/user:pass@target\n"
                 "Ex: impacket-psexec domain/user:pass@target")
 
-        return self._result(False, "Précise l'action d'exploitation (metasploit/msfvenom/searchsploit/impacket).")
+        return self._result(True,
+            "💥 EXPLOITATION — Précise l'action.\n\n"
+            "Exemples :\n"
+            "  metasploit listener 10.0.0.1 4444   → handler reverse shell\n"
+            "  msfvenom linux 10.0.0.1 4444        → payload ELF\n"
+            "  searchsploit apache 2.4             → chercher CVE\n"
+            "  impacket-psexec dom/user:pass@IP    → PSExec")
 
     def _handle_reversing(self, task: str) -> dict:
         t = task.lower()
@@ -1038,7 +1079,15 @@ class CyberAgent(BaseAgent):
             if binary:
                 return self._result(True, exploit_summary(binary))
 
-        return self._result(False, "Précise l'action de reverse (checksec/gadgets/objdump/strings/strace/ltrace).")
+        return self._result(True,
+            "🔬 REVERSING — Précise l'action et le binaire.\n\n"
+            "Exemples :\n"
+            "  checksec ./binary        → protections (ASLR/NX/PIE/canary)\n"
+            "  rop gadgets ./binary     → chaîne ROP\n"
+            "  strings ./binary         → strings lisibles\n"
+            "  objdump ./binary         → désassemblage\n"
+            "  strace ./binary          → appels système\n"
+            "  analyse complète ./bin   → rapport complet exploit")
 
     def _handle_network(self, task: str) -> dict:
         t = task.lower()
