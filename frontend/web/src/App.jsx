@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Chat from './components/Chat'
 import Sidebar from './components/Sidebar'
 import StarField from './components/StarField'
