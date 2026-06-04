@@ -1121,6 +1121,35 @@ kbd {
   display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
 }
 
+/* ── OBSERVE ─────────────────────────────────────────────────────────────── */
+.obs-section-title {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 8px;
+}
+.obs-item {
+  padding: 10px 14px; border-radius: var(--radius);
+  font-size: 0.82rem; line-height: 1.45; backdrop-filter: blur(10px);
+}
+.obs-healthy    { background: rgba(16,185,129,0.08);  border: 1px solid rgba(16,185,129,0.2);  color: #a7f3d0; }
+.obs-issue      { background: rgba(239,68,68,0.08);   border: 1px solid rgba(239,68,68,0.2);   color: #fca5a5; }
+.obs-suggestion { background: rgba(245,158,11,0.08);  border: 1px solid rgba(245,158,11,0.2);  color: #fde68a; }
+
+.obs-action-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 24px; border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.obs-action-row:hover { background: var(--glass2); }
+.obs-action-row:last-child { border-bottom: none; }
+
+.obs-report-pre {
+  font-family: 'Courier New', monospace; font-size: 0.78rem;
+  color: var(--text2); line-height: 1.7; white-space: pre-wrap;
+  background: var(--glass2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px;
+  backdrop-filter: blur(12px);
+}
+
 /* ── THEME SWITCHER ──────────────────────────────────────────────────────── */
 .theme-overlay {
   position: fixed; inset: 0; z-index: 100;
