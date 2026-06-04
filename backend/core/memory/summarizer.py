@@ -61,23 +61,21 @@ class ConversationSummarizer:
             logger.error("Summarizer: erreur Claude: %s", e)
             return False
 
-        # Sauvegarder comme mémoire long terme
+        # Sauvegarder comme mémoire long terme (upsert — évite les doublons)
+        from core.memory.storage import memory_storage
         key = f"résumé_{old[0].timestamp.strftime('%Y%m%d_%H%M')}"
-        mem = Memory(
+        mem = memory_storage.save_memory(
+            db=db,
             memory_type="long",
             key=key,
             value=summary,
             importance=0.7,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
         )
-        db.add(mem)
 
         # Marquer les échanges comme résumés (context_used = -1)
         for c in old:
             c.context_used = -1
         db.commit()
-        db.refresh(mem)
 
         # Indexer le résumé dans le vector store
         vector_store.add(

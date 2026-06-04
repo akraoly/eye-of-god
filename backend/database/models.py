@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, Float, Enum, JSON, Boolean
+from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, Float, Enum, JSON, Boolean, UniqueConstraint
 from sqlalchemy.orm import declarative_base
 from datetime import datetime
 import uuid as _uuid
@@ -61,6 +61,8 @@ class Memory(Base):
     importance = Column(Float, default=0.5)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("memory_type", "key", name="uq_memory_type_key"),)
 
 
 class UserProfile(Base):
