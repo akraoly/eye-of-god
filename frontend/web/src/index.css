@@ -1061,6 +1061,66 @@ kbd {
 }
 .mem-del-btn:hover:not(:disabled) { background: rgba(239,68,68,0.1); border-color: var(--red); color: var(--red); }
 
+/* Onglets mémoire */
+.mem-tab-btn {
+  background: none; border: 1px solid transparent; border-radius: 8px;
+  color: var(--text3); cursor: pointer; font-size: 0.78rem; padding: 5px 11px;
+  transition: all 0.15s; white-space: nowrap;
+}
+.mem-tab-btn:hover { color: var(--text2); border-color: var(--border); }
+.mem-tab-btn.active { background: var(--glow2); border-color: var(--border2); color: var(--accent); font-weight: 600; }
+
+/* Filtre type */
+.mem-filter-btn {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text3); cursor: pointer; font-size: 0.72rem; padding: 4px 9px;
+  transition: all 0.15s;
+}
+.mem-filter-btn:hover { color: var(--text2); }
+.mem-filter-btn.active { background: var(--glow2); border-color: var(--border2); color: var(--accent); font-weight: 600; }
+
+/* Inputs */
+.mem-search-input {
+  background: var(--glass2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.8rem; padding: 6px 12px;
+  outline: none; transition: border-color 0.15s;
+}
+.mem-search-input:focus { border-color: var(--border2); }
+.mem-input {
+  background: var(--glass2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.82rem; padding: 7px 12px;
+  outline: none; transition: border-color 0.15s; width: 100%;
+}
+.mem-input:focus { border-color: var(--border2); }
+.mem-textarea { resize: vertical; font-family: inherit; line-height: 1.45; }
+
+/* Boutons */
+.mem-add-btn {
+  background: var(--glass2); border: 1px solid var(--border2); border-radius: 8px;
+  color: var(--accent); cursor: pointer; font-size: 0.78rem; padding: 5px 13px;
+  transition: all 0.15s; white-space: nowrap;
+}
+.mem-add-btn:hover { background: var(--glow2); box-shadow: 0 0 10px var(--glow2); }
+.mem-save-btn {
+  background: var(--glow2); border: 1px solid var(--border2); border-radius: 8px;
+  color: var(--accent); cursor: pointer; font-size: 0.82rem; font-weight: 600;
+  padding: 7px 16px; transition: all 0.15s; white-space: nowrap;
+}
+.mem-save-btn:hover:not(:disabled) { box-shadow: 0 0 14px var(--glow2); filter: brightness(1.15); }
+.mem-save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.mem-edit-btn {
+  background: none; border: none; cursor: pointer; font-size: 0.85rem;
+  opacity: 0.35; transition: opacity 0.15s; padding: 0 4px; flex-shrink: 0;
+}
+.mem-edit-btn:hover { opacity: 0.8; }
+
+/* Formulaire ajout */
+.mem-add-form {
+  padding: 14px 24px; border-bottom: 1px solid var(--border);
+  background: var(--glass); backdrop-filter: blur(12px);
+  display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
+}
+
 /* ── THEME SWITCHER ──────────────────────────────────────────────────────── */
 .theme-overlay {
   position: fixed; inset: 0; z-index: 100;
