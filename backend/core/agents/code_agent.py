@@ -20,27 +20,37 @@ logger = get_logger(__name__)
 
 _CODE_KEYWORDS = [
     # Exploration
-    "explore", "analyse le projet", "analyse le code", "comprends le projet",
-    "lis le fichier", "lire", "ouvre", "montre", "affiche le contenu",
-    "structure du projet", "arborescence", "architecture",
+    "explore le projet", "explore le code", "analyse le projet", "analyse le code",
+    "comprends le projet", "lis le fichier", "lire le fichier",
+    "ouvre le fichier", "montre le code", "affiche le contenu",
+    "structure du projet", "arborescence", "architecture du projet",
     # Edition
-    "crée", "créer", "écris", "modifier", "modifie", "édite", "change",
-    "ajoute", "ajouter", "supprime", "refactore", "renomme",
-    "implémente", "implémenter", "code", "développe",
+    "crée le fichier", "créer le fichier", "écris le code", "écris dans",
+    "modifie le fichier", "modifie le code", "édite le fichier",
+    "ajoute la fonction", "ajouter la fonction", "supprime la fonction",
+    "refactore", "renomme", "implémente", "implémenter",
+    "développe", "programme",
     # Exécution
-    "lance", "lancer", "exécute", "execute", "installe", "installer",
-    "compile", "build", "tourne", "run", "démarre",
+    "lance la commande", "lancer la commande", "exécute la commande",
+    "exécute le script", "installe les dépendances", "installe le paquet",
+    "npm install", "pip install", "cargo build",
+    "compile le projet", "build le projet", "démarre le serveur",
     # Tests
-    "teste", "test", "tests", "pytest", "jest", "lance les tests",
+    "lance les tests", "exécute les tests", "pytest", "jest", "unittest",
+    "teste le code", "tests unitaires", "tests d'intégration",
     # Debug
-    "debug", "débug", "erreur", "error", "bug", "crash", "traceback",
-    "corrige", "fixe", "répare",
+    "debug", "débug", "traceback", "stack trace",
+    "corrige l'erreur", "corrige le bug", "fixe le bug", "répare le code",
+    "analyse l'erreur", "explique l'erreur",
     # Git
-    "commit", "push", "pull", "git", "branche", "diff", "log",
-    # Planification
-    "plan", "planifie", "étapes", "liste les tâches",
+    "git status", "git diff", "git log", "git commit", "git push",
+    "git pull", "git branch", "commit les changements",
+    # Planification code
+    "plan de développement", "planifie le code", "étapes de développement",
+    "liste les tâches de code",
     # Lint / qualité
-    "lint", "linter", "format", "qualité",
+    "lint", "linter", "ruff check", "eslint", "pylint", "mypy",
+    "format le code", "qualité du code",
 ]
 
 
@@ -101,36 +111,43 @@ class CodeAgent(BaseAgent):
             return self._explore(path)
 
         # ── Lecture de fichier ────────────────────────────────────────────────
-        if any(kw in t for kw in ["lis le fichier", "lire", "ouvre", "montre", "affiche le contenu", "read"]):
+        if any(kw in t for kw in ["lis le fichier", "lire le fichier", "ouvre le fichier", "montre le code", "affiche le contenu"]):
             path = self._extract_path(task)
             if not path:
-                return self._result(False, "Spécifie le chemin du fichier à lire.")
+                return self._result(True,
+                    "📂 Lis le fichier — Exemples :\n\n"
+                    "  lis le fichier /home/kali/eye-of-god/backend/app/main.py\n"
+                    "  montre le code backend/core/orchestrator.py\n"
+                    "  affiche le contenu requirements.txt lignes 1 à 20")
             return self._read_file(path, task)
 
         # ── Écriture / création de fichier ────────────────────────────────────
         if any(kw in t for kw in ["crée le fichier", "créer le fichier", "écris dans", "write to"]):
             path = self._extract_path(task)
             if not path:
-                return self._result(False, "Spécifie le chemin du fichier.")
+                return self._result(True, "📝 Crée le fichier — Spécifie le chemin :\n  crée le fichier /tmp/mon_script.py")
             content = ctx.get("content", "")
             if not content:
-                return self._result(False, "Fournis le contenu (context.content).")
+                return self._result(True, f"📝 Fichier cible : {path}\nFournis le contenu dans le contexte (context.content).")
             return self._write_file(path, content)
 
         # ── Modification (patch) ──────────────────────────────────────────────
-        if any(kw in t for kw in ["modifie", "modifier", "remplace", "patch", "change la ligne"]):
+        if any(kw in t for kw in ["modifie le fichier", "modifie le code", "édite le fichier", "remplace", "patch"]):
             path = self._extract_path(task)
             if path and ctx.get("old") and ctx.get("new"):
                 r = code_editor.patch(path, ctx["old"], ctx["new"])
                 return self._result(r["success"], r.get("diff") or r.get("error", ""), r)
+            if path:
+                return self._result(True, f"📝 Fichier : {path}\nFournis context.old (texte à remplacer) et context.new (nouveau texte).")
+            return self._result(True, "📝 Modification — Spécifie le fichier :\n  modifie le fichier /chemin/fichier.py")
 
         # ── Listing de répertoire ─────────────────────────────────────────────
-        if any(kw in t for kw in ["liste les fichiers", "list", "ls", "arborescence"]):
+        if any(kw in t for kw in ["liste les fichiers", "arborescence"]):
             path = self._extract_path(task) or _session.root or "."
             r = code_editor.list_dir(path, recursive="recursive" in t or "-r" in t)
             if r["success"]:
                 return self._result(True, "\n".join(r["entries"][:80]))
-            return self._result(False, r["error"])
+            return self._result(True, f"📂 Impossible de lister {path} : {r['error']}")
 
         # ── Exécution / installation ──────────────────────────────────────────
         if any(kw in t for kw in ["installe", "installer", "install", "npm install", "pip install"]):
@@ -142,16 +159,21 @@ class CodeAgent(BaseAgent):
                 r = dev_runner.install_deps(path)
             return self._format_dev_result(r, "Installation")
 
-        if any(kw in t for kw in ["lance", "lancer", "run", "exécute", "démarre", "start"]):
+        if any(kw in t for kw in ["lance la commande", "lancer la commande", "exécute la commande", "exécute le script", "démarre le serveur"]):
             cmd = self._extract_command(task)
             path = self._extract_path(task) or _session.root or "."
             if not cmd:
-                return self._result(False, "Spécifie la commande à exécuter.")
+                return self._result(True,
+                    "⚡ Exécution — Exemples :\n\n"
+                    "  lance la commande `python3 script.py`\n"
+                    "  exécute le script /tmp/test.sh\n"
+                    "  démarre le serveur `uvicorn app.main:app --port 8080`")
             r = dev_runner.run(cmd, cwd=path, timeout=60)
             return self._format_dev_result(r, "Exécution")
 
         # ── Tests ──────────────────────────────────────────────────────────────
-        if any(kw in t for kw in ["teste", "test", "tests", "pytest", "jest", "lance les tests"]):
+        if any(kw in t for kw in ["lance les tests", "exécute les tests", "pytest", "jest", "unittest",
+                                   "teste le code", "tests unitaires", "tests d'intégration"]):
             path = self._extract_path(task) or _session.root or "."
             cmd = None
             if "pytest" in t:
@@ -159,14 +181,22 @@ class CodeAgent(BaseAgent):
             elif "jest" in t:
                 cmd = "npx jest --watchAll=false"
             r = dev_runner.run_tests(path, test_cmd=cmd)
+            # "Aucun test détecté" n'est pas une erreur, c'est un guide
+            if not r.get("success") and "aucun test" in (r.get("error","") + r.get("stderr","")).lower():
+                return self._result(True,
+                    "🧪 Aucun test détecté dans ce répertoire.\n\n"
+                    "Pour créer des tests :\n"
+                    "  Python  : pytest + fichiers test_*.py\n"
+                    "  JS/TS   : jest + fichiers *.test.js\n"
+                    "  Rust    : cargo test\n\n"
+                    "Spécifie le répertoire avec les tests ou lance `pytest /chemin/tests/`")
             return self._format_dev_result(r, "Tests")
 
         # ── Compilation / build ───────────────────────────────────────────────
-        if any(kw in t for kw in ["compile", "build", "construis"]):
+        if any(kw in t for kw in ["compile le projet", "build le projet", "construis"]):
             cmd = self._extract_command(task)
             path = self._extract_path(task) or _session.root or "."
             if not cmd:
-                # Auto-détecter
                 p = Path(path)
                 if (p / "Makefile").exists():
                     cmd = "make"
@@ -177,27 +207,46 @@ class CodeAgent(BaseAgent):
                 elif (p / "pyproject.toml").exists() or (p / "setup.py").exists():
                     cmd = "pip install -e ."
                 else:
-                    return self._result(False, "Aucun système de build détecté. Spécifie la commande.")
+                    return self._result(True,
+                        f"🏗️  Build — Aucun système détecté dans {path}\n\n"
+                        "Spécifie la commande :\n"
+                        "  compile le projet `make`\n"
+                        "  build le projet `cargo build`\n"
+                        "  build le projet `npm run build`")
             r = dev_runner.run(cmd, cwd=path, timeout=180)
             return self._format_dev_result(r, "Build")
 
         # ── Lint / qualité ────────────────────────────────────────────────────
-        if any(kw in t for kw in ["lint", "linter", "qualité", "format", "ruff", "eslint", "pylint"]):
+        if any(kw in t for kw in ["lint", "linter", "ruff check", "eslint", "pylint", "mypy",
+                                   "format le code", "qualité du code"]):
             path = self._extract_path(task) or _session.root or "."
             r = dev_runner.lint(path)
+            if not r.get("success") and "aucun linter" in (r.get("error","") + r.get("stderr","")).lower():
+                return self._result(True,
+                    f"🔍 Lint — Aucun linter configuré dans {path}\n\n"
+                    "Linters disponibles :\n"
+                    "  Python : ruff check . --fix   (ou pylint, flake8, mypy)\n"
+                    "  JS/TS  : npx eslint . --ext .js,.ts\n"
+                    "  Rust   : cargo clippy\n"
+                    "  Go     : golangci-lint run\n\n"
+                    "Lance directement : `ruff check /chemin/`")
             return self._format_dev_result(r, "Lint")
 
         # ── Git ────────────────────────────────────────────────────────────────
-        if any(kw in t for kw in ["git status", "statut git", "git diff", "git log", "commit", "git push", "git pull"]):
+        if any(kw in t for kw in ["git status", "statut git", "git diff", "git log",
+                                   "git commit", "commit les changements", "git push", "git pull", "git branch"]):
             return self._handle_git(task)
 
         # ── Debug ──────────────────────────────────────────────────────────────
-        if any(kw in t for kw in ["debug", "débug", "erreur", "error", "bug", "crash", "traceback", "corrige", "fixe"]):
+        if any(kw in t for kw in ["debug", "débug", "traceback", "stack trace",
+                                   "corrige l'erreur", "corrige le bug", "fixe le bug",
+                                   "répare le code", "analyse l'erreur", "explique l'erreur"]):
             error = ctx.get("error", task)
             return self._debug(error, ctx)
 
         # ── Plan multi-étapes ─────────────────────────────────────────────────
-        if any(kw in t for kw in ["plan", "planifie", "étapes", "liste les tâches"]):
+        if any(kw in t for kw in ["plan de développement", "planifie le code",
+                                   "étapes de développement", "liste les tâches de code"]):
             return self._make_plan(task, ctx)
 
         # ── État des tâches ────────────────────────────────────────────────────
@@ -211,10 +260,29 @@ class CodeAgent(BaseAgent):
                 _session.root = path
                 return self._result(True, f"Projet courant défini : {path}")
 
-        return self._result(
-            False,
-            "Je n'ai pas pu déterminer l'action. Précise : explore/lis/écris/installe/teste/commit/debug/plan."
-        )
+        return self._result(True,
+            "🛠️  Code Agent — Commandes disponibles\n\n"
+            "EXPLORATION :\n"
+            "  explore le projet /chemin/         → analyse complète\n"
+            "  lis le fichier /chemin/fichier.py  → afficher le contenu\n"
+            "  arborescence /chemin/              → arbre de fichiers\n\n"
+            "ÉDITION :\n"
+            "  crée le fichier /chemin/nouveau.py → créer un fichier\n"
+            "  modifie le fichier /chemin/...     → modifier du code\n\n"
+            "EXÉCUTION :\n"
+            "  lance la commande `python3 script.py`\n"
+            "  installe les dépendances /projet/  → pip/npm auto-détecté\n"
+            "  compile le projet /projet/         → make/cargo/npm build\n\n"
+            "TESTS & QUALITÉ :\n"
+            "  lance les tests /projet/           → pytest/jest auto\n"
+            "  lint /projet/                      → ruff/eslint\n\n"
+            "GIT :\n"
+            "  git status /projet/\n"
+            "  git commit les changements 'message'\n"
+            "  git push /projet/\n\n"
+            "DEBUG :\n"
+            "  debug TypeError: ... (colle ton erreur)\n"
+            "  analyse l'erreur <traceback>")
 
     # ── Handlers spécialisés ──────────────────────────────────────────────────
 
