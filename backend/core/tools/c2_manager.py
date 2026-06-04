@@ -31,7 +31,7 @@ C2_CONFIGS = {
         "needs_sudo": False,
     },
     "havoc": {
-        "cmd": "havoc server --profile /tmp/havoc.yaotl -v",
+        "cmd": "havoc server --profile /tmp/havoc.yaotl",
         "description": "Havoc C2 — Teamserver GUI (port 40056)",
         "port": 40056,
         "color": "#f97316",
@@ -46,7 +46,7 @@ C2_CONFIGS = {
         "needs_sudo": False,
     },
     "evilginx": {
-        "cmd": "evilginx -p /usr/share/evilginx/phishlets",
+        "cmd": "unbuffer evilginx -p /home/kali/.evilginx/phishlets -developer",
         "description": "Evilginx — AiTM proxy MFA bypass (port 443/80)",
         "port": 443,
         "color": "#a78bfa",
@@ -85,23 +85,27 @@ Teamserver {
     Port = 40056
 
     Build {
-        Compiler64 = "x86_64-w64-mingw32-gcc"
+        Compiler64 = "/usr/bin/x86_64-w64-mingw32-gcc"
+        Compiler86 = "/usr/bin/i686-w64-mingw32-gcc"
         Nasm = "/usr/bin/nasm"
     }
 }
 
 Operators {
-    operator "admin" {
+    user "admin" {
         Password = "admin123!"
     }
 }
 
-Listeners {
-    Http {
-        Name         = "default"
-        Hosts        = ["0.0.0.0"]
-        Port         = 80
-        Secure       = false
+Demon {
+    Sleep = 2
+    Jitter = 15
+
+    TrustXForwardedFor = false
+
+    Injection {
+        Spawn64 = "C:\\\\Windows\\\\System32\\\\notepad.exe"
+        Spawn32 = "C:\\\\Windows\\\\SysWOW64\\\\notepad.exe"
     }
 }
 """

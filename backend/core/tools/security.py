@@ -34,6 +34,7 @@ ALLOWED_COMMANDS = {
     "python", "python2", "python3", "ruby", "perl", "lua", "node", "nodejs",
     "php", "bash", "sh", "zsh", "dash", "fish",
     "pip", "pip3", "gem", "npm",
+    "unbuffer", "expect", "script",
 
     # ── Compilation et assemblage ───────────────────────────────────────────
     "gcc", "g++", "cc", "c++", "clang", "clang++",
