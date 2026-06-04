@@ -187,6 +187,146 @@ class CyberAgent(BaseAgent):
                 return True
         return False
 
+    # ── Guardrails légaux ────────────────────────────────────────────────────
+    # Patterns illégaux → (message_risque, suggestions_légales)
+    _GUARDRAIL_RULES = [
+        {
+            "patterns": ["pirater wifi", "cracker wifi", "hacker wifi", "casser wpa",
+                         "cracker un réseau wifi", "scanner les réseau wifi au toure",
+                         "scanner les reseau wifi", "comment pirater un wifi",
+                         "crack wifi voisin", "wifi voisin", "réseau de mon voisin",
+                         "wpa voisin", "wpa2 voisin"],
+            "exemptions": ["mon réseau", "mon wifi", "mon lab", "mon routeur", "ctf",
+                           "hackthebox", "tryhackme", "test réseau", "authorized",
+                           "wlan0mon", "airodump-ng", "airmon-ng"],
+            "risk": "Cracking de réseau WiFi non autorisé",
+            "law": "Article 323-1 Code Pénal FR — jusqu'à 2 ans + 60 000€",
+            "legal_path": [
+                "✅ Configurer un routeur personnel en lab (Raspberry Pi)",
+                "✅ Utiliser une VM avec adaptateur WiFi USB en mode monitor",
+                "✅ HackTheBox / TryHackMe — challenges WiFi légaux",
+                "✅ Certification WiFi (OSWP) sur environnement Offensive Security",
+                "✅ 'airmon-ng start mon propre réseau' → test sur ton propre SSID",
+            ],
+        },
+        {
+            "patterns": ["phishing utilisateurs", "phishing clients", "phishing employés",
+                         "pirater email", "pirater compte email", "voler compte",
+                         "voler identifiants", "voler mot de passe", "voler credentials",
+                         "hameçonner", "arnaquer", "escroquer"],
+            "exemptions": ["simulation", "campagne autorisée", "red team autorisé",
+                           "pentest autorisé", "ctf", "hackthebox", "test employés",
+                           "sensibilisation", "gophish entreprise"],
+            "risk": "Phishing / vol de credentials sans autorisation",
+            "law": "Article 313-1 Code Pénal FR — escroquerie jusqu'à 5 ans + 375 000€",
+            "legal_path": [
+                "✅ Campagne phishing interne autorisée par écrit (RSSI + direction)",
+                "✅ GoPhish sur lab interne pour former les équipes",
+                "✅ TryHackMe — module Phishing légal",
+                "✅ Certification OSCP/CEH — exercices phishing contrôlés",
+            ],
+        },
+        {
+            "patterns": ["contourner protection", "contourner les protection", "contourner les protections",
+                         "bypass protection", "contourner sécurité", "bypass sécurité",
+                         "déverrouiller iphone", "débloquer téléphone",
+                         "contourner mdp", "bypass password", "contourner windows",
+                         "crack windows", "bypass drm", "contourner drm",
+                         "pirater compte", "hacker compte instagram", "hacker facebook",
+                         "hacker snapchat", "pirater snapchat", "pirater instagram",
+                         "pirater whatsapp"],
+            "exemptions": ["mon compte", "mon téléphone", "mon pc", "mon appareil",
+                           "ctf", "hackthebox", "lab", "vm", "machine virtuelle",
+                           "pentest autorisé", "authorized"],
+            "risk": "Contournement de protections / accès non autorisé",
+            "law": "Article 323-1 Code Pénal FR — accès frauduleux STAD",
+            "legal_path": [
+                "✅ Récupérer ton propre compte via le processus officiel",
+                "✅ HackTheBox / TryHackMe — machines légales à compromettre",
+                "✅ Metasploitable, DVWA, VulnHub — labs intentionnellement vulnérables",
+                "✅ CTF (Capture The Flag) — compétitions légales mondiales",
+            ],
+        },
+        {
+            "patterns": ["ddos", "dos attack", "attaque ddos", "flood server",
+                         "déni de service", "rendre inaccessible", "saturer serveur",
+                         "botnet", "bot net"],
+            "exemptions": ["lab", "vm", "machine virtuelle", "test local", "localhost",
+                           "mon serveur", "ctf", "authorized"],
+            "risk": "Attaque par déni de service (DoS/DDoS)",
+            "law": "Article 323-2 Code Pénal FR — jusqu'à 5 ans + 75 000€",
+            "legal_path": [
+                "✅ Tester la résilience de TES propres serveurs",
+                "✅ Outils légaux : locust, k6, wrk (load testing autorisé)",
+                "✅ Bug bounty — signaler les vulnérabilités aux éditeurs",
+            ],
+        },
+        {
+            "patterns": ["créer un virus", "créer un malware", "créer un ransomware",
+                         "créer un trojan", "écrire un malware", "coder un virus",
+                         "développer malware", "spreader", "se propager"],
+            "exemptions": ["analyse", "reverse", "sandbox", "lab", "ctf", "malware analysis",
+                           "comprendre comment fonctionne", "détecter"],
+            "risk": "Création de logiciel malveillant",
+            "law": "Article 323-3-1 Code Pénal FR — jusqu'à 5 ans + 75 000€",
+            "legal_path": [
+                "✅ Analyser des malwares existants en sandbox (Any.run, Cuckoo)",
+                "✅ Certification GREM (GIAC Reverse Engineering Malware)",
+                "✅ Défense : déployer un EDR et analyser les détections",
+            ],
+        },
+    ]
+
+    # Contexte d'autorisation légitime — exemption universelle
+    _PENTEST_AUTH_CONTEXT = [
+        "pentest autorisé", "authorized pentest", "bug bounty", "ctf",
+        "hackthebox", "tryhackme", "capture the flag", "red team autorisé",
+        "lab personnel", "environnement de test", "vm", "machine virtuelle",
+        "mon propre", "ma propre", "mon infrastructure", "notre infrastructure",
+    ]
+
+    def _check_guardrails(self, task: str) -> Optional[dict]:
+        """
+        Vérifie les guardrails légaux.
+        Retourne un message éducatif si la requête est hors périmètre légal,
+        None si tout est ok.
+        """
+        t = task.lower().strip()
+
+        # Contexte d'autorisation universelle → bypass guardrails
+        if any(ctx in t for ctx in self._PENTEST_AUTH_CONTEXT):
+            return None
+
+        for rule in self._GUARDRAIL_RULES:
+            # Vérifier si un pattern de risque correspond
+            if not any(p in t for p in rule["patterns"]):
+                continue
+            # Vérifier les exemptions spécifiques à la règle
+            if any(ex in t for ex in rule["exemptions"]):
+                continue
+
+            # Guardrail déclenché
+            legal_steps = "\n".join(f"  {s}" for s in rule["legal_path"])
+            return self._result(True,
+                f"⚠️  GUARDRAIL — {rule['risk']}\n"
+                f"{'─' * 50}\n\n"
+                f"🚫 Cette action est illégale sans autorisation explicite.\n"
+                f"📖 Cadre légal : {rule['law']}\n\n"
+                f"{'─' * 50}\n"
+                f"✅ ALTERNATIVES LÉGALES ET FORMATIVES :\n\n"
+                f"{legal_steps}\n\n"
+                f"{'─' * 50}\n"
+                f"💡 Pour un pentest autorisé, fournis le contexte :\n"
+                f"   → 'pentest autorisé sur [cible] — périmètre [scope]'\n"
+                f"   → 'ctf [nom de la compétition]'\n"
+                f"   → 'lab personnel [description]'\n\n"
+                f"L'Œil de Dieu est un outil offensif professionnel.\n"
+                f"Son utilisation engage ta responsabilité légale.",
+                {"guardrail": True, "risk": rule["risk"], "law": rule["law"]},
+            )
+
+        return None
+
     # Mots-clés exclusifs à dev_secure/report — prioritaires sur _dispatch_level
     _DEV_SECURE_PRIORITY = {"owasp", "sast", "dast", "xss", "csrf", "ssrf", "idor",
                              "jwt", "cors", "csp", "hsts", "semgrep", "snyk", "bandit",
@@ -200,6 +340,11 @@ class CyberAgent(BaseAgent):
 
     async def run(self, task: str, context: Optional[dict] = None) -> dict:
         t = task.lower().strip()
+
+        # 0. Guardrails légaux — vérification avant tout dispatch
+        guardrail = self._check_guardrails(task)
+        if guardrail is not None:
+            return guardrail
 
         # 0a. Priorité dev_secure et report (avant dispatch niveaux)
         if any(kw in t for kw in self._DEV_SECURE_PRIORITY):
