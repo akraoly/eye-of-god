@@ -10,7 +10,7 @@ const THEMES = [
 ]
 
 const NAV = [
-  { id: 'chat',      icon: '💬', label: 'Chat'      },
+  { id: 'chat',      icon: '🏠', label: 'Accueil'   },
   { id: 'soc',       icon: '🔴', label: 'SOC'       },
   { id: 'offensive', icon: '⚔️', label: 'Offensif'  },
   { id: 'memory',    icon: '🧠', label: 'Mémoire'   },
@@ -64,8 +64,13 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
       )}
 
       <aside className="sidebar">
-        {/* Logo */}
-        <div className="sidebar-logo">👁️</div>
+        {/* Logo — clic = retour accueil */}
+        <button
+          className="sidebar-logo"
+          onClick={onNewChat}
+          title="Accueil"
+          style={{ cursor: 'pointer', border: 'none', padding: 0, fontFamily: 'inherit' }}
+        >👁️</button>
         <div className="status-dot-sidebar" title="En ligne" />
 
         {/* ── Nouveau chat ── */}
@@ -83,7 +88,7 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
         {NAV.map(item => (
           <button key={item.id}
             className={`nav-btn ${view === item.id ? 'active' : ''}`}
-            onClick={() => onNav(item.id)}
+            onClick={() => item.id === 'chat' ? onNewChat() : onNav(item.id)}
             title={item.label}
             style={{ position: 'relative' }}
           >
