@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import EyeOfGod from './EyeOfGod'
 import WelcomeNodes from './WelcomeNodes'
 import VoiceInput from './VoiceInput'
+import MatrixRain from './MatrixRain'
 import { sendMessage, loadHistory, resetSession } from '../utils/api'
 
 const fmtTime = d => d instanceof Date
@@ -81,6 +82,7 @@ export default function Chat({ sessionId, onNewChat }) {
   const [loading,       setLoading]       = useState(false)
   const [eyeState,      setEyeState]      = useState('idle')
   const [historyLoaded, setHistoryLoaded] = useState(false)
+  const [cyberMode,     setCyberMode]     = useState(false)
   const bottomRef = useRef(null)
   const taRef     = useRef(null)
 
@@ -167,8 +169,10 @@ export default function Chat({ sessionId, onNewChat }) {
 
   // ── Vue conversation ──────────────────────────────────────────────────
   return (
-    <div className="chat">
-      <ChatHeader eyeState={eyeState} msgCount={messages.length} onNew={onNewChat} />
+    <div className={`chat ${cyberMode ? 'cyber-mode' : ''}`}>
+      <MatrixRain active={cyberMode} />
+      <ChatHeader eyeState={eyeState} msgCount={messages.length} onNew={onNewChat}
+        cyberMode={cyberMode} onCyberToggle={() => setCyberMode(v => !v)} />
 
       <div className="messages">
         {messages.map((m, i) => {
@@ -256,7 +260,7 @@ const STATE_LABELS = {
   idle: 'En attente', listening: 'Écoute…', thinking: 'Réflexion…', responding: 'Réponse…',
 }
 
-function ChatHeader({ eyeState, msgCount, onNew }) {
+function ChatHeader({ eyeState, msgCount, onNew, cyberMode, onCyberToggle }) {
   return (
     <header className="chat-header">
       <EyeOfGod state={eyeState} size={48} />
@@ -268,6 +272,14 @@ function ChatHeader({ eyeState, msgCount, onNew }) {
           {msgCount > 0 && <span className="msg-count">{msgCount} messages</span>}
         </div>
       </div>
+      <button
+        className={`cyber-toggle ${cyberMode ? 'active' : ''}`}
+        onClick={onCyberToggle}
+        title="Mode cyber / matrix"
+      >
+        <span className="toggle-dot" />
+        {cyberMode ? 'CYBER ON' : 'CYBER'}
+      </button>
       <button className="new-chat-btn" onClick={onNew} title="Nouvelle conversation">
         <span>+</span> Nouveau
       </button>

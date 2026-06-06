@@ -355,7 +355,7 @@ body::after {
 /* ═══════════════════════════════════════════════════════════════
    CHAT
 ═══════════════════════════════════════════════════════════════ */
-.chat { display: flex; flex-direction: column; height: 100%; }
+.chat { display: flex; flex-direction: column; height: 100%; position: relative; overflow: hidden; }
 
 /* ── Écran accueil ── */
 .welcome-screen {
@@ -1082,3 +1082,150 @@ kbd { background: var(--glass2); border: 1px solid var(--border2); border-radius
 .aut-monitor-name { font-size:0.8rem; font-weight:600; color:var(--text); }
 .aut-monitor-desc { font-size:0.68rem; color:var(--text3); }
 .aut-monitor-next { font-size:0.68rem; color:var(--text3); flex-shrink:0; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CYBER / MATRIX MODE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Canvas MatrixRain — absolu dans .chat (position: relative) */
+.matrix-rain-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.matrix-rain-canvas.matrix-active { opacity: 0.38; }
+
+/* Wrapper chat en mode cyber */
+.chat.cyber-mode { position: relative; }
+
+/* Header reste lisible au-dessus du canvas */
+.chat.cyber-mode .chat-header {
+  position: relative;
+  z-index: 2;
+  border-bottom-color: rgba(0, 255, 136, 0.2) !important;
+  background: rgba(0, 5, 1, 0.88) !important;
+}
+
+/* Zone messages — fond sombre + scanlines */
+.chat.cyber-mode .messages {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 6, 2, 0.7) !important;
+}
+.chat.cyber-mode .messages::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.07) 2px,
+    rgba(0, 0, 0, 0.07) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Input area */
+.chat.cyber-mode .input-area {
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 5, 1, 0.9) !important;
+  border-top: 1px solid rgba(0, 255, 136, 0.2) !important;
+}
+.chat.cyber-mode .input-box {
+  border-color: rgba(0, 255, 136, 0.25) !important;
+}
+.chat.cyber-mode .input-box:focus-within {
+  border-color: rgba(0, 255, 136, 0.65) !important;
+  box-shadow: 0 0 22px rgba(0, 255, 136, 0.12) !important;
+}
+.chat.cyber-mode textarea {
+  color: #00ff88 !important;
+  caret-color: #00ff88 !important;
+  font-family: 'Courier New', monospace !important;
+  font-size: 0.88rem !important;
+}
+.chat.cyber-mode textarea::placeholder {
+  color: rgba(0, 255, 136, 0.3) !important;
+}
+.chat.cyber-mode .send-btn {
+  color: #00ff88 !important;
+}
+.chat.cyber-mode .send-btn:hover:not(:disabled) {
+  background: rgba(0, 255, 136, 0.1) !important;
+  box-shadow: 0 0 16px rgba(0, 255, 136, 0.25) !important;
+}
+
+/* Bulles user teintées vert en mode cyber */
+.chat.cyber-mode .bubble-user {
+  background: rgba(0, 255, 136, 0.08) !important;
+  border: 1px solid rgba(0, 255, 136, 0.2) !important;
+  color: #ccffdd !important;
+}
+
+/* Bouton toggle CYBER */
+.cyber-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(0, 255, 136, 0.5);
+  font-size: 0.6rem;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.cyber-toggle:hover {
+  border-color: rgba(0, 255, 136, 0.6);
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.06);
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.15);
+}
+.cyber-toggle.active {
+  border-color: rgba(0, 255, 136, 0.75);
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.08);
+  box-shadow: 0 0 18px rgba(0, 255, 136, 0.2);
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
+}
+.toggle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0, 255, 136, 0.35);
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+}
+.cyber-toggle.active .toggle-dot {
+  background: #00ff88;
+  box-shadow: 0 0 8px #00ff88;
+  animation: pulse-green 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.65); }
+}
+
+/* Animation entrée bulle user (pulse au send) */
+@keyframes cyber-send {
+  0%   { transform: scale(0.97); opacity: 0.7; }
+  60%  { transform: scale(1.015); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.chat.cyber-mode .bubble-user {
+  animation: cyber-send 0.28s ease-out;
+}
