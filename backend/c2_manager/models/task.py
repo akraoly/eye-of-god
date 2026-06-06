@@ -24,3 +24,4 @@ class Task(BaseModel):
     error:        str | None = None
     created_at:   datetime = Field(default_factory=datetime.utcnow)
     completed_at: datetime | None = None
+    meta:         dict = Field(default_factory=dict)

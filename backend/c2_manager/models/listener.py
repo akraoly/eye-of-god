@@ -17,3 +17,4 @@ class Listener(BaseModel):
     payloads_served: int = 0
     created_at:      datetime = Field(default_factory=datetime.utcnow)
     config:          dict[str, Any] = Field(default_factory=dict)
+    meta:            dict[str, Any] = Field(default_factory=dict)

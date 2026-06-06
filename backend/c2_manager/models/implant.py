@@ -23,3 +23,4 @@ class Implant(BaseModel):
     first_seen:   datetime = Field(default_factory=datetime.utcnow)
     notes:        str | None = None
     active:       bool = True
+    meta:         dict = Field(default_factory=dict)
