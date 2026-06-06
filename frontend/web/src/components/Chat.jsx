@@ -254,6 +254,12 @@ export default function Chat({ sessionId, onNewChat }) {
   if (messages.length === 0 && !loading) {
     return (
       <div className="chat">
+        {shanuraModal && (
+          <ShanuraPasswordModal
+            onSuccess={() => { setShanuraModal(false); send(pendingShanura) }}
+            onCancel={() => { setShanuraModal(false); setPendingShanura('') }}
+          />
+        )}
         <div className="welcome-screen">
           <WelcomeNodes eyeState={eyeState} onSend={send} />
           <div className="welcome-text">
