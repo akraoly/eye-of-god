@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
 
 const BASE = '/api/soc'
-const f = url => fetch(url).then(r => r.json()).catch(() => ({}))
+const getAuthHeaders = () => {
+  const t = localStorage.getItem('eye_token')
+  return t ? { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+}
+const f = url => fetch(url, { headers: getAuthHeaders() }).then(r => r.json()).catch(() => ({}))
 
 // ── Badges sévérité ─────────────────────────────────────────────────────────
 const SEV_ICON  = { CRITICAL: '🔴', HIGH: '🟠', MEDIUM: '🟡', LOW: '🟢' }
@@ -254,7 +258,7 @@ function Mitre() {
 
   const doSearch = async () => {
     const data = await fetch(`${BASE}/mitre/search`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: getAuthHeaders(),
       body: JSON.stringify({ q: search }),
     }).then(r => r.json())
     setResults(data.results || [])
@@ -328,7 +332,7 @@ function MlAnomaly() {
 
   const train = async () => {
     setTraining(true)
-    const r = await fetch(`${BASE}/ml/train`, { method: 'POST' }).then(r => r.json()).catch(() => ({}))
+    const r = await fetch(`${BASE}/ml/train`, { method: 'POST', headers: getAuthHeaders() }).then(r => r.json()).catch(() => ({}))
     setTraining(false)
     f(`${BASE}/ml/stats`).then(setStats)
     f(`${BASE}/ml/anomalies?hours=168`).then(setAnomalies)
@@ -664,7 +668,7 @@ function Dlp() {
     if (!scan.trim()) return
     setScanning(true)
     const r = await fetch(`${BASE}/dlp/scan`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: getAuthHeaders(),
       body: JSON.stringify({ text: scan, source: 'ui-manual', channel: 'MANUAL' }),
     }).then(r => r.json()).catch(() => ({}))
     setResult(r)
@@ -800,7 +804,7 @@ function Phishing() {
     if (!form.sender) return
     setAn(true)
     const r = await fetch(`${BASE}/phishing/analyze`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: getAuthHeaders(),
       body: JSON.stringify(form),
     }).then(r => r.json()).catch(() => ({}))
     setResult(r)
@@ -876,7 +880,7 @@ function Osint() {
 
   const doSearch = async () => {
     const r = await fetch(`${BASE}/osint/search`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: getAuthHeaders(),
       body: JSON.stringify({ q: search }),
     }).then(r => r.json()).catch(() => ({}))
     setResults(r.results || [])
@@ -1015,7 +1019,7 @@ function Compliance() {
 
   const assess = async () => {
     setAssessing(true)
-    await fetch(`${BASE}/compliance/assess`, { method: 'POST' })
+    await fetch(`${BASE}/compliance/assess`, { method: 'POST', headers: getAuthHeaders() })
     load()
     setAssessing(false)
   }
@@ -1098,7 +1102,7 @@ function ZeroTrust() {
 
   const evaluate = async () => {
     const r = await fetch(`${BASE}/zero-trust/evaluate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: getAuthHeaders(),
       body: JSON.stringify(form),
     }).then(r => r.json()).catch(() => ({}))
     setEval(r)
@@ -1181,7 +1185,7 @@ function Reports() {
 
   const generate = async (type) => {
     setLoading(type)
-    const r = await fetch(`${BASE}/reports/generate/${type}`, { method: 'POST' })
+    const r = await fetch(`${BASE}/reports/generate/${type}`, { method: 'POST', headers: getAuthHeaders() })
       .then(r => r.json()).catch(() => ({}))
     setResult(r)
     setLoading(null)
