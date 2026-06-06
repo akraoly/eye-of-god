@@ -1284,3 +1284,293 @@ kbd { background: var(--glass2); border: 1px solid var(--border2); border-radius
   0%, 100% { box-shadow: 0 0 18px rgba(255,160,0,0.2); }
   50%       { box-shadow: 0 0 30px rgba(255,180,0,0.45); }
 }
+
+/* ── SHANURA MODE — FOND DORÉ DIVIN ─────────────────────────────────────── */
+.chat.shanura-mode {
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,180,0,0.18) 0%, rgba(30,15,0,0.98) 55%, rgba(10,5,0,1) 100%) !important;
+  transition: background 0.6s ease;
+}
+.chat.shanura-mode .messages {
+  background: transparent !important;
+}
+.chat.shanura-mode::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,160,0,0.018) 2px,
+      rgba(255,160,0,0.018) 4px
+    );
+  pointer-events: none;
+  z-index: 0;
+  animation: shanura-scanline 8s linear infinite;
+}
+@keyframes shanura-scanline {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 200px; }
+}
+
+/* Overlay SHANURA */
+.shanura-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Bannière divine */
+.shanura-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, transparent, rgba(255,150,0,0.22) 20%, rgba(255,190,0,0.35) 50%, rgba(255,150,0,0.22) 80%, transparent);
+  border-bottom: 1px solid rgba(255,180,0,0.5);
+  animation: shanura-banner-glow 1.8s ease-in-out infinite;
+  backdrop-filter: blur(4px);
+}
+.shanura-banner::before,
+.shanura-banner::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,200,0,0.6));
+}
+.shanura-banner::after {
+  background: linear-gradient(90deg, rgba(255,200,0,0.6), transparent);
+}
+.shanura-bolt {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 8px #ffa500);
+  animation: shanura-bolt-flash 1.2s ease-in-out infinite;
+}
+.shanura-title {
+  font-size: 0.8rem;
+  font-family: var(--font-ui);
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: #ffd700;
+  text-shadow: 0 0 12px #ffa500, 0 0 24px rgba(255,160,0,0.6);
+}
+.shanura-sub {
+  font-size: 0.55rem;
+  font-family: var(--font-ui);
+  letter-spacing: 0.12em;
+  color: rgba(255,200,100,0.8);
+  text-shadow: 0 0 6px rgba(255,160,0,0.5);
+}
+@keyframes shanura-banner-glow {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 1; box-shadow: 0 0 30px rgba(255,180,0,0.3); }
+}
+@keyframes shanura-bolt-flash {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px #ffa500); }
+  50%       { transform: scale(1.15); filter: drop-shadow(0 0 16px #ffd700); }
+}
+
+/* Particules dorées */
+.shanura-particles { position: absolute; inset: 0; }
+.shanura-particle {
+  position: absolute;
+  bottom: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd700, rgba(255,160,0,0.3));
+  box-shadow: 0 0 6px #ffa500;
+  animation: shanura-float linear infinite;
+  opacity: 0;
+}
+@keyframes shanura-float {
+  0%   { transform: translateY(0) scale(1);    opacity: 0; }
+  10%  { opacity: 0.9; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-100vh) scale(0.4); opacity: 0; }
+}
+
+/* Header doré en mode SHANURA */
+.chat.shanura-mode .chat-header {
+  background: linear-gradient(90deg, rgba(20,10,0,0.95), rgba(50,25,0,0.92)) !important;
+  border-bottom-color: rgba(255,180,0,0.5) !important;
+  box-shadow: 0 2px 20px rgba(255,150,0,0.2) !important;
+}
+
+/* Input bar dorée */
+.chat.shanura-mode .input-bar {
+  background: linear-gradient(0deg, rgba(20,10,0,0.97), rgba(30,15,0,0.95)) !important;
+  border-top-color: rgba(255,180,0,0.4) !important;
+  box-shadow: 0 -4px 24px rgba(255,140,0,0.15) !important;
+}
+.chat.shanura-mode textarea {
+  border-color: rgba(255,180,0,0.4) !important;
+  background: rgba(30,15,0,0.7) !important;
+  color: #ffe9b0 !important;
+}
+.chat.shanura-mode textarea:focus {
+  border-color: rgba(255,200,0,0.7) !important;
+  box-shadow: 0 0 16px rgba(255,160,0,0.25) !important;
+}
+
+/* Border extérieure scintillante */
+.chat.shanura-mode {
+  border: 1px solid rgba(255,180,0,0.25) !important;
+  box-shadow: 0 0 40px rgba(255,140,0,0.12), inset 0 0 60px rgba(255,100,0,0.04) !important;
+}
+
+/* ── SHANURA PASSWORD MODAL ──────────────────────────────────────────────── */
+.shanura-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: shanura-backdrop-in 0.3s ease;
+}
+@keyframes shanura-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.shanura-modal {
+  background: radial-gradient(ellipse at 50% 0%, rgba(80,40,0,0.98) 0%, rgba(10,5,0,0.99) 80%);
+  border: 1px solid rgba(255,180,0,0.6);
+  border-radius: 16px;
+  padding: 40px 36px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow:
+    0 0 60px rgba(255,150,0,0.35),
+    0 0 120px rgba(255,100,0,0.15),
+    inset 0 0 40px rgba(255,120,0,0.06);
+  animation: shanura-modal-in 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes shanura-modal-in {
+  from { transform: scale(0.8) translateY(-20px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);       opacity: 1; }
+}
+.shanura-modal-shake {
+  animation: shanura-shake 0.5s ease !important;
+}
+@keyframes shanura-shake {
+  0%,100% { transform: translateX(0); }
+  15%     { transform: translateX(-10px); }
+  30%     { transform: translateX(10px); }
+  45%     { transform: translateX(-8px); }
+  60%     { transform: translateX(8px); }
+  75%     { transform: translateX(-4px); }
+  90%     { transform: translateX(4px); }
+}
+.shanura-modal-eye {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 0 20px #ffa500);
+  animation: shanura-bolt-flash 1.2s ease-in-out infinite;
+  line-height: 1;
+}
+.shanura-modal-title {
+  font-size: 1.2rem;
+  font-family: var(--font-ui);
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: #ffd700;
+  text-shadow: 0 0 16px #ffa500, 0 0 32px rgba(255,160,0,0.5);
+  text-align: center;
+}
+.shanura-modal-sub {
+  font-size: 0.62rem;
+  font-family: var(--font-ui);
+  letter-spacing: 0.08em;
+  color: rgba(255,200,100,0.7);
+  text-align: center;
+  line-height: 1.5;
+}
+.shanura-modal-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,180,0,0.5), transparent);
+  margin: 4px 0;
+}
+.shanura-modal-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(20,10,0,0.8);
+  border: 1px solid rgba(255,180,0,0.4);
+  border-radius: 8px;
+  color: #ffe9b0;
+  font-size: 0.9rem;
+  font-family: var(--font-ui);
+  letter-spacing: 0.1em;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.shanura-modal-input::placeholder { color: rgba(255,200,100,0.35); letter-spacing: 0.08em; }
+.shanura-modal-input:focus {
+  border-color: rgba(255,200,0,0.7);
+  box-shadow: 0 0 16px rgba(255,160,0,0.3);
+}
+.shanura-input-error {
+  border-color: rgba(255,50,50,0.7) !important;
+  box-shadow: 0 0 12px rgba(255,0,0,0.25) !important;
+}
+.shanura-modal-err {
+  font-size: 0.62rem;
+  color: #ff6060;
+  font-family: var(--font-ui);
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(255,0,0,0.4);
+}
+.shanura-modal-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
+}
+.shanura-modal-cancel {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.75rem;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.shanura-modal-cancel:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.shanura-modal-confirm {
+  flex: 2;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(180,90,0,0.9), rgba(220,140,0,0.85));
+  border: 1px solid rgba(255,200,0,0.6);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-shadow: 0 0 8px rgba(255,200,0,0.6);
+  box-shadow: 0 0 16px rgba(255,150,0,0.3);
+}
+.shanura-modal-confirm:hover {
+  background: linear-gradient(135deg, rgba(200,110,0,0.95), rgba(255,170,0,0.9));
+  box-shadow: 0 0 24px rgba(255,160,0,0.5);
+  transform: translateY(-1px);
+}

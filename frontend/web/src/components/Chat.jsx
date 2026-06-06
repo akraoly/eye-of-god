@@ -42,6 +42,86 @@ const MD = {
     <code className={className}>{children}</code>,
 }
 
+// ── Modal mot de passe SHANURA ────────────────────────────────────────────
+const SHANURA_PWD = import.meta.env.VITE_SHANURA_PASSWORD || 'DIEU2026'
+const SHANURA_SESSION_KEY = 'shanura_unlocked'
+
+function ShanuraPasswordModal({ onSuccess, onCancel }) {
+  const [pwd, setPwd]       = useState('')
+  const [error, setError]   = useState(false)
+  const [shake, setShake]   = useState(false)
+  const inputRef            = useRef(null)
+
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  const verify = () => {
+    if (pwd === SHANURA_PWD) {
+      sessionStorage.setItem(SHANURA_SESSION_KEY, '1')
+      onSuccess()
+    } else {
+      setError(true)
+      setShake(true)
+      setPwd('')
+      setTimeout(() => setShake(false), 600)
+    }
+  }
+
+  const onKey = e => {
+    if (e.key === 'Enter') verify()
+    if (e.key === 'Escape') onCancel()
+  }
+
+  return (
+    <div className="shanura-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+      <div className={`shanura-modal${shake ? ' shanura-modal-shake' : ''}`}>
+        <div className="shanura-modal-eye">⚡</div>
+        <div className="shanura-modal-title">MODE DIVIN</div>
+        <div className="shanura-modal-sub">Authentification requise pour activer l'omnipotence</div>
+        <div className="shanura-modal-divider" />
+        <input
+          ref={inputRef}
+          type="password"
+          className={`shanura-modal-input${error ? ' shanura-input-error' : ''}`}
+          placeholder="Mot de passe divin…"
+          value={pwd}
+          onChange={e => { setPwd(e.target.value); setError(false) }}
+          onKeyDown={onKey}
+        />
+        {error && <div className="shanura-modal-err">⛔ Accès refusé — Mot de passe incorrect</div>}
+        <div className="shanura-modal-actions">
+          <button className="shanura-modal-cancel" onClick={onCancel}>Annuler</button>
+          <button className="shanura-modal-confirm" onClick={verify}>⚡ Activer</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Overlay Mode Divin SHANURA ────────────────────────────────────────────
+function ShanuraOverlay() {
+  return (
+    <div className="shanura-overlay">
+      <div className="shanura-particles">
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div key={i} className="shanura-particle" style={{
+            left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 3}s`,
+            animationDuration: `${2 + Math.random() * 3}s`,
+            width: `${2 + Math.random() * 4}px`,
+            height: `${2 + Math.random() * 4}px`,
+          }} />
+        ))}
+      </div>
+      <div className="shanura-banner">
+        <span className="shanura-bolt">⚡</span>
+        <span className="shanura-title">MODE DIVIN ACTIVÉ</span>
+        <span className="shanura-sub">OMNIPOTENCE TOTALE — TOUS LES AGENTS EN ACTION</span>
+        <span className="shanura-bolt">⚡</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Séparateur de date ────────────────────────────────────────────────────
 function DateSep({ date }) {
   return (
@@ -88,8 +168,10 @@ export default function Chat({ sessionId, onNewChat }) {
   const [loading,       setLoading]       = useState(false)
   const [eyeState,      setEyeState]      = useState('idle')
   const [historyLoaded, setHistoryLoaded] = useState(false)
-  const [cyberMode,     setCyberMode]     = useState(false)
-  const [shanuraMode,   setShanuraMode]   = useState(false)
+  const [cyberMode,      setCyberMode]      = useState(false)
+  const [shanuraMode,    setShanuraMode]    = useState(false)
+  const [shanuraModal,   setShanuraModal]   = useState(false)
+  const [pendingShanura, setPendingShanura] = useState('')
   const bottomRef = useRef(null)
   const taRef     = useRef(null)
 
@@ -119,7 +201,17 @@ export default function Chat({ sessionId, onNewChat }) {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     const isShanura = msg.toUpperCase().includes('SHANURA:)')
-    setShanuraMode(isShanura)
+
+    // Vérification mot de passe si SHANURA non encore déverrouillé
+    if (isShanura && !sessionStorage.getItem(SHANURA_SESSION_KEY)) {
+      setPendingShanura(msg)
+      setInput('')
+      setShanuraModal(true)
+      return
+    }
+
+    if (!isShanura) setShanuraMode(false)
+    else setShanuraMode(true)
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: msg, ts: new Date(), shanura: isShanura }])
     setLoading(true)
@@ -132,7 +224,8 @@ export default function Chat({ sessionId, onNewChat }) {
         tool: data.tool_executed, intent: data.intent, agents: data.agents_used,
         shanura: data.shanura_mode,
       }])
-      setTimeout(() => { setEyeState('idle'); setShanuraMode(false) }, 1200)
+      setTimeout(() => setEyeState('idle'), 1200)
+      if (!data.shanura_mode) setShanuraMode(false)
     } catch {
       setEyeState('idle')
       setShanuraMode(false)
@@ -180,8 +273,15 @@ export default function Chat({ sessionId, onNewChat }) {
 
   // ── Vue conversation ──────────────────────────────────────────────────
   return (
-    <div className={`chat ${cyberMode ? 'cyber-mode' : ''}`}>
+    <div className={`chat ${cyberMode ? 'cyber-mode' : ''} ${shanuraMode ? 'shanura-mode' : ''}`}>
+      {shanuraModal && (
+        <ShanuraPasswordModal
+          onSuccess={() => { setShanuraModal(false); send(pendingShanura) }}
+          onCancel={() => { setShanuraModal(false); setPendingShanura('') }}
+        />
+      )}
       <MatrixRain active={cyberMode} />
+      {shanuraMode && <ShanuraOverlay />}
       <ChatHeader eyeState={eyeState} msgCount={messages.length} onNew={onNewChat}
         cyberMode={cyberMode} onCyberToggle={() => setCyberMode(v => !v)} />
 
