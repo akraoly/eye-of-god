@@ -1,5 +1,172 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { logout, auth } from '../utils/auth'
+
+// ── Helpers temps ─────────────────────────────────────────────────────────────
+const STATS_KEY = 'eye_time_stats'
+
+function getStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY) || '{}') } catch { return {} }
+}
+
+function saveMinute() {
+  const today = new Date().toDateString()
+  const s = getStats()
+  s[today] = (s[today] || 0) + 60
+  localStorage.setItem(STATS_KEY, JSON.stringify(s))
+  return s
+}
+
+function fmtSec(s) {
+  if (s < 60)  return `${s}s`
+  if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60)
+  return `${h}h ${m}m`
+}
+
+function fmtShort(s) {
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`
+}
+
+function calcPeriods(stats, sessionSec) {
+  const now   = new Date()
+  const today = now.toDateString()
+
+  const dayMs   = 86400000
+  const weekMs  = 7 * dayMs
+  const monthMs = 30 * dayMs
+  const yearMs  = 365 * dayMs
+
+  let week = 0, month = 0, year = 0, total = 0
+  for (const [key, val] of Object.entries(stats)) {
+    const d = new Date(key)
+    const diff = now - d
+    if (diff <= weekMs)  week  += val
+    if (diff <= monthMs) month += val
+    if (diff <= yearMs)  year  += val
+    total += val
+  }
+  const todaySaved = stats[today] || 0
+  return {
+    session: fmtSec(sessionSec),
+    today:   fmtSec(todaySaved + sessionSec),
+    week:    fmtSec(week + sessionSec),
+    month:   fmtSec(month + sessionSec),
+    year:    fmtSec(year + sessionSec),
+    total:   fmtSec(total + sessionSec),
+  }
+}
+
+// ── Timer de session ──────────────────────────────────────────────────────────
+function useSessionTimer() {
+  const startRef = useRef(Date.now())
+  const [elapsed, setElapsed] = useState(0)
+  const [stats, setStats] = useState(getStats)
+
+  useEffect(() => {
+    const tick = setInterval(() => setElapsed(Math.floor((Date.now() - startRef.current) / 1000)), 1000)
+    return () => clearInterval(tick)
+  }, [])
+
+  useEffect(() => {
+    const save = setInterval(() => setStats(saveMinute()), 60000)
+    return () => clearInterval(save)
+  }, [])
+
+  return { elapsed, periods: calcPeriods(stats, elapsed), short: fmtShort(elapsed) }
+}
+
+// ── Panneau statistiques de temps ─────────────────────────────────────────────
+function StatsPanel({ periods, onClose }) {
+  const rows = [
+    { label: 'Session actuelle', value: periods.session, icon: '⚡' },
+    { label: "Aujourd'hui",      value: periods.today,   icon: '☀️' },
+    { label: 'Cette semaine',    value: periods.week,    icon: '📅' },
+    { label: 'Ce mois',         value: periods.month,   icon: '🗓️' },
+    { label: 'Cette année',     value: periods.year,    icon: '📆' },
+    { label: 'Total cumul',     value: periods.total,   icon: '∞'  },
+  ]
+  return (
+    <div className="stats-panel">
+      <div className="compass-panel-header">
+        <span>⏱ Temps sur la plateforme</span>
+        <button className="compass-close" onClick={onClose}>✕</button>
+      </div>
+      {rows.map(r => (
+        <div key={r.label} className="stats-row">
+          <span className="stats-row-icon">{r.icon}</span>
+          <span className="stats-row-label">{r.label}</span>
+          <span className="stats-row-val">{r.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Boussole ──────────────────────────────────────────────────────────────────
+function CompassPanel({ onClose }) {
+  const [heading, setHeading] = useState(null)
+  const [permDenied, setPermDenied] = useState(false)
+
+  const subscribe = useCallback(() => {
+    const handler = (e) => {
+      const h = e.webkitCompassHeading ?? (e.alpha !== null ? (360 - e.alpha) % 360 : null)
+      if (h !== null) setHeading(Math.round(h))
+    }
+    if (typeof DeviceOrientationEvent !== 'undefined') {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(s => { if (s === 'granted') { window.addEventListener('deviceorientation', handler) } else { setPermDenied(true) } })
+          .catch(() => setPermDenied(true))
+      } else {
+        window.addEventListener('deviceorientation', handler)
+      }
+    }
+    return () => window.removeEventListener('deviceorientation', handler)
+  }, [])
+
+  useEffect(() => { const unsub = subscribe(); return unsub }, [subscribe])
+
+  const deg = heading ?? 0
+  const dirs = ['N','NE','E','SE','S','SO','O','NO']
+  const dirLabel = dirs[Math.round(deg / 45) % 8]
+
+  return (
+    <div className="compass-panel">
+      <div className="compass-panel-header">
+        <span>🧭 Boussole</span>
+        <button className="compass-close" onClick={onClose}>✕</button>
+      </div>
+      <div className="compass-ring">
+        {/* Cadran */}
+        <svg viewBox="0 0 120 120" className="compass-svg">
+          <circle cx="60" cy="60" r="56" fill="none" stroke="var(--border2)" strokeWidth="1.5"/>
+          <circle cx="60" cy="60" r="46" fill="none" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2 4"/>
+          {['N','E','S','O'].map((d,i) => {
+            const a = i * 90, r = Math.PI * a / 180
+            const x = 60 + 40 * Math.sin(r), y = 60 - 40 * Math.cos(r)
+            return <text key={d} x={x} y={y} textAnchor="middle" dominantBaseline="central"
+              fill={d === 'N' ? '#e8c14a' : 'var(--text3)'} fontSize={d === 'N' ? '11' : '9'} fontWeight="700">{d}</text>
+          })}
+          {/* Aiguille tournante */}
+          <g transform={`rotate(${deg} 60 60)`}>
+            <polygon points="60,12 63,58 57,58" fill="#e8c14a"/>
+            <polygon points="60,108 63,62 57,62" fill="var(--text3)" opacity="0.6"/>
+          </g>
+          <circle cx="60" cy="60" r="4" fill="var(--accent)" opacity="0.9"/>
+        </svg>
+      </div>
+      <div className="compass-info">
+        {heading !== null
+          ? <><span className="compass-deg">{heading}°</span><span className="compass-dir">{dirLabel}</span></>
+          : permDenied
+            ? <span className="compass-unavail">Permission refusée</span>
+            : <span className="compass-unavail">Capteur non détecté<br/><small>Disponible sur mobile</small></span>
+        }
+      </div>
+    </div>
+  )
+}
 
 const THEMES = [
   { id: 'galactic',  icon: '🌌', label: 'Galactique' },
@@ -23,9 +190,12 @@ const NAV = [
 ]
 
 export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertCount = 0 }) {
-  const [showThemes,  setShowThemes]  = useState(false)
+  const [showThemes,   setShowThemes]   = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showCompass,  setShowCompass]  = useState(false)
+  const [showStats,    setShowStats]    = useState(false)
   const userMenuRef = useRef(null)
+  const { short, periods } = useSessionTimer()
   const user = auth.getUser()
   const initials = (user?.display_name || user?.username || '?')
     .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -63,6 +233,10 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
         </>
       )}
 
+      {/* Panneaux flottants — hors de <aside> pour éviter le clipping backdrop-filter */}
+      {showStats   && <StatsPanel   periods={periods} onClose={() => setShowStats(false)} />}
+      {showCompass && <CompassPanel onClose={() => setShowCompass(false)} />}
+
       <aside className="sidebar">
         {/* Logo — clic = retour accueil */}
         <button
@@ -99,6 +273,27 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
             )}
           </button>
         ))}
+
+        {/* ── Timer de session ── */}
+        <div className="sidebar-divider" style={{ margin: '4px 0' }} />
+        <button
+          className={`sidebar-timer ${showStats ? 'active-timer' : ''}`}
+          onClick={() => { setShowStats(v => !v); setShowCompass(false) }}
+          title="Voir les statistiques de temps"
+        >
+          <span className="sidebar-timer-icon">⏱</span>
+          <span className="sidebar-timer-val">{short}</span>
+          <span className="sidebar-timer-label">session</span>
+        </button>
+        {/* ── Boussole ── */}
+        <button
+          className={`nav-btn compass-btn ${showCompass ? 'active' : ''}`}
+          onClick={() => { setShowCompass(v => !v); setShowStats(false) }}
+          title="Boussole"
+        >
+          <span style={{ fontSize: '1.2rem' }}>🧭</span>
+          <span className="nav-label">Bousole</span>
+        </button>
 
         <div className="sidebar-spacer" />
 
