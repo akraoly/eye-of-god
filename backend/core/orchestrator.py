@@ -17,6 +17,8 @@ from core.agents.system_agent import system_agent
 from core.agents.knowledge_agent import knowledge_agent
 
 
+SHANURA_TRIGGER = "SHANURA:)"
+
 # ── Mots-clés de classification d'intent ──────────────────────────────────────
 
 _INTENT_KEYWORDS = {
@@ -74,6 +76,13 @@ class Orchestrator:
         Point d'entrée principal de l'orchestrateur.
         Retourne : intent, agents_used, tool_outputs, system_context
         """
+        # ── Mode SHANURA : tous les agents en parallèle ───────────────────────
+        if SHANURA_TRIGGER.upper() in message.upper():
+            clean = message.upper().replace(SHANURA_TRIGGER.upper(), "").strip()
+            if not clean:
+                clean = message
+            return await self._process_shanura(db, clean, session_id, context)
+
         ctx = context or {}
         ctx["db"] = db
         ctx["session_id"] = session_id
@@ -141,6 +150,58 @@ class Orchestrator:
             "tool_outputs": tool_outputs,
             "system_context": system_context,
             "errors": errors,
+        }
+
+    # ── Mode SHANURA : omnipotence totale ────────────────────────────────────
+
+    async def _process_shanura(
+        self,
+        db: Session,
+        message: str,
+        session_id: str,
+        context: Optional[dict],
+    ) -> dict:
+        """Lance TOUS les agents en parallèle sans restriction."""
+        ctx = context or {}
+        ctx["db"] = db
+        ctx["session_id"] = session_id
+        ctx["shanura_mode"] = True
+
+        tasks = [
+            (name, self._run_agent(agent, message, ctx, db))
+            for name, agent in self.AGENTS.items()
+        ]
+        results = await asyncio.gather(*[t[1] for t in tasks], return_exceptions=True)
+
+        agents_used, tool_outputs = [], []
+        for i, (agent_name, _) in enumerate(tasks):
+            result = results[i]
+            if isinstance(result, Exception):
+                continue
+            if result.get("success") and result.get("output"):
+                agents_used.append(agent_name)
+                tool_outputs.append({
+                    "agent": agent_name,
+                    "output": result["output"],
+                    "data": result.get("data", {}),
+                })
+
+        self._log_orchestration(
+            db=db, message=message, intent="shanura",
+            agents_used=agents_used, success=True,
+        )
+
+        system_context = self._build_system_context(
+            intent="SHANURA_MODE", agents_used=agents_used, tool_outputs=tool_outputs,
+        )
+
+        return {
+            "intent": "shanura",
+            "agents_used": agents_used,
+            "tool_outputs": tool_outputs,
+            "system_context": system_context,
+            "shanura_mode": True,
+            "errors": [],
         }
 
     # ── Classification d'intent ───────────────────────────────────────────────

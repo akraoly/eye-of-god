@@ -60,9 +60,15 @@ function AssistantBubble({ msg, isLast }) {
     .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800) })
 
   return (
-    <div className="bubble bubble-md bubble-assistant">
+    <div className={`bubble bubble-md bubble-assistant${msg.shanura ? ' bubble-shanura-response' : ''}`}>
+      {/* Badge SHANURA mode */}
+      {msg.shanura && (
+        <div className="shanura-response-badge">
+          ⚡ MODE SHANURA — {msg.agents?.length || 0} agents activés
+        </div>
+      )}
       {/* Badge outil si agent utilisé */}
-      {msg.tool && (
+      {msg.tool && !msg.shanura && (
         <div className="msg-agent-badge">
           <span className="agent-dot" />
           {msg.agents?.join(' · ') || 'outil exécuté'}
@@ -83,6 +89,7 @@ export default function Chat({ sessionId, onNewChat }) {
   const [eyeState,      setEyeState]      = useState('idle')
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const [cyberMode,     setCyberMode]     = useState(false)
+  const [shanuraMode,   setShanuraMode]   = useState(false)
   const bottomRef = useRef(null)
   const taRef     = useRef(null)
 
@@ -111,20 +118,24 @@ export default function Chat({ sessionId, onNewChat }) {
   const send = useCallback(async (text) => {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
+    const isShanura = msg.toUpperCase().includes('SHANURA:)')
+    setShanuraMode(isShanura)
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: msg, ts: new Date() }])
+    setMessages(prev => [...prev, { role: 'user', content: msg, ts: new Date(), shanura: isShanura }])
     setLoading(true)
-    setEyeState('thinking')
+    setEyeState(isShanura ? 'responding' : 'thinking')
     try {
       const data = await sendMessage(msg, sessionId)
       setEyeState('responding')
       setMessages(prev => [...prev, {
         role: 'assistant', content: data.response, ts: new Date(),
         tool: data.tool_executed, intent: data.intent, agents: data.agents_used,
+        shanura: data.shanura_mode,
       }])
-      setTimeout(() => setEyeState('idle'), 1200)
+      setTimeout(() => { setEyeState('idle'); setShanuraMode(false) }, 1200)
     } catch {
       setEyeState('idle')
+      setShanuraMode(false)
       setMessages(prev => [...prev, {
         role: 'assistant', content: '⚠️ Connexion backend perdue. Port 8001 ?', ts: new Date(),
       }])
@@ -210,7 +221,10 @@ export default function Chat({ sessionId, onNewChat }) {
                     {m.role === 'assistant' ? (
                       <AssistantBubble msg={m} isLast={isLastInGroup} />
                     ) : (
-                      <div className="bubble bubble-user">{m.content}</div>
+                      <div className={`bubble bubble-user${m.shanura ? ' bubble-shanura' : ''}`}>
+                        {m.shanura && <span className="shanura-badge">⚡ SHANURA</span>}
+                        {m.content}
+                      </div>
                     )}
                   </div>
 
@@ -231,9 +245,11 @@ export default function Chat({ sessionId, onNewChat }) {
             <div className="msg assistant">
               <div className="avatar avatar-ai">👁️</div>
               <div className="bubble-wrap">
-                <div className="typing-bubble">
+                <div className={`typing-bubble${shanuraMode ? ' typing-shanura' : ''}`}>
                   <span /><span /><span />
-                  <span className="typing-label">réflexion…</span>
+                  <span className="typing-label">
+                    {shanuraMode ? '⚡ TOUS LES AGENTS EN ACTION…' : 'réflexion…'}
+                  </span>
                 </div>
               </div>
             </div>

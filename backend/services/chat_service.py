@@ -31,6 +31,12 @@ class ChatService:
         agents_used = orchestration.get("agents_used", [])
         tool_outputs = orchestration.get("tool_outputs", [])
         system_context = orchestration.get("system_context", "")
+        shanura_mode = orchestration.get("shanura_mode", False)
+
+        # Mode SHANURA : prompt omnipotence
+        if shanura_mode:
+            from core.llm.prompts import SHANURA_MODE_PROMPT
+            system = system + SHANURA_MODE_PROMPT
 
         # Injecter les sorties des agents dans le system prompt
         if system_context:
@@ -89,6 +95,7 @@ class ChatService:
             "intent": intent,
             "agents_used": agents_used,
             "vector_backend": vb,
+            "shanura_mode": shanura_mode,
         }
 
     def clear_session(self, session_id: str):
