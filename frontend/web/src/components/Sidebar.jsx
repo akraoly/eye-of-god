@@ -76,9 +76,51 @@ function useSessionTimer() {
   return { elapsed, periods: calcPeriods(stats, elapsed), short: fmtShort(elapsed) }
 }
 
+// ── Fuseau horaire & horloge live ─────────────────────────────────────────────
+function useTimezone() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone  // ex: "Africa/Abidjan"
+  const locale = navigator.language || 'fr-FR'
+
+  // Calcul offset UTC ex: "UTC+0" ou "UTC+2"
+  const offsetMin = -new Date().getTimezoneOffset()
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const absH  = Math.floor(Math.abs(offsetMin) / 60)
+  const absM  = Math.abs(offsetMin) % 60
+  const utcLabel = absM === 0 ? `UTC${sign}${absH}` : `UTC${sign}${absH}:${String(absM).padStart(2,'0')}`
+
+  // Abréviation locale ex: "WAT", "CET", "EST"
+  const abbr = (() => {
+    try {
+      const parts = new Intl.DateTimeFormat(locale, { timeZoneName: 'short' }).formatToParts(new Date())
+      return parts.find(p => p.type === 'timeZoneName')?.value || utcLabel
+    } catch { return utcLabel }
+  })()
+
+  // Pays/région lisible ex: "Abidjan", "Paris", "New York"
+  const region = tz.split('/').pop().replace(/_/g, ' ')
+  const continent = tz.split('/')[0]
+
+  return { tz, utcLabel, abbr, region, continent, locale }
+}
+
+function useClock() {
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  return now
+}
+
 // ── Panneau statistiques de temps ─────────────────────────────────────────────
 function StatsPanel({ periods, onClose }) {
-  const rows = [
+  const { tz, utcLabel, abbr, region, continent } = useTimezone()
+  const now = useClock()
+
+  const timeStr  = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const dateStr  = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  const timeRows = [
     { label: 'Session actuelle', value: periods.session, icon: '⚡' },
     { label: "Aujourd'hui",      value: periods.today,   icon: '☀️' },
     { label: 'Cette semaine',    value: periods.week,    icon: '📅' },
@@ -86,13 +128,28 @@ function StatsPanel({ periods, onClose }) {
     { label: 'Cette année',     value: periods.year,    icon: '📆' },
     { label: 'Total cumul',     value: periods.total,   icon: '∞'  },
   ]
+
   return (
     <div className="stats-panel">
       <div className="compass-panel-header">
         <span>⏱ Temps sur la plateforme</span>
         <button className="compass-close" onClick={onClose}>✕</button>
       </div>
-      {rows.map(r => (
+
+      {/* ── Horloge locale ── */}
+      <div className="stats-clock-block">
+        <div className="stats-clock-time">{timeStr}</div>
+        <div className="stats-clock-date">{dateStr}</div>
+        <div className="stats-clock-tz">
+          <span className="stats-tz-badge">{abbr}</span>
+          <span className="stats-tz-region">{continent} / {region}</span>
+          <span className="stats-tz-utc">{utcLabel}</span>
+        </div>
+      </div>
+
+      <div className="stats-divider" />
+
+      {timeRows.map(r => (
         <div key={r.label} className="stats-row">
           <span className="stats-row-icon">{r.icon}</span>
           <span className="stats-row-label">{r.label}</span>
@@ -196,6 +253,9 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
   const [showStats,    setShowStats]    = useState(false)
   const userMenuRef = useRef(null)
   const { short, periods } = useSessionTimer()
+  const { utcLabel, abbr } = useTimezone()
+  const now = useClock()
+  const localTime = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   const user = auth.getUser()
   const initials = (user?.display_name || user?.username || '?')
     .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -279,11 +339,13 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
         <button
           className={`sidebar-timer ${showStats ? 'active-timer' : ''}`}
           onClick={() => { setShowStats(v => !v); setShowCompass(false) }}
-          title="Voir les statistiques de temps"
+          title={`Session: ${short} | ${abbr} ${utcLabel}`}
         >
           <span className="sidebar-timer-icon">⏱</span>
           <span className="sidebar-timer-val">{short}</span>
           <span className="sidebar-timer-label">session</span>
+          <span className="sidebar-timer-clock">{localTime}</span>
+          <span className="sidebar-timer-tz">{abbr}</span>
         </button>
         {/* ── Boussole ── */}
         <button
