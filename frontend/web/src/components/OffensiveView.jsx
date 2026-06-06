@@ -2,6 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 const API = '/api/offensive'
 const C2_API = '/api/c2'
+const getAuthHeaders = () => {
+  const t = localStorage.getItem('eye_token')
+  return t ? { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+}
 
 const C2_META = {
   sliver:   { icon: '🐍', color: '#10b981', port: 31337, label: 'Sliver C2' },
@@ -40,7 +44,7 @@ export default function OffensiveView() {
   const termRef = useRef(null)
 
   useEffect(() => {
-    fetch(`${API}/levels`)
+    fetch(`${API}/levels`, { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(d => setLevels(d.levels || {}))
       .catch(() => {})
@@ -52,7 +56,7 @@ export default function OffensiveView() {
 
   // Charge l'état initial des C2
   const refreshC2Status = useCallback(() => {
-    fetch(`${C2_API}/`)
+    fetch(`${C2_API}/`, { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(d => {
         const map = {}
@@ -71,7 +75,7 @@ export default function OffensiveView() {
     c2PollRef.current = setInterval(() => {
       Object.values(c2Status).forEach(s => {
         if (s.running) {
-          fetch(`${C2_API}/logs/${s.name}?n=60`)
+          fetch(`${C2_API}/logs/${s.name}?n=60`, { headers: getAuthHeaders() })
             .then(r => r.json())
             .then(d => setC2Logs(prev => ({ ...prev, [s.name]: d.lines || [] })))
             .catch(() => {})
@@ -88,7 +92,7 @@ export default function OffensiveView() {
     try {
       const r = await fetch(`${C2_API}/start`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ name }),
       })
       const d = await r.json()
@@ -102,7 +106,7 @@ export default function OffensiveView() {
   const stopC2 = async (name) => {
     setC2Loading(prev => ({ ...prev, [name]: true }))
     try {
-      const r = await fetch(`${C2_API}/stop/${name}`, { method: 'POST' })
+      const r = await fetch(`${C2_API}/stop/${name}`, { method: 'POST', headers: getAuthHeaders() })
       const d = await r.json()
       log(`\n[C2] ${name.toUpperCase()} : ${d.message || d.error}`)
       refreshC2Status()
@@ -118,7 +122,7 @@ export default function OffensiveView() {
     try {
       const r = await fetch(`${API}/run/tool`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ level, tool, params }),
       })
       const d = await r.json()
@@ -149,7 +153,7 @@ export default function OffensiveView() {
         ? { binary, offset: 0, lhost: target || '127.0.0.1', lport: 4444 }
         : { binary }
       const r = await fetch(endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify(body),
       })
       const d = await r.json()
