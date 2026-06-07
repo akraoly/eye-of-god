@@ -30,6 +30,21 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 
+# Middlewares post-routing
+try:
+    from middleware.rag_hook import register_rag_hooks
+    register_rag_hooks(app)
+except Exception as _e:
+    import logging
+    logging.getLogger("main").warning("RAG hook middleware: %s", _e)
+
+try:
+    from middleware.rbac_middleware import register_rbac_middleware
+    register_rbac_middleware(app)
+except Exception as _e:
+    import logging
+    logging.getLogger("main").warning("RBAC middleware: %s", _e)
+
 
 @app.get("/")
 async def root():

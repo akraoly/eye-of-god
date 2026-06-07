@@ -24,6 +24,10 @@ from api.routes import (
     report_routes,
     # AEGIS — Renseignement offensif
     aegis_intel,
+    # RAG Semantic Engine
+    rag_routes,
+    # Multi-user admin
+    users_admin,
 )
 from core.auth.dependencies import get_current_user
 
@@ -102,3 +106,9 @@ router.include_router(report_routes.router,  prefix="/reports/audit", tags=["Aud
 
 # ── AEGIS — Renseignement offensif ───────────────────────────────────────────
 router.include_router(aegis_intel.router,    prefix="/aegis",         tags=["AEGIS Intel"],     **_protected)
+
+# ── RAG Semantic Engine ───────────────────────────────────────────────────────
+router.include_router(rag_routes.router,     prefix="/rag",           tags=["RAG Engine"],      **_protected)
+
+# ── Multi-user management ─────────────────────────────────────────────────────
+router.include_router(users_admin.router,    prefix="/users",         tags=["Users Admin"],     **_protected)

@@ -537,3 +537,72 @@ async def terminal_websocket(websocket: WebSocket, token: str = Query(None)):
             os.close(master_fd)
         except OSError:
             pass
+
+
+# ── Power Saver routes ────────────────────────────────────────────────────────
+
+@router.get("/power-mode")
+async def get_power_mode(current_user=Depends(get_current_user)):
+    """Mode de consommation actuel."""
+    from core.performance.power_saver import power_saver
+    return power_saver.get_current_mode()
+
+
+class PowerModeRequest(BaseModel):
+    mode: str
+
+
+@router.post("/power-mode")
+async def set_power_mode(body: PowerModeRequest, current_user=Depends(get_current_user)):
+    """Changer le mode de consommation."""
+    from core.performance.power_saver import power_saver
+    try:
+        return await power_saver.set_mode(body.mode)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/power-mode/auto")
+async def auto_power_mode(current_user=Depends(get_current_user)):
+    """Détection automatique du mode selon CPU."""
+    from core.performance.power_saver import power_saver
+    mode = await power_saver.auto_detect()
+    return power_saver.get_current_mode()
+
+
+@router.get("/power-mode/all")
+async def list_power_modes(current_user=Depends(get_current_user)):
+    """Liste tous les modes disponibles."""
+    from core.performance.power_saver import power_saver
+    return power_saver.get_all_modes()
+
+
+# ── Signed Logs routes ────────────────────────────────────────────────────────
+
+@router.get("/signed-logs")
+async def get_signed_logs(current_user=Depends(get_current_user), n: int = 50):
+    """Dernières entrées de la chaîne de logs signés."""
+    from core.security.signed_logs import signed_log_chain
+    return await signed_log_chain.get_recent(n)
+
+
+@router.post("/signed-logs/verify")
+async def verify_log_chain(current_user=Depends(get_current_user)):
+    """Vérification de l'intégrité de la chaîne de logs."""
+    from core.security.signed_logs import signed_log_chain
+    return await signed_log_chain.verify_chain()
+
+
+class LogExportRequest(BaseModel):
+    from_date: str = ""
+    to_date: str = ""
+
+
+@router.post("/signed-logs/export")
+async def export_log_proof(body: LogExportRequest, current_user=Depends(get_current_user)):
+    """Export d'une preuve d'intégrité pour une période."""
+    from core.security.signed_logs import signed_log_chain
+    return await signed_log_chain.export_proof(
+        from_date=body.from_date or None,
+        to_date=body.to_date or None,
+    )

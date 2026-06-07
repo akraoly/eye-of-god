@@ -273,6 +273,8 @@ const NAV = [
   { id: 'rfid',         icon: '💳', label: 'RFID'     },
   { id: 'mitre',        icon: '🎯', label: 'MITRE'    },
   { id: 'audit-reports',icon: '📋', label: 'Audit'    },
+  { id: 'rag',          icon: '🧬', label: 'RAG'      },
+  { id: 'users',        icon: '👥', label: 'Users'    },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres'},
 ]
 

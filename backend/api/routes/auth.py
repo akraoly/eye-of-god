@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -65,3 +66,49 @@ def change_password(
     current_user.password_hash = hash_password(body.new_password)
     db.commit()
     return {"message": "Mot de passe modifié"}
+
+
+# ── Register (admin-only, protected via dependency inline) ────────────────────
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+    role: str = "auditor"
+    organization: Optional[str] = None
+
+
+@router.post("/register")
+def register(
+    body: RegisterRequest,
+    db: Session = Depends(get_db),
+    current_user: AppUser = Depends(get_current_user),
+):
+    """Créer un compte utilisateur (admin uniquement)."""
+    from core.security.rbac import ROLES
+    if (current_user.role or "admin") != "admin":
+        raise HTTPException(403, detail="Réservé aux administrateurs")
+    if body.role not in ROLES:
+        raise HTTPException(400, detail=f"Rôle invalide : {list(ROLES.keys())}")
+    if db.query(AppUser).filter(AppUser.username == body.username).first():
+        raise HTTPException(400, detail="Nom d'utilisateur déjà pris")
+    if len(body.password) < 6:
+        raise HTTPException(400, detail="Mot de passe trop court (min 6 caractères)")
+
+    user = AppUser(
+        username=body.username,
+        display_name=body.display_name or body.username,
+        email=body.email,
+        password_hash=hash_password(body.password),
+        role=body.role,
+        organization=body.organization,
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {
+        "id": user.id, "username": user.username,
+        "role": user.role, "display_name": user.display_name,
+    }

@@ -39,6 +39,8 @@ import SDRPanel from './components/sdr/SDRPanel'
 import RFIDPanel from './components/rfid/RFIDPanel'
 import MitreDashboard from './components/soc/MitreDashboard'
 import ReportDashboard from './components/reporting/ReportDashboard'
+import RAGDashboard from './components/RAGDashboard'
+import UsersManager from './components/admin/UsersManager'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -120,6 +122,8 @@ function MainApp() {
           {view === 'mitre'        && <MitreDashboard />}
           {view === 'audit-reports'&& <ReportDashboard />}
           {view === 'sentinel'     && <SystemMonitorView />}
+          {view === 'rag'          && <RAGDashboard />}
+          {view === 'users'        && <UsersManager />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>

@@ -7,6 +7,26 @@ from core.tools.logger import get_logger
 logger = get_logger("lifecycle")
 
 
+def _migrate_db():
+    """Migrations SQLite légères — ajoute les colonnes manquantes sans supprimer."""
+    from database.db import engine
+    import sqlalchemy as sa
+    migrations = [
+        ("app_users", "email",        "VARCHAR(255)"),
+        ("app_users", "role",         "VARCHAR(50) DEFAULT 'admin'"),
+        ("app_users", "organization", "VARCHAR(255)"),
+        ("app_users", "permissions",  "TEXT"),
+    ]
+    with engine.connect() as conn:
+        for table, col, col_type in migrations:
+            try:
+                conn.execute(sa.text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                conn.commit()
+                logger.info("Migration: ajout colonne %s.%s", table, col)
+            except Exception:
+                pass  # Colonne déjà existante
+
+
 def _ensure_admin():
     db = SessionLocal()
     try:
@@ -191,6 +211,7 @@ async def startup():
     logger.info("=" * 50)
     logger.info("L'Œil de Dieu — démarrage...")
     init_db()
+    _migrate_db()
     logger.info("Base de données initialisée")
     _ensure_admin()
     _start_scheduler()

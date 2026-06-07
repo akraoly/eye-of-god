@@ -55,3 +55,8 @@ export function logout() {
   auth.clear()
   window.location.reload()
 }
+
+// Exports nommés pour compatibilité (évite les erreurs "does not provide an export named")
+export const getToken = () => auth.getToken()
+export const getUser  = () => auth.getUser()
+export const isLoggedIn = () => auth.isLoggedIn()

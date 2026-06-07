@@ -26,12 +26,26 @@ MODELS_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_MODEL = "small"   # tiny|base|small|medium|large
 
 
+def _ensure_model_downloaded(model_size: str = DEFAULT_MODEL):
+    """Télécharge le modèle si absent (au 1er appel seulement)."""
+    try:
+        from faster_whisper import download_model as _dl
+        model_path = MODELS_DIR / f"models--Systran--faster-whisper-{model_size}"
+        if not model_path.exists():
+            logger.info("[Voice] Téléchargement modèle Whisper '%s' — patience...", model_size)
+            _dl(model_size, cache_dir=str(MODELS_DIR))
+            logger.info("[Voice] Modèle Whisper '%s' téléchargé", model_size)
+    except Exception as e:
+        logger.warning("[Voice] Téléchargement Whisper optionnel échoué: %s", e)
+
+
 def _load_model(model_size: str = DEFAULT_MODEL):
     global _model
     with _model_lock:
         if _model is not None:
             return _model
         try:
+            _ensure_model_downloaded(model_size)
             from faster_whisper import WhisperModel
             logger.info("Chargement Whisper %s (local, CPU)…", model_size)
             t0 = time.time()
