@@ -30,3 +30,12 @@ frontend/web/dist/
 .idea/
 *.swp
 *.DS_Store
+
+# Sensitive / runtime data
+backend/data/.fernet_key
+backend/data/reports/
+backend/data/sdr_recordings/
+backend/data/post_exploit/
+data/reports/
+data/sdr_recordings/
+.claude/
