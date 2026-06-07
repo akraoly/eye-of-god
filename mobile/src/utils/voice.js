@@ -47,8 +47,8 @@ export async function speak(text, opts = {}) {
 
   const options = {
     language: opts.language || 'fr-FR',
-    pitch: opts.pitch ?? 0.50,   // très grave — voix homme profond type Adam ElevenLabs
-    rate: opts.rate ?? 1.05,     // fluide et naturel
+    pitch: opts.pitch ?? 0.75,
+    rate: opts.rate ?? 1.15,
     volume: opts.volume ?? 1.0,
     onDone: opts.onDone,
     onError: opts.onError,

@@ -56,8 +56,8 @@ function ttsSpeak(text, onEnd) {
   window.speechSynthesis.cancel()
   const utt = new SpeechSynthesisUtterance(cleanForTTS(text))
   utt.lang   = 'fr-FR'
-  utt.pitch  = 0.45   // très grave — voix homme profond type Adam ElevenLabs
-  utt.rate   = 1.05   // fluide et naturel
+  utt.pitch  = 0.75
+  utt.rate   = 1.15
   utt.volume = 1.0
   const pickVoice = () => {
     const voices = window.speechSynthesis.getVoices()
