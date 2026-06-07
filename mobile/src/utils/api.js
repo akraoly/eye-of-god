@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const API_BASE = 'http://172.20.10.5:8001';
+export const API_BASE = 'http://172.20.10.5:8000';
 
 export async function getToken() {
   return await AsyncStorage.getItem('eye_token');

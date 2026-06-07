@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from api.routes import chat, memory, user, system, exploit, code, knowledge, life, observe, soc, offensive, c2, auth, vision, autonomy
+from api.routes import chat, memory, user, system, exploit, code, knowledge, life, observe, soc, offensive, c2, auth, vision, autonomy, voice
 from api.routes import c2_unified
 from core.auth.dependencies import get_current_user
 
@@ -26,3 +26,4 @@ router.include_router(c2.router,        prefix="/c2",        tags=["C2 — Frame
 router.include_router(c2_unified.router, prefix="/c2/unified", tags=["C2 Manager Unifié"],         **_protected)
 router.include_router(vision.router,    prefix="/vision",    tags=["Vision"],                     **_protected)
 router.include_router(autonomy.router,  prefix="/autonomy",  tags=["Autonomy"],                   **_protected)
+router.include_router(voice.router,     prefix="/voice",     tags=["Voice — STT/TTS"],               **_protected)

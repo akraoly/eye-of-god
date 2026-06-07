@@ -737,6 +737,31 @@ kbd { background: var(--glass2); border: 1px solid var(--border2); border-radius
 .voice-btn { width: 36px; height: 36px; background: var(--glass2); border: 1px solid var(--border2); border-radius: 10px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
 .voice-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--glow2); }
 .voice-btn-active { background: var(--glow2) !important; border-color: var(--accent) !important; box-shadow: 0 0 20px var(--glow); animation: voice-pulse 1.5s ease-in-out infinite; }
+.voice-error { font-size: 1rem; cursor: default; }
+
+/* Barre contrôle voix (auto ON/OFF + stop) */
+.voice-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px 4px 4px;
+  min-height: 28px;
+}
+.voice-auto-toggle {
+  font-size: 0.68rem; font-weight: 700; font-family: var(--font-ui);
+  padding: 3px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border2); background: var(--glass2); color: var(--text3);
+  transition: all 0.15s;
+}
+.voice-auto-toggle.voice-auto-on {
+  border-color: #a78bfa60; background: #8b5cf618; color: #a78bfa;
+}
+.voice-auto-toggle:hover { opacity: 0.85; }
+.voice-stop-btn {
+  font-size: 0.68rem; font-weight: 700; font-family: var(--font-ui);
+  padding: 3px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid #f9731660; background: #f9731618; color: #f97316;
+  transition: all 0.15s;
+}
+.voice-stop-btn:hover { opacity: 0.85; }
 
 /* ═══════════════════════════════════════════════════════════════
    L'ŒIL — 3D Neural Core

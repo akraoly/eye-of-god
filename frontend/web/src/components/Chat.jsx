@@ -6,6 +6,26 @@ import VoiceInput from './VoiceInput'
 import MatrixRain from './MatrixRain'
 import { sendMessage, loadHistory, resetSession } from '../utils/api'
 
+// ── TTS voix homme ───────────────────────────────────────────────────────────
+function ttsSpeak(text, onEnd) {
+  if (!window.speechSynthesis || !text) return
+  window.speechSynthesis.cancel()
+  const utt = new SpeechSynthesisUtterance(text.slice(0, 3000))
+  utt.lang = 'fr-FR'
+  utt.pitch = 0.78
+  utt.rate = 0.93
+  const pickVoice = () => {
+    const voices = window.speechSynthesis.getVoices()
+    return voices.find(v => v.lang.startsWith('fr') && /thomas|pierre|male|man|henri/i.test(v.name))
+      || voices.find(v => v.lang.startsWith('fr'))
+  }
+  const v = pickVoice()
+  if (v) utt.voice = v
+  if (onEnd) utt.onend = onEnd
+  window.speechSynthesis.speak(utt)
+}
+function ttsStop() { window.speechSynthesis?.cancel() }
+
 const fmtTime = d => d instanceof Date
   ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   : ''
@@ -133,11 +153,17 @@ function DateSep({ date }) {
   )
 }
 
-// ── Bulle assistant avec bouton copier ────────────────────────────────────
+// ── Bulle assistant avec bouton copier + lecture vocale ──────────────────
 function AssistantBubble({ msg, isLast }) {
-  const [copied, setCopied] = useState(false)
+  const [copied,   setCopied]   = useState(false)
+  const [speaking, setSpeaking] = useState(false)
   const copyMsg = () => navigator.clipboard.writeText(msg.content)
     .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800) })
+  const handleSpeak = () => {
+    if (speaking) { ttsStop(); setSpeaking(false); return }
+    setSpeaking(true)
+    ttsSpeak(msg.content, () => setSpeaking(false))
+  }
 
   return (
     <div className={`bubble bubble-md bubble-assistant${msg.shanura ? ' bubble-shanura-response' : ''}`}>
@@ -155,9 +181,14 @@ function AssistantBubble({ msg, isLast }) {
         </div>
       )}
       <ReactMarkdown components={MD}>{msg.content}</ReactMarkdown>
-      <button className="msg-copy-btn" onClick={copyMsg} title="Copier">
-        {copied ? '✅' : '⎘'}
-      </button>
+      <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', marginTop: 4 }}>
+        <button className="msg-copy-btn" onClick={handleSpeak} title={speaking ? 'Stopper' : 'Lire en voix homme'} style={{ opacity: speaking ? 1 : 0.7 }}>
+          {speaking ? '⏹' : '🔊'}
+        </button>
+        <button className="msg-copy-btn" onClick={copyMsg} title="Copier">
+          {copied ? '✅' : '⎘'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -172,6 +203,8 @@ export default function Chat({ sessionId, onNewChat }) {
   const [shanuraMode,    setShanuraMode]    = useState(false)
   const [shanuraModal,   setShanuraModal]   = useState(false)
   const [pendingShanura, setPendingShanura] = useState('')
+  const [autoSpeak,      setAutoSpeak]      = useState(true)
+  const [speaking,       setSpeaking]       = useState(false)
   const bottomRef = useRef(null)
   const taRef     = useRef(null)
 
@@ -226,6 +259,11 @@ export default function Chat({ sessionId, onNewChat }) {
       }])
       setTimeout(() => setEyeState('idle'), 1200)
       if (!data.shanura_mode) setShanuraMode(false)
+      // Lecture vocale automatique (voix homme) si activée
+      if (data.response && autoSpeak) {
+        setSpeaking(true)
+        ttsSpeak(data.response, () => setSpeaking(false))
+      }
     } catch {
       setEyeState('idle')
       setShanuraMode(false)
@@ -239,6 +277,7 @@ export default function Chat({ sessionId, onNewChat }) {
 
   const onKey = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
   const onVoiceTranscript = text => { setInput(text); send(text) }
+  const stopSpeak = () => { ttsStop(); setSpeaking(false) }
 
   // ── Spinner ───────────────────────────────────────────────────────────
   if (!historyLoaded) {
@@ -272,7 +311,9 @@ export default function Chat({ sessionId, onNewChat }) {
         </div>
         <InputBar input={input} setInput={setInput} loading={loading}
           onKey={onKey} taRef={taRef} onSend={send}
-          onVoice={onVoiceTranscript} onVoiceState={setEyeState} />
+          onVoice={onVoiceTranscript} onVoiceState={setEyeState}
+          autoSpeak={autoSpeak} onToggleAutoSpeak={() => { setAutoSpeak(v => !v); stopSpeak() }}
+          speaking={speaking} onStopSpeak={stopSpeak} />
       </div>
     )
   }
@@ -366,7 +407,9 @@ export default function Chat({ sessionId, onNewChat }) {
 
       <InputBar input={input} setInput={setInput} loading={loading}
         onKey={onKey} taRef={taRef} onSend={send}
-        onVoice={onVoiceTranscript} onVoiceState={setEyeState} />
+        onVoice={onVoiceTranscript} onVoiceState={setEyeState}
+        autoSpeak={autoSpeak} onToggleAutoSpeak={() => { setAutoSpeak(v => !v); stopSpeak() }}
+        speaking={speaking} onStopSpeak={stopSpeak} />
     </div>
   )
 }
@@ -410,10 +453,27 @@ function ChatHeader({ eyeState, msgCount, onNew, cyberMode, onCyberToggle }) {
 }
 
 // ── Input bar ─────────────────────────────────────────────────────────────
-function InputBar({ input, setInput, loading, onKey, taRef, onSend, onVoice, onVoiceState }) {
+function InputBar({ input, setInput, loading, onKey, taRef, onSend, onVoice, onVoiceState,
+                    autoSpeak, onToggleAutoSpeak, speaking, onStopSpeak }) {
   const charCount = input.length
   return (
     <div className="input-area">
+      {/* Barre contrôle voix */}
+      <div className="voice-toolbar">
+        <button
+          className={`voice-auto-toggle ${autoSpeak ? 'voice-auto-on' : ''}`}
+          onClick={onToggleAutoSpeak}
+          title={autoSpeak ? 'Réponse vocale activée — cliquer pour désactiver' : 'Réponse vocale désactivée'}
+        >
+          {autoSpeak ? '🔊 Auto ON' : '🔇 Auto OFF'}
+        </button>
+        {speaking && (
+          <button className="voice-stop-btn" onClick={onStopSpeak} title="Stopper la voix">
+            ⏹ Stopper la voix
+          </button>
+        )}
+      </div>
+
       <div className="input-box">
         <VoiceInput onTranscript={onVoice} onStateChange={onVoiceState} disabled={loading} />
         <textarea
