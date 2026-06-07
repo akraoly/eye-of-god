@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { logout, auth } from '../utils/auth'
+import { motion } from 'framer-motion'
+import { logout, auth, apiFetch } from '../utils/auth'
+import { NotifBell } from './NotificationSystem'
 
 // ── Helpers temps ─────────────────────────────────────────────────────────────
 const STATS_KEY = 'eye_time_stats'
@@ -234,6 +236,7 @@ const THEMES = [
 ]
 
 const NAV = [
+  { id: 'dashboard',    icon: '📊', label: 'Dashboard' },
   { id: 'chat',         icon: '🏠', label: 'Accueil'  },
   { id: 'soc',          icon: '🔴', label: 'SOC'      },
   { id: 'offensive',    icon: '⚔️', label: 'Offensif' },
@@ -269,7 +272,19 @@ const NAV = [
   { id: 'rfid',         icon: '💳', label: 'RFID'     },
   { id: 'mitre',        icon: '🎯', label: 'MITRE'    },
   { id: 'audit-reports',icon: '📋', label: 'Audit'    },
+  { id: 'settings',     icon: '⚙️', label: 'Paramètres'},
 ]
+
+function useBackendStatus() {
+  const [online, setOnline] = useState(null)
+  useEffect(() => {
+    const check = () => apiFetch('/system/health').then(() => setOnline(true)).catch(() => setOnline(false))
+    check()
+    const t = setInterval(check, 30000)
+    return () => clearInterval(t)
+  }, [])
+  return online
+}
 
 export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertCount = 0 }) {
   const [showThemes,   setShowThemes]   = useState(false)
@@ -277,6 +292,7 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
   const [showCompass,  setShowCompass]  = useState(false)
   const [showStats,    setShowStats]    = useState(false)
   const userMenuRef = useRef(null)
+  const backendOnline = useBackendStatus()
   const { short, periods } = useSessionTimer()
   const { utcLabel, abbr } = useTimezone()
   const now = useClock()
@@ -323,14 +339,24 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
       {showCompass && <CompassPanel onClose={() => setShowCompass(false)} />}
 
       <aside className="sidebar">
-        {/* Logo — clic = retour accueil */}
-        <button
+        {/* Logo animé — œil pulsant */}
+        <motion.button
           className="sidebar-logo"
-          onClick={onNewChat}
-          title="Accueil"
-          style={{ cursor: 'pointer', border: 'none', padding: 0, fontFamily: 'inherit' }}
-        >👁️</button>
-        <div className="status-dot-sidebar" title="En ligne" />
+          onClick={() => onNav('dashboard')}
+          title="Dashboard"
+          style={{ cursor: 'pointer', border: 'none', padding: 0, fontFamily: 'inherit', background: 'none' }}
+          animate={{ scale: [1, 1.08, 1], filter: ['brightness(1)', 'brightness(1.4)', 'brightness(1)'] }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+        >👁️</motion.button>
+
+        {/* Indicateur connexion backend */}
+        <div title={backendOnline === null ? 'Vérification…' : backendOnline ? 'Backend en ligne' : 'Backend hors ligne'}
+          style={{
+            width: 8, height: 8, borderRadius: '50%', margin: '0 auto',
+            background: backendOnline === null ? '#fbbf24' : backendOnline ? '#4ade80' : '#ef4444',
+            boxShadow: `0 0 6px ${backendOnline ? '#4ade80' : '#ef4444'}`,
+            transition: 'background 0.5s',
+          }} />
 
         {/* ── Nouveau chat ── */}
         <button className="sidebar-new-chat" onClick={onNewChat} title="Nouveau chat">
@@ -383,6 +409,11 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
         </button>
 
         <div className="sidebar-spacer" />
+
+        {/* Cloche notifications */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
+          <NotifBell />
+        </div>
 
         {/* Theme switcher */}
         <button className="theme-btn" onClick={() => setShowThemes(v => !v)} title="Changer de thème">

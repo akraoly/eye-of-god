@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import Chat from './components/Chat'
 import Sidebar from './components/Sidebar'
 import StarField from './components/StarField'
+import DashboardView from './components/DashboardView'
+import SettingsView from './components/SettingsView'
+import { ToastContainer } from './components/NotificationSystem'
 import SocView from './components/SocView'
 import OffensiveView from './components/OffensiveView'
 import CodeView from './components/CodeView'
@@ -55,7 +58,7 @@ function MainApp() {
     localStorage.setItem('eye_session_id', id)
     return id
   })
-  const [view,  setView]  = useState('chat')
+  const [view,  setView]  = useState('dashboard')
   const [theme, setTheme] = useState('galactic')
 
   useEffect(() => {
@@ -72,6 +75,7 @@ function MainApp() {
   return (
     <>
       <StarField theme={theme} />
+      <ToastContainer />
       <div className="app">
         <Sidebar
           view={view} onNav={setView}
@@ -80,6 +84,7 @@ function MainApp() {
           alertCount={alertCount}
         />
         <main className="main">
+          {view === 'dashboard'    && <DashboardView onNav={setView} />}
           {view === 'chat'         && <Chat sessionId={sessionId} onNewChat={handleNewChat} />}
           {view === 'soc'          && <SocView />}
           {view === 'offensive'    && <OffensiveView />}
@@ -115,6 +120,7 @@ function MainApp() {
           {view === 'mitre'        && <MitreDashboard />}
           {view === 'audit-reports'&& <ReportDashboard />}
           {view === 'sentinel'     && <SystemMonitorView />}
+          {view === 'settings'     && <SettingsView />}
         </main>
       </div>
     </>

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import EyeOfGod from './EyeOfGod'
 import WelcomeNodes from './WelcomeNodes'
 import VoiceInput from './VoiceInput'
@@ -123,20 +125,42 @@ function PreBlock({ children }) {
   const code = String(codeEl?.children ?? '').replace(/\n$/, '')
   const copy = () => navigator.clipboard.writeText(code)
     .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800) })
+
+  const isTerminal = lang === 'bash' || lang === 'sh' || lang === 'shell' || lang === 'zsh'
+
   return (
-    <div style={{ margin: '0.75em 0' }}>
-      <div className="code-block-header">
-        <span className="code-lang">{lang || 'code'}</span>
-        <button className="code-copy" onClick={copy}>{copied ? '✅ Copié' : '📋 Copier'}</button>
+    <div style={{ margin: '0.75em 0', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div className="code-block-header" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: isTerminal ? '#001a0a' : '#1e1e2e', borderBottom: '1px solid var(--border)' }}>
+        {isTerminal && <span style={{ color: '#4ade80', fontSize: '0.7rem' }}>$_</span>}
+        <span className="code-lang" style={{ color: isTerminal ? '#4ade80' : '#a78bfa', fontSize: '0.68rem', fontWeight: 700 }}>{lang || 'code'}</span>
+        <button className="code-copy" onClick={copy} style={{ marginLeft: 'auto', padding: '2px 8px', background: '#ffffff10', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text3)', cursor: 'pointer', fontSize: '0.65rem' }}>
+          {copied ? '✅ Copié' : '📋 Copier'}
+        </button>
       </div>
-      <pre style={{ margin: 0 }}>{children}</pre>
+      <SyntaxHighlighter
+        language={lang || 'text'}
+        style={vscDarkPlus}
+        customStyle={{
+          margin: 0,
+          padding: '12px 14px',
+          fontSize: '0.82rem',
+          background: isTerminal ? '#001a0a' : undefined,
+          borderRadius: 0,
+        }}
+        showLineNumbers={!isTerminal && code.split('\n').length > 5}
+        lineNumberStyle={{ color: '#ffffff20', fontSize: '0.68rem' }}
+      >
+        {code}
+      </SyntaxHighlighter>
     </div>
   )
 }
 const MD = {
   pre: PreBlock,
-  code: ({ inline, className, children }) =>
-    <code className={className}>{children}</code>,
+  code: ({ node, inline, className, children, ...props }) => {
+    if (inline) return <code style={{ background: '#ffffff15', padding: '1px 5px', borderRadius: 3, fontSize: '0.88em', fontFamily: 'monospace', color: '#a78bfa' }}>{children}</code>
+    return <code className={className} {...props}>{children}</code>
+  },
 }
 
 // ── Modal mot de passe SHANURA ────────────────────────────────────────────
