@@ -5,6 +5,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { apiFetch, auth } from '../utils/auth'
 
+
+
 // ── Utilitaires ───────────────────────────────────────────────────────────────
 const fmtBytes = b => {
   if (b == null) return '—'
@@ -53,9 +55,11 @@ function useNetworkWS() {
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
+    const token = auth.getToken()
+    if (!token) return
     setStatus('connecting')
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${proto}//${window.location.host}/api/network/ws`)
+    const ws = new WebSocket(`${proto}//${window.location.host}/api/network/ws?token=${encodeURIComponent(token)}`)
     wsRef.current = ws
 
     ws.onopen  = () => setStatus('connected')

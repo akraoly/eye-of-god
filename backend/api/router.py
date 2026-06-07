@@ -50,7 +50,7 @@ router.include_router(c2_unified.router, prefix="/c2/unified", tags=["C2 Manager
 router.include_router(vision.router,     prefix="/vision",     tags=["Vision"],                 **_protected)
 router.include_router(autonomy.router,   prefix="/autonomy",   tags=["Autonomy"],               **_protected)
 router.include_router(voice.router,      prefix="/voice",      tags=["Voice — STT/TTS"],        **_protected)
-router.include_router(network.router,    prefix="/network",    tags=["Network Monitor"],        **_protected)
+router.include_router(network.router,    prefix="/network",    tags=["Network Monitor"])
 router.include_router(pentest.router,    prefix="/pentest",    tags=["Pentest Orchestré"],      **_protected)
 
 # ── Modules 5, 6, 7, 9 ────────────────────────────────────────────────────────
