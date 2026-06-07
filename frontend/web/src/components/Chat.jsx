@@ -56,7 +56,7 @@ function ttsSpeak(text, onEnd) {
   window.speechSynthesis.cancel()
   const utt = new SpeechSynthesisUtterance(cleanForTTS(text))
   utt.lang   = 'fr-FR'
-  utt.pitch  = 0.40
+  utt.pitch  = 0
   utt.rate   = 1.15
   utt.volume = 1.0
   const pickVoice = () => {
