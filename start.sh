@@ -57,7 +57,7 @@ done
 # ── Frontend ──────────────────────────────────────────────────────────────────
 echo -e "${B}[2/2]${N} Démarrage du frontend..."
 cd "$FRONTEND"
-nohup npm run dev > "$LOG_FRONT" 2>&1 &
+nohup npm run dev -- --host 0.0.0.0 > "$LOG_FRONT" 2>&1 &
 FRONT_PID=$!
 
 for i in $(seq 1 15); do
