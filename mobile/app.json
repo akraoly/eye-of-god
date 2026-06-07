@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "L'Œil de Dieu",
+    "slug": "eye-of-god",
+    "version": "8.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#050a14",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mrvitch.eyeofgod"
+    },
+    "android": {
+      "package": "com.mrvitch.eyeofgod",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#050a14",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": []
+  }
+}
