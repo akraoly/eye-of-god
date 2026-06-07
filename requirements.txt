@@ -22,3 +22,5 @@ sentence-transformers==3.3.1
 SpeechRecognition>=3.16.1
 imageio-ffmpeg>=0.6.0
 edge-tts>=7.2.8
+# Filesystem watcher
+watchdog>=4.0.0

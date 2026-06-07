@@ -57,12 +57,21 @@ class ChatService:
         memory_engine.extract_and_save(db=db, message=message)
         memory_engine.learn_communication_style(db=db, message=message)
 
-        # Mémoires sémantiquement proches
+        # Mémoires sémantiquement proches (inclut critiques + vectorielles)
         memories = memory_engine.get_relevant_memories(db=db, query=message)
         profile = memory_engine.get_user_profile(db=db)
 
         # Système enrichi avec profil et mémoires
         system = context_builder.build_system(user_memories=memories, user_profile=profile)
+
+        # Injecter la mémoire de travail (objectif session, fichiers, commandes récentes)
+        try:
+            from core.memory.working_memory import working_memory
+            wm_ctx = working_memory.get_context_string(session_id)
+            if wm_ctx:
+                system += f"\n\n## Contexte de travail actuel\n{wm_ctx}"
+        except Exception:
+            pass
 
         # ── Orchestrateur : classify intent + dispatch agents ─────────────────
         orchestration = await orchestrator.process(
@@ -147,7 +156,7 @@ class ChatService:
         context_builder.add_message(session_id, "user", message)
         context_builder.add_message(session_id, "assistant", response)
 
-        # Sauvegarder l'échange en base
+        # Sauvegarder l'échange en base (+ auto-indexation ChromaDB)
         memory_engine.save_exchange(
             db=db,
             session_id=session_id,
@@ -155,6 +164,21 @@ class ChatService:
             assistant_response=response,
             context_used=len(memories),
         )
+
+        # Mémoire de travail (working memory)
+        try:
+            from core.memory.working_memory import working_memory
+            working_memory.update(session_id, message, response)
+        except Exception:
+            pass
+
+        # Mémoire épisodique
+        try:
+            from core.memory.episodic import episodic_memory
+            episodic_memory.record_exchange(db=db, session_id=session_id,
+                                            user_message=message, assistant_response=response)
+        except Exception:
+            pass
 
         # Résumé automatique si l'historique est trop long
         try:
@@ -192,6 +216,15 @@ class ChatService:
         memories = memory_engine.get_relevant_memories(db=db, query=message)
         profile  = memory_engine.get_user_profile(db=db)
         system   = context_builder.build_system(user_memories=memories, user_profile=profile)
+
+        # Injecter la mémoire de travail
+        try:
+            from core.memory.working_memory import working_memory
+            wm_ctx = working_memory.get_context_string(session_id)
+            if wm_ctx:
+                system += f"\n\n## Contexte de travail actuel\n{wm_ctx}"
+        except Exception:
+            pass
 
         orchestration  = await orchestrator.process(db=db, message=message, session_id=session_id)
         shanura_mode   = orchestration.get("shanura_mode", False)
@@ -247,6 +280,19 @@ class ChatService:
         context_builder.add_message(session_id, "assistant", full_response)
         memory_engine.save_exchange(db=db, session_id=session_id,
                                     user_message=message, assistant_response=full_response)
+
+        # Mémoire de travail + épisodique
+        try:
+            from core.memory.working_memory import working_memory
+            working_memory.update(session_id, message, full_response)
+        except Exception:
+            pass
+        try:
+            from core.memory.episodic import episodic_memory
+            episodic_memory.record_exchange(db=db, session_id=session_id,
+                                            user_message=message, assistant_response=full_response)
+        except Exception:
+            pass
 
     def clear_session(self, session_id: str):
         context_builder.clear_session(session_id)

@@ -42,6 +42,7 @@ class MemoryStorage:
         key: str,
         value: str,
         importance: float = 0.5,
+        priority: str = "normal",
     ) -> Memory:
         existing = (
             db.query(Memory)
@@ -51,15 +52,30 @@ class MemoryStorage:
         if existing:
             existing.value = value
             existing.importance = importance
+            existing.priority = priority
             existing.updated_at = datetime.utcnow()
             db.commit()
             return existing
 
-        mem = Memory(memory_type=memory_type, key=key, value=value, importance=importance)
+        mem = Memory(
+            memory_type=memory_type, key=key, value=value,
+            importance=importance, priority=priority,
+        )
         db.add(mem)
         db.commit()
         db.refresh(mem)
         return mem
+
+    def get_memories_by_priority(
+        self, db: Session, priority: str, limit: int = 10
+    ) -> List[Memory]:
+        return (
+            db.query(Memory)
+            .filter(Memory.priority == priority)
+            .order_by(Memory.importance.desc())
+            .limit(limit)
+            .all()
+        )
 
     def get_memories(
         self, db: Session, memory_type: Optional[str] = None, limit: int = 50

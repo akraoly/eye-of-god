@@ -59,10 +59,39 @@ class Memory(Base):
     key = Column(String(200), nullable=False)
     value = Column(Text, nullable=False)
     importance = Column(Float, default=0.5)
+    priority = Column(String(20), default="normal")  # critical|important|normal|archive
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("memory_type", "key", name="uq_memory_type_key"),)
+
+
+class EpisodicSession(Base):
+    """Épisode mémoriel — une session de travail avec Mr Vitch."""
+    __tablename__ = "episodic_sessions"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    session_id     = Column(String(100), nullable=False, unique=True, index=True)
+    started_at     = Column(DateTime, default=datetime.utcnow, index=True)
+    ended_at       = Column(DateTime, nullable=True)
+    exchange_count = Column(Integer, default=0)
+    goal           = Column(Text, nullable=True)
+    summary        = Column(Text, nullable=True)
+    files_touched  = Column(Text, nullable=True)   # JSON list
+    key_commands   = Column(Text, nullable=True)   # JSON list
+    topics         = Column(Text, nullable=True)   # JSON list
+    is_summarized  = Column(Boolean, default=False)
+
+
+class BashCommandLog(Base):
+    """Commande bash indexée depuis l'historique shell."""
+    __tablename__ = "bash_command_logs"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    command    = Column(Text, nullable=False)
+    cwd        = Column(String(500), nullable=True)
+    timestamp  = Column(DateTime, default=datetime.utcnow, index=True)
+    indexed    = Column(Boolean, default=False)
 
 
 class UserProfile(Base):

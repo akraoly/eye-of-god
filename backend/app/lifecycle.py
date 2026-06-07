@@ -55,6 +55,96 @@ async def _start_network_monitor():
     logger.info("Moniteur réseau démarré")
 
 
+def _start_memory_workers():
+    """Démarre le watcher filesystem + planifie l'indexeur bash history."""
+    # Filesystem watcher (watchdog thread)
+    try:
+        from core.memory.watcher import file_watcher
+        file_watcher.start()
+    except Exception as e:
+        logger.warning("Watcher filesystem: %s", e)
+
+    # Bash history indexer — toutes les 30 secondes via APScheduler
+    try:
+        from core.autonomy.scheduler import get_scheduler
+        from core.memory.bash_history import index_new_commands
+
+        scheduler = get_scheduler()
+        if scheduler:
+            scheduler.add_job(
+                _bash_history_job,
+                trigger="interval",
+                seconds=30,
+                id="bash_history_indexer",
+                replace_existing=True,
+                misfire_grace_time=10,
+            )
+            logger.info("Indexeur bash history planifié (30s)")
+    except Exception as e:
+        logger.warning("Bash history scheduler: %s", e)
+
+    # Session summarizer — vérifie les sessions inactives toutes les 10 minutes
+    try:
+        from core.autonomy.scheduler import get_scheduler
+        scheduler = get_scheduler()
+        if scheduler:
+            scheduler.add_job(
+                _session_summarizer_job,
+                trigger="interval",
+                minutes=10,
+                id="session_summarizer",
+                replace_existing=True,
+                misfire_grace_time=60,
+            )
+            logger.info("Résumeur de sessions planifié (10min)")
+    except Exception as e:
+        logger.warning("Session summarizer scheduler: %s", e)
+
+
+def _bash_history_job():
+    """Job APScheduler — indexe les nouvelles commandes bash."""
+    try:
+        from core.memory.bash_history import index_new_commands
+        db = SessionLocal()
+        try:
+            n = index_new_commands(db=db)
+            if n:
+                logger.debug("bash_history: %d commande(s) indexée(s)", n)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.debug("bash_history job: %s", e)
+
+
+def _session_summarizer_job():
+    """Job APScheduler — résume les sessions inactives (> 1h)."""
+    try:
+        import asyncio
+        from core.memory.working_memory import working_memory
+        from core.memory.episodic import episodic_memory
+
+        timed_out = working_memory.get_timed_out_sessions()
+        for session_id in timed_out:
+            db = SessionLocal()
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(
+                        episodic_memory.summarize_and_close(db=db, session_id=session_id)
+                    )
+                finally:
+                    loop.close()
+                working_memory.close_session(session_id)
+                logger.info("Session '%s' résumée et fermée", session_id)
+            except Exception as e:
+                logger.debug("session summarizer: %s", e)
+            finally:
+                db.close()
+    except Exception as e:
+        logger.debug("session_summarizer job: %s", e)
+
+
 async def startup():
     logger.info("=" * 50)
     logger.info("L'Œil de Dieu — démarrage...")
@@ -63,6 +153,7 @@ async def startup():
     _ensure_admin()
     _start_scheduler()
     await _start_network_monitor()
+    _start_memory_workers()
     logger.info("Système prêt")
     logger.info("=" * 50)
 
@@ -71,4 +162,9 @@ async def shutdown():
     from core.network.monitor import network_monitor
     network_monitor.stop()
     _stop_scheduler()
+    try:
+        from core.memory.watcher import file_watcher
+        file_watcher.stop()
+    except Exception:
+        pass
     logger.info("L'Œil de Dieu — arrêt propre")
