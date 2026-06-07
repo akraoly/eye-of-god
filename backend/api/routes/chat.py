@@ -24,9 +24,14 @@ class ChatResponse(BaseModel):
     response: str
     session_id: str
     memories_used: int
+    tool_executed: bool = False
+    terminal_calls: int = 0
+    intent: str = "general"
+    agents_used: list = []
+    shanura_mode: bool = False
 
 
-@router.post("/", response_model=ChatResponse)
+@router.post("/")
 async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     result = await chat_service.chat(
         db=db,
@@ -38,7 +43,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         image_b64=request.image_b64,
         media_type=request.media_type,
     )
-    return ChatResponse(**result)
+    return result
 
 
 @router.post("/stream")
