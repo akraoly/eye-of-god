@@ -50,8 +50,10 @@ class ContextBuilder:
             logger.warning(f"[CTX] Chargement historique échoué : {e}")
             return 0
 
-    def build_messages(self, session_id: str, new_message: str) -> List[dict]:
-        messages = list(self.get_session(session_id))
+    def build_messages(self, session_id: str, new_message: str, max_turns: int = 12) -> List[dict]:
+        session = self.get_session(session_id)
+        # Limiter l'historique envoyé à Claude (max_turns paires user/assistant)
+        messages = list(session[-(max_turns * 2):])
         messages.append({"role": "user", "content": new_message})
         return messages
 

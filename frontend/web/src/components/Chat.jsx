@@ -5,6 +5,7 @@ import WelcomeNodes from './WelcomeNodes'
 import VoiceInput from './VoiceInput'
 import MatrixRain from './MatrixRain'
 import { sendMessage, loadHistory, resetSession } from '../utils/api'
+import { apiFetch } from '../utils/auth'
 
 // ── Nettoyage texte avant TTS ─────────────────────────────────────────────────
 function cleanForTTS(raw) {
@@ -55,8 +56,8 @@ function ttsSpeak(text, onEnd) {
   window.speechSynthesis.cancel()
   const utt = new SpeechSynthesisUtterance(cleanForTTS(text))
   utt.lang   = 'fr-FR'
-  utt.pitch  = 0.55   // très grave — voix homme
-  utt.rate   = 1.08   // rapide et fluide
+  utt.pitch  = 0.45   // très grave — voix homme profond type Adam ElevenLabs
+  utt.rate   = 1.05   // fluide et naturel
   utt.volume = 1.0
   const pickVoice = () => {
     const voices = window.speechSynthesis.getVoices()
@@ -228,6 +229,7 @@ function AssistantBubble({ msg, isLast }) {
         </div>
       )}
       <ReactMarkdown components={MD}>{msg.content}</ReactMarkdown>
+      {msg.streaming && <span className="stream-cursor" />}
       <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', marginTop: 4 }}>
         <button className="msg-copy-btn" onClick={handleSpeak} title={speaking ? 'Stopper' : 'Lire en voix homme'} style={{ opacity: speaking ? 1 : 0.7 }}>
           {speaking ? '⏹' : '🔊'}
@@ -282,7 +284,6 @@ export default function Chat({ sessionId, onNewChat }) {
     if (!msg || loading) return
     const isShanura = msg.toUpperCase().includes('SHANURA:)')
 
-    // Vérification mot de passe si SHANURA non encore déverrouillé
     if (isShanura && !sessionStorage.getItem(SHANURA_SESSION_KEY)) {
       setPendingShanura(msg)
       setInput('')
@@ -296,31 +297,107 @@ export default function Chat({ sessionId, onNewChat }) {
     setMessages(prev => [...prev, { role: 'user', content: msg, ts: new Date(), shanura: isShanura }])
     setLoading(true)
     setEyeState(isShanura ? 'responding' : 'thinking')
+
+    // ID unique pour la bulle streaming — permet de la retrouver dans le tableau
+    const streamId = `stream-${Date.now()}`
+
     try {
-      const data = await sendMessage(msg, sessionId, isVocal, voiceEnergy, voiceDuration)
-      setEyeState('responding')
-      setMessages(prev => [...prev, {
-        role: 'assistant', content: data.response, ts: new Date(),
-        tool: data.tool_executed, intent: data.intent, agents: data.agents_used,
-        shanura: data.shanura_mode,
-      }])
-      setTimeout(() => setEyeState('idle'), 1200)
-      if (!data.shanura_mode) setShanuraMode(false)
-      // Lecture vocale automatique (voix homme) si activée
-      if (data.response && autoSpeak) {
-        setSpeaking(true)
-        ttsSpeak(data.response, () => setSpeaking(false))
+      const res = await apiFetch('/chat/stream', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: msg,
+          session_id: sessionId,
+          vocal_input: isVocal,
+          voice_energy: voiceEnergy,
+          voice_duration: voiceDuration,
+        }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let accumulated = ''
+      let bubbleAdded = false
+      let finalMeta = {}
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() // fragment incomplet en attente
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (!raw) continue
+          try {
+            const parsed = JSON.parse(raw)
+            if (parsed.error) throw new Error(parsed.error)
+
+            if (parsed.chunk !== undefined) {
+              accumulated += parsed.chunk
+              if (!bubbleAdded) {
+                // Premier chunk : insérer la bulle assistant dans le tableau
+                setMessages(prev => [...prev, {
+                  id: streamId, role: 'assistant', content: accumulated,
+                  ts: new Date(), streaming: true, tool: false, agents: [], shanura: isShanura,
+                }])
+                bubbleAdded = true
+                setEyeState('responding')
+              } else {
+                // Chunks suivants : mise à jour en place par ID
+                setMessages(prev => prev.map(m =>
+                  m.id === streamId ? { ...m, content: accumulated } : m
+                ))
+              }
+            }
+            if (parsed.done) finalMeta = parsed
+          } catch (e) {
+            console.warn('[stream] SSE parse:', e.message)
+          }
+        }
       }
-    } catch {
+
+      // Finaliser la bulle : enlever le flag streaming, injecter les métadonnées
+      setMessages(prev => prev.map(m =>
+        m.id === streamId ? {
+          ...m, content: accumulated, streaming: false,
+          tool: finalMeta.tool_executed || false,
+          agents: finalMeta.agents_used || [],
+          shanura: finalMeta.shanura_mode || isShanura,
+        } : m
+      ))
+
+      if (finalMeta.shanura_mode) setShanuraMode(true)
+      else if (!isShanura) setShanuraMode(false)
+
+      setTimeout(() => setEyeState('idle'), 1200)
+
+      // TTS lecture automatique voix homme après stream complet
+      if (accumulated && autoSpeak) {
+        setSpeaking(true)
+        ttsSpeak(accumulated, () => setSpeaking(false))
+      }
+
+    } catch (err) {
       setEyeState('idle')
       setShanuraMode(false)
-      setMessages(prev => [...prev, {
-        role: 'assistant', content: '⚠️ Connexion backend perdue. Port 8001 ?', ts: new Date(),
-      }])
+      setMessages(prev => {
+        const hasStream = prev.some(m => m.id === streamId)
+        if (hasStream) {
+          return prev.map(m => m.id === streamId
+            ? { ...m, content: '⚠️ Connexion perdue.', streaming: false }
+            : m)
+        }
+        return [...prev, { role: 'assistant', content: '⚠️ Connexion backend perdue.', ts: new Date() }]
+      })
     } finally {
       setLoading(false)
     }
-  }, [input, loading, sessionId])
+  }, [input, loading, sessionId, autoSpeak])
 
   const onKey = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
   const onVoiceTranscript = (text, voiceMeta = {}) => {
@@ -437,7 +514,7 @@ export default function Chat({ sessionId, onNewChat }) {
           )
         })}
 
-        {loading && (
+        {loading && !messages.some(m => m.streaming) && (
           <div className="msg-group assistant group-last">
             <div className="msg assistant">
               <div className="avatar avatar-ai">👁️</div>

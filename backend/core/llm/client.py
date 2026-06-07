@@ -31,10 +31,11 @@ class LLMClient:
         self,
         messages: List[dict],
         system: Optional[str] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[str, None]:
         async with self.client.messages.stream(
             model=settings.CLAUDE_MODEL,
-            max_tokens=settings.CLAUDE_MAX_TOKENS,
+            max_tokens=max_tokens or settings.CLAUDE_MAX_TOKENS,
             system=system or "",
             messages=messages,
         ) as stream:
