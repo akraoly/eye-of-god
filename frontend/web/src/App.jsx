@@ -11,6 +11,7 @@ import VisionView from './components/VisionView'
 import AutonomyView from './components/AutonomyView'
 import MemoryView from './components/MemoryView'
 import ObserveView from './components/ObserveView'
+import DiagnosticView from './components/DiagnosticView'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -64,7 +65,8 @@ function MainApp() {
           {view === 'life'      && <LifeView />}
           {view === 'vision'    && <VisionView />}
           {view === 'autonomy'  && <AutonomyView onUnreadChange={setAlertCount} />}
-          {view === 'observe'   && <ObserveView />}
+          {view === 'observe'     && <ObserveView />}
+          {view === 'diagnostic'  && <DiagnosticView />}
         </main>
       </div>
     </>

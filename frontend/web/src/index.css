@@ -1709,3 +1709,150 @@ kbd { background: var(--glass2); border: 1px solid var(--border2); border-radius
   box-shadow: 0 0 24px rgba(255,160,0,0.5);
   transform: translateY(-1px);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIAGNOSTIC VIEW
+   ═══════════════════════════════════════════════════════════════════════════ */
+.diag-view {
+  padding: 24px 28px; overflow-y: auto; height: 100%;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+/* ── En-tête ── */
+.diag-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.diag-header-left { display: flex; align-items: center; gap: 14px; }
+.diag-header-icon { font-size: 2rem; }
+.diag-header-title {
+  font-size: 1.25rem; font-weight: 800; color: var(--text1);
+  font-family: var(--font-ui); letter-spacing: 0.04em;
+}
+.diag-header-sub { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
+.diag-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.diag-btn-refresh, .diag-btn-auto {
+  padding: 6px 14px; border-radius: 8px; font-size: 0.78rem; cursor: pointer;
+  border: 1px solid var(--border2); background: transparent; color: var(--text2);
+  font-family: var(--font-ui); transition: all 0.15s;
+}
+.diag-btn-refresh:hover { background: rgba(0,212,255,0.1); color: var(--accent); }
+.diag-btn-auto.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+.diag-last-refresh { font-size: 0.68rem; color: var(--text3); font-family: var(--font-ui); }
+.diag-error { background: rgba(255,68,102,0.1); border: 1px solid rgba(255,68,102,0.3); border-radius: 10px; padding: 10px 14px; color: #ff6688; font-size: 0.82rem; }
+
+/* ── Section titre ── */
+.diag-section-title {
+  font-size: 0.78rem; font-weight: 700; color: var(--text3); text-transform: uppercase;
+  letter-spacing: 0.1em; font-family: var(--font-ui);
+}
+
+/* ── Gauges ── */
+.diag-metrics-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.diag-gauge { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.diag-gauge-svg { width: 72px; height: 72px; }
+.diag-gauge-label { font-size: 0.65rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* ── Metric card ── */
+.diag-metric-card {
+  background: rgba(0,212,255,0.04); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 16px; min-width: 110px;
+}
+.diag-metric-val { font-size: 1.2rem; font-weight: 800; color: var(--text1); font-family: var(--font-ui); }
+.diag-metric-unit { font-size: 0.7rem; color: var(--text3); font-weight: 400; }
+.diag-metric-label { font-size: 0.65rem; color: var(--text3); text-transform: uppercase; margin: 2px 0 6px; letter-spacing: 0.06em; }
+.diag-metric-sub { font-size: 0.62rem; color: var(--text3); margin-top: 4px; }
+
+/* ── Barre ── */
+.diag-bar-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.diag-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+
+/* ── Layout deux colonnes ── */
+.diag-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .diag-two-col { grid-template-columns: 1fr; } }
+
+/* ── Carte générique ── */
+.diag-card {
+  background: rgba(0,4,18,0.7); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 18px;
+}
+.diag-card-title {
+  font-size: 0.75rem; font-weight: 700; color: var(--text3); text-transform: uppercase;
+  letter-spacing: 0.1em; margin-bottom: 10px; font-family: var(--font-ui);
+}
+
+/* ── Services ── */
+.diag-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+.diag-service-row, .diag-chroma-row {
+  display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 6px;
+  transition: background 0.15s;
+}
+.diag-service-row:hover, .diag-chroma-row:hover { background: rgba(0,212,255,0.04); }
+.diag-service-info { display: flex; flex-direction: column; flex: 1; }
+.diag-service-name { font-size: 0.82rem; font-weight: 600; color: var(--text1); }
+.diag-service-port { font-size: 0.7rem; color: var(--accent); font-family: var(--font-ui); }
+.diag-service-detail { font-size: 0.68rem; color: var(--text3); }
+.diag-service-badge {
+  font-size: 0.62rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+  font-family: var(--font-ui); text-transform: uppercase;
+}
+.diag-service-badge.online { background: rgba(0,255,136,0.12); color: #00ff88; }
+.diag-service-badge.offline { background: rgba(255,68,102,0.12); color: #ff4466; }
+.diag-chroma-stat { font-size: 0.72rem; color: var(--text3); font-family: var(--font-ui); }
+
+/* ── Agents grid ── */
+.diag-agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.diag-agent-card {
+  background: rgba(0,212,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+.diag-agent-card:hover { border-color: var(--border2); }
+.diag-agent-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.diag-agent-name { font-size: 0.72rem; font-weight: 800; color: var(--accent); font-family: var(--font-ui); }
+.diag-agent-desc { font-size: 0.62rem; color: var(--text3); line-height: 1.3; }
+
+/* ── DB grid ── */
+.diag-db-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+.diag-db-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 8px; border-radius: 6px; background: rgba(0,212,255,0.03);
+}
+.diag-db-label { font-size: 0.72rem; color: var(--text3); }
+.diag-db-count { font-size: 0.78rem; font-weight: 700; color: var(--accent); font-family: var(--font-ui); }
+
+/* ── Process table ── */
+.diag-proc-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.diag-proc-table th {
+  color: var(--text3); text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border);
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.62rem;
+}
+.diag-proc-table td { padding: 5px 6px; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text2); }
+.diag-proc-pid { color: var(--text3) !important; font-family: var(--font-ui); }
+.diag-proc-name { color: var(--text1) !important; font-weight: 600; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diag-proc-cpu.high { color: #ff6688 !important; font-weight: 700; }
+.diag-proc-status { font-size: 0.62rem; padding: 1px 5px; border-radius: 3px; }
+.diag-proc-status.running { background: rgba(0,255,136,0.1); color: #00ff88; }
+.diag-proc-status.sleeping { background: rgba(0,212,255,0.08); color: var(--text3); }
+
+/* ── Logs ── */
+.diag-card-logs { display: flex; flex-direction: column; }
+.diag-log-box {
+  flex: 1; overflow-y: auto; max-height: 280px; background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+  font-family: 'Fira Code', monospace; font-size: 0.62rem; line-height: 1.5;
+}
+.diag-log-line { color: var(--text3); white-space: pre-wrap; word-break: break-all; }
+.diag-log-line.log-error { color: #ff6688; }
+.diag-log-line.log-warn  { color: #e8c14a; }
+.diag-log-line.log-info  { color: var(--accent); }
+.diag-log-empty { color: var(--text3); font-size: 0.72rem; padding: 8px; text-align: center; }
+
+/* ── Loading ── */
+.diag-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px; color: var(--text3); }
+.diag-loading-spinner {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+}

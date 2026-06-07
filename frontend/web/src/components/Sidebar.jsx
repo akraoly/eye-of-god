@@ -243,7 +243,8 @@ const NAV = [
   { id: 'life',      icon: '🎯', label: 'Life'      },
   { id: 'vision',    icon: '👁️', label: 'Vision'    },
   { id: 'autonomy',  icon: '⏰', label: 'Auto'      },
-  { id: 'observe',   icon: '🔭', label: 'Observe'   },
+  { id: 'observe',     icon: '🔭', label: 'Observe'  },
+  { id: 'diagnostic',  icon: '🩺', label: 'Diag'     },
 ]
 
 export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertCount = 0 }) {
