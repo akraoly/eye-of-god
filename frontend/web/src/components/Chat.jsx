@@ -5,7 +5,7 @@ import WelcomeNodes from './WelcomeNodes'
 import VoiceInput from './VoiceInput'
 import MatrixRain from './MatrixRain'
 import { sendMessage, loadHistory, resetSession } from '../utils/api'
-import { apiFetch } from '../utils/auth'
+import { apiFetch, auth } from '../utils/auth'
 
 // ── Nettoyage texte avant TTS ─────────────────────────────────────────────────
 function cleanForTTS(raw) {
@@ -50,31 +50,41 @@ function cleanForTTS(raw) {
     .slice(0, 3000)
 }
 
-// ── TTS voix homme ───────────────────────────────────────────────────────────
-function ttsSpeak(text, onEnd) {
-  if (!window.speechSynthesis || !text) return
-  window.speechSynthesis.cancel()
-  const utt = new SpeechSynthesisUtterance(cleanForTTS(text))
-  utt.lang   = 'fr-FR'
-  utt.pitch  = 0.01
-  utt.rate   = 1.20
-  utt.volume = 1.0
-  const pickVoice = () => {
-    const voices = window.speechSynthesis.getVoices()
-    // Priorité : voix masculine explicite, puis Thomas/Pierre (Apple), puis fr générique
-    return voices.find(v => v.lang.startsWith('fr') && /thomas/i.test(v.name))
-      || voices.find(v => v.lang.startsWith('fr') && /pierre|henri|nicolas|male|man|homm/i.test(v.name))
-      || voices.find(v => /fr/i.test(v.lang) && /standard-b|neural2-b|wavenet-b/i.test(v.name))
-      || voices.find(v => v.lang.startsWith('fr') && !/amelie|céline|celine|florence|juliette|marie|female|femme|fille/i.test(v.name))
-      || voices.find(v => v.lang === 'fr-FR')
-      || voices.find(v => v.lang.startsWith('fr'))
+// ── TTS backend — voix masculine Henri (Microsoft Neural) ────────────────────
+let _currentAudio = null
+
+async function ttsSpeak(text, onEnd) {
+  if (!text) { onEnd?.(); return }
+  ttsStop()
+  const clean = cleanForTTS(text)
+  if (!clean) { onEnd?.(); return }
+  try {
+    const token = auth.getToken()
+    const res = await fetch('/api/voice/tts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ text: clean }),
+    })
+    if (!res.ok) throw new Error(`TTS HTTP ${res.status}`)
+    const blob = await res.blob()
+    const url  = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    _currentAudio = audio
+    audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; onEnd?.() }
+    audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; onEnd?.() }
+    audio.play()
+  } catch (e) {
+    console.warn('[TTS]', e.message)
+    onEnd?.()
   }
-  const v = pickVoice()
-  if (v) utt.voice = v
-  if (onEnd) utt.onend = onEnd
-  window.speechSynthesis.speak(utt)
 }
-function ttsStop() { window.speechSynthesis?.cancel() }
+function ttsStop() {
+  window.speechSynthesis?.cancel()
+  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null }
+}
 
 const fmtTime = d => d instanceof Date
   ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })

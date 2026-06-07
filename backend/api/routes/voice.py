@@ -152,11 +152,61 @@ def voice_status():
         stt_ok = True
     except ImportError:
         pass
+    tts_ok = False
+    try:
+        import edge_tts  # noqa
+        tts_ok = True
+    except ImportError:
+        pass
 
     return {
         "status": "online",
         "ffmpeg": ffmpeg_bin or "non trouvé",
         "stt_google": stt_ok,
-        "tts_client": "expo-speech (mobile) / SpeechSynthesis (web)",
+        "tts_backend": tts_ok,
+        "tts_voice": "fr-FR-HenriNeural (Male)",
         "stt_pipeline": "expo-av → m4a → ffmpeg 16kHz PCM WAV → Google STT",
     }
+
+
+# ── TTS backend — voix masculine Henri (Microsoft Neural) ─────────────────────
+from fastapi import Request as FastAPIRequest
+from fastapi.responses import StreamingResponse as _StreamingResponse
+from pydantic import BaseModel as _BaseModel
+
+
+class TTSRequest(_BaseModel):
+    text: str
+    voice: str = "fr-FR-HenriNeural"   # voix masculine par défaut
+    rate: str  = "+20%"                 # +20 % = rate 1.20
+    pitch: str = "-10Hz"                # légèrement plus grave
+
+
+@router.post("/tts")
+async def backend_tts(req: TTSRequest):
+    """
+    Synthèse vocale backend via edge-tts (Microsoft Neural).
+    Retourne un flux MP3 directement jouable côté client.
+    Voix masculine : fr-FR-HenriNeural ou fr-FR-RemyMultilingualNeural.
+    """
+    try:
+        import edge_tts
+    except ImportError:
+        raise HTTPException(status_code=503, detail="edge-tts non installé")
+
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Texte vide")
+
+    communicate = edge_tts.Communicate(text, req.voice, rate=req.rate, pitch=req.pitch)
+
+    async def audio_stream():
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                yield chunk["data"]
+
+    return _StreamingResponse(
+        audio_stream(),
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "no-cache"},
+    )
