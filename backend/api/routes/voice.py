@@ -1,5 +1,10 @@
 """
-Routes /api/voice — Transcription audio (STT) + synthèse vocale (TTS côté backend).
+Routes /api/voice — STT + TTS + WebSocket pipeline vocal local.
+- /transcribe   : transcription Google (legacy)
+- /local/transcribe : faster-whisper 100% local
+- /local/tts    : Piper TTS ou espeak-ng local
+- /ws/stream    : WebSocket STT temps réel (PCM → Whisper → JSON)
+- /status       : état des moteurs
 """
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import Optional
@@ -210,3 +215,221 @@ async def backend_tts(req: TTSRequest):
         media_type="audio/mpeg",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Routes locales — Whisper STT + Piper TTS (100% offline)
+# Aucun audio ne quitte jamais la machine.
+# ════════════════════════════════════════════════════════════════════════════════
+
+from fastapi import WebSocket, WebSocketDisconnect, Query
+from fastapi.responses import Response as _Response
+import json as _json
+
+
+@router.post("/local/transcribe")
+async def local_transcribe(
+    file: UploadFile = File(...),
+    language: str = "fr",
+    model: str = "small",
+):
+    """
+    Transcription 100% locale via faster-whisper.
+    Accepte PCM WAV 16kHz mono ou tout format ffmpeg.
+    Aucun audio ne quitte la machine.
+    """
+    from core.voice.stt import transcribe_audio
+    from core.voice.intent import classify_intent
+
+    content = await file.read()
+
+    # Conversion ffmpeg → PCM 16kHz mono si nécessaire
+    ffmpeg_bin = _get_ffmpeg()
+    pcm_bytes = content
+    if ffmpeg_bin and not file.filename.endswith(".pcm"):
+        import tempfile as _tmpmod
+        suffix = os.path.splitext(file.filename or "audio.bin")[1].lower() or ".bin"
+        with _tmpmod.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(content); src_path = tmp.name
+        wav_path = src_path + "_16k.wav"
+        try:
+            _to_pcm_wav(src_path, wav_path, ffmpeg_bin)
+            with open(wav_path, "rb") as f:
+                pcm_bytes = f.read()
+        except Exception:
+            pcm_bytes = content
+        finally:
+            for p in [src_path, wav_path]:
+                try: os.unlink(p)
+                except Exception: pass
+
+    result = transcribe_audio(pcm_bytes, language=language, model_size=model)
+    if result.get("text"):
+        result["intent"] = classify_intent(result["text"])
+    return result
+
+
+@router.post("/local/tts")
+async def local_tts(req: TTSRequest):
+    """
+    Synthèse vocale 100% locale via Piper TTS ou espeak-ng.
+    Aucune donnée ne quitte la machine.
+    Retourne un flux WAV/PCM jouable directement.
+    """
+    from core.voice.tts import synthesize
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(400, "Texte vide")
+    audio = synthesize(text, speed=1.0)
+    if not audio:
+        raise HTTPException(503, "Synthèse vocale locale indisponible")
+    # Détecter le format (WAV si espeak produit un WAV)
+    media = "audio/wav" if audio[:4] == b"RIFF" else "audio/x-raw"
+    return _Response(content=audio, media_type=media)
+
+
+@router.get("/local/status")
+def local_voice_status():
+    """État du pipeline vocal local."""
+    import shutil
+    whisper_ok = False
+    try:
+        from faster_whisper import WhisperModel
+        whisper_ok = True
+    except ImportError:
+        pass
+
+    piper_ok = bool(shutil.which("piper"))
+    espeak_ok = bool(shutil.which("espeak-ng"))
+    vad_ok = False
+    try:
+        import webrtcvad; vad_ok = True
+    except ImportError:
+        pass
+    wake_ok = False
+    try:
+        import openwakeword; wake_ok = True
+    except ImportError:
+        pass
+
+    return {
+        "whisper":     {"available": whisper_ok, "model": "small", "backend": "cpu/int8"},
+        "piper_tts":   {"available": piper_ok},
+        "espeak_tts":  {"available": espeak_ok},
+        "webrtcvad":   {"available": vad_ok},
+        "openwakeword":{"available": wake_ok},
+        "local_only":  True,
+        "audio_exits_machine": False,
+    }
+
+
+@router.websocket("/ws/stream")
+async def voice_stream_ws(
+    websocket: WebSocket,
+    token: str = Query(""),
+    language: str = Query("fr"),
+    model: str = Query("small"),
+):
+    """
+    WebSocket STT temps réel.
+    Client envoie des chunks PCM 16-bit 16kHz, serveur retourne du JSON.
+
+    Protocole :
+    - Client → binaire : chunk PCM (n × 2 bytes, 16kHz)
+    - Client → text JSON : { "cmd": "transcribe" } pour forcer la transcription
+    - Serveur → text JSON : { "type": "partial"|"final"|"command"|"error", ... }
+    """
+    from core.auth.jwt_handler import decode_access_token
+    from core.voice.stt import transcribe_audio
+    from core.voice.vad import vad_pipeline, FRAME_BYTES
+    from core.voice.intent import classify_intent, handle_voice_command
+
+    # Authentification WebSocket
+    try:
+        decode_access_token(token)
+    except Exception:
+        await websocket.close(code=4001)
+        return
+
+    await websocket.accept()
+    buffer = bytearray()
+    silence_frames = 0
+    SILENCE_THRESHOLD = 25   # ~750ms de silence → transcription auto
+    MIN_SPEECH_BYTES = FRAME_BYTES * 10  # au moins ~300ms de parole
+
+    try:
+        while True:
+            data = await websocket.receive()
+
+            # Chunk PCM binaire
+            if "bytes" in data and data["bytes"]:
+                chunk = data["bytes"]
+                buffer.extend(chunk)
+
+                # VAD frame-par-frame
+                for i in range(0, len(chunk) - FRAME_BYTES + 1, FRAME_BYTES):
+                    frame = chunk[i:i + FRAME_BYTES]
+                    if vad_pipeline.is_speech(frame):
+                        silence_frames = 0
+                    else:
+                        silence_frames += 1
+
+                # Auto-transcription si silence prolongé et buffer assez long
+                if silence_frames >= SILENCE_THRESHOLD and len(buffer) >= MIN_SPEECH_BYTES:
+                    pcm_copy = bytes(buffer)
+                    buffer.clear()
+                    silence_frames = 0
+
+                    result = transcribe_audio(pcm_copy, language=language, model_size=model)
+                    text = result.get("text", "")
+
+                    if text:
+                        intent = classify_intent(text)
+                        response = {
+                            "type":   "final",
+                            "text":   text,
+                            "intent": intent,
+                            "duration": result.get("duration"),
+                            "transcription_time": result.get("transcription_time"),
+                        }
+                        # Commandes vocales système
+                        if intent.get("intent") == "voice_command":
+                            cmd_resp = handle_voice_command(intent["command"])
+                            response["voice_response"] = cmd_resp
+                        await websocket.send_text(_json.dumps(response))
+                    else:
+                        await websocket.send_text(_json.dumps({"type": "silence"}))
+
+            # Commande texte JSON
+            elif "text" in data and data["text"]:
+                try:
+                    msg = _json.loads(data["text"])
+                    cmd = msg.get("cmd")
+
+                    if cmd == "transcribe" and len(buffer) >= MIN_SPEECH_BYTES:
+                        pcm_copy = bytes(buffer)
+                        buffer.clear()
+                        result = transcribe_audio(pcm_copy, language=language, model_size=model)
+                        text = result.get("text", "")
+                        intent = classify_intent(text) if text else {}
+                        await websocket.send_text(_json.dumps({
+                            "type": "final", "text": text, "intent": intent
+                        }))
+
+                    elif cmd == "clear":
+                        buffer.clear(); silence_frames = 0
+                        await websocket.send_text(_json.dumps({"type": "cleared"}))
+
+                    elif cmd == "ping":
+                        await websocket.send_text(_json.dumps({"type": "pong"}))
+
+                except Exception:
+                    await websocket.send_text(_json.dumps({"type": "error", "message": "Message invalide"}))
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await websocket.send_text(_json.dumps({"type": "error", "message": str(e)}))
+        except Exception:
+            pass

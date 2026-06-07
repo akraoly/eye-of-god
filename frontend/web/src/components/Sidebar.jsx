@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { logout, auth, apiFetch } from '../utils/auth'
 import { NotifBell } from './NotificationSystem'
+import VoiceOrb from './VoiceOrb'
 
 // ── Helpers temps ─────────────────────────────────────────────────────────────
 const STATS_KEY = 'eye_time_stats'
@@ -409,6 +410,17 @@ export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertC
         </button>
 
         <div className="sidebar-spacer" />
+
+        {/* VoiceOrb — compact dans la sidebar */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
+          <VoiceOrb compact onTranscript={(text, intent) => {
+            if (intent?.intent !== 'voice_command') {
+              window.__voiceTranscript?.(text)
+            }
+          }} onCommand={(cmd) => {
+            if (cmd === 'cmd_navigate') window.__voiceNav?.()
+          }} />
+        </div>
 
         {/* Cloche notifications */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>

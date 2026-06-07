@@ -148,6 +148,16 @@ def _start_aegis():
         logger.warning("AEGIS: démarrage échoué: %s", e)
 
 
+def _preload_voice_models():
+    """Précharge le modèle Whisper en arrière-plan (non-bloquant)."""
+    try:
+        from core.voice.stt import preload_model
+        preload_model()
+        logger.info("Voice: préchargement Whisper lancé en arrière-plan")
+    except Exception as e:
+        logger.debug("Voice: préchargement optionnel: %s", e)
+
+
 def _session_summarizer_job():
     """Job APScheduler — résume les sessions inactives (> 1h)."""
     try:
@@ -188,6 +198,7 @@ async def startup():
     _start_memory_workers()
     _start_sentinel()
     _start_aegis()
+    _preload_voice_models()
     logger.info("Système prêt")
     logger.info("=" * 50)
 
