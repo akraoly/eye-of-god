@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from api.routes import (
     chat, memory, user, system, exploit, code, knowledge, life,
     observe, soc, offensive, c2, auth, vision, autonomy, voice,
-    c2_unified, network, pentest,
+    c2_unified, network, pentest, sysmonitor,
     # Modules 5, 6, 7, 9
     exploit_engine, implants, osint, credentials,
     # Modules 11, 12, 14, 17, 18
@@ -52,6 +52,7 @@ router.include_router(autonomy.router,   prefix="/autonomy",   tags=["Autonomy"]
 router.include_router(voice.router,      prefix="/voice",      tags=["Voice — STT/TTS"],        **_protected)
 router.include_router(network.router,    prefix="/network",    tags=["Network Monitor"])
 router.include_router(pentest.router,    prefix="/pentest",    tags=["Pentest Orchestré"],      **_protected)
+router.include_router(sysmonitor.router, prefix="/sentinel",   tags=["Sentinel — Surveillance Système"])
 
 # ── Modules 5, 6, 7, 9 ────────────────────────────────────────────────────────
 router.include_router(exploit_engine.router, prefix="/exploit-engine", tags=["Exploit Engine"], **_protected)

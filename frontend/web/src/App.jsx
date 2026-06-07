@@ -30,6 +30,7 @@ import NetworkSnifferView from './components/NetworkSnifferView'
 import TriggersView from './components/TriggersView'
 import ExfilView from './components/ExfilView'
 import OmniscienceView from './components/OmniscienceView'
+import SystemMonitorView from './components/SystemMonitorView'
 import BLEDashboard from './components/ble/BLEDashboard'
 import SDRPanel from './components/sdr/SDRPanel'
 import RFIDPanel from './components/rfid/RFIDPanel'
@@ -113,6 +114,7 @@ function MainApp() {
           {view === 'rfid'         && <RFIDPanel />}
           {view === 'mitre'        && <MitreDashboard />}
           {view === 'audit-reports'&& <ReportDashboard />}
+          {view === 'sentinel'     && <SystemMonitorView />}
         </main>
       </div>
     </>

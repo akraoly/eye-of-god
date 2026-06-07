@@ -116,6 +116,26 @@ def _bash_history_job():
         logger.debug("bash_history job: %s", e)
 
 
+def _start_sentinel():
+    """Démarre le daemon Sentinel — surveillance système temps réel."""
+    try:
+        from core.autonomy.scheduler import get_scheduler
+        from core.monitor.daemon import register_sentinel_jobs, set_event_loop
+        import asyncio
+
+        scheduler = get_scheduler()
+        if scheduler:
+            register_sentinel_jobs(scheduler)
+            # Câbler l'event loop pour les WebSocket pushes
+            try:
+                loop = asyncio.get_event_loop()
+                set_event_loop(loop)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning("Sentinel: démarrage échoué: %s", e)
+
+
 def _session_summarizer_job():
     """Job APScheduler — résume les sessions inactives (> 1h)."""
     try:
@@ -154,6 +174,7 @@ async def startup():
     _start_scheduler()
     await _start_network_monitor()
     _start_memory_workers()
+    _start_sentinel()
     logger.info("Système prêt")
     logger.info("=" * 50)
 

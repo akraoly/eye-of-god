@@ -1262,3 +1262,71 @@ class ExfilJob(Base):
     checksum     = Column(String(64), nullable=True)
     error_msg    = Column(Text, nullable=True)
     created_at   = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MODULE SENTINEL — Surveillance système temps réel
+# ══════════════════════════════════════════════════════════════════════════════
+
+class SystemMetricHistory(Base):
+    """Historique des métriques système — collecté toutes les 30s."""
+    __tablename__ = "system_metric_history"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp     = Column(DateTime, default=datetime.utcnow, index=True)
+    cpu_pct       = Column(Float, default=0.0)
+    ram_pct       = Column(Float, default=0.0)
+    disk_pct      = Column(Float, default=0.0)
+    swap_pct      = Column(Float, default=0.0)
+    cpu_temp      = Column(Float, nullable=True)
+    net_sent_mb   = Column(Float, default=0.0)
+    net_recv_mb   = Column(Float, default=0.0)
+    process_count = Column(Integer, default=0)
+    open_ports    = Column(Integer, default=0)
+    health_score  = Column(Integer, default=100)
+
+
+class SecurityEventLog(Base):
+    """Journal des événements de sécurité détectés par le daemon Sentinel."""
+    __tablename__ = "security_event_log"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp   = Column(DateTime, default=datetime.utcnow, index=True)
+    category    = Column(String(50), nullable=False, index=True)
+    # METRIC|PROCESS|NETWORK|FILE|PORT|LOG
+    severity    = Column(String(10), default="INFO", index=True)
+    # INFO|LOW|MEDIUM|HIGH|CRITICAL
+    title       = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    details     = Column(Text, nullable=True)   # JSON
+    source      = Column(String(50), default="sentinel")
+    resolved    = Column(Boolean, default=False)
+
+
+class MonitorBaseline(Base):
+    """Baseline de référence pour la comparaison (processus, ports, fichiers)."""
+    __tablename__ = "monitor_baseline"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    baseline_type  = Column(String(30), nullable=False, unique=True, index=True)
+    # processes | ports | files
+    data           = Column(Text, nullable=False)   # JSON
+    created_at     = Column(DateTime, default=datetime.utcnow)
+    updated_at     = Column(DateTime, default=datetime.utcnow)
+
+
+class CustomMonitorRule(Base):
+    """Règle de surveillance personnalisée définie par Mr Vitch."""
+    __tablename__ = "custom_monitor_rules"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    rule_id     = Column(String(36), nullable=False, unique=True, index=True,
+                         default=lambda: str(_uuid.uuid4()))
+    name        = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    rule_type   = Column(String(30), nullable=False)
+    # watch_dir | watch_process | ignore_port | alert_metric | watch_service
+    condition   = Column(Text, nullable=False)   # JSON
+    action      = Column(String(20), default="alert")   # alert | ignore | restart
+    enabled     = Column(Boolean, default=True, index=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)

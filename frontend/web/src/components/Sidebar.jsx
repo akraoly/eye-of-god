@@ -244,6 +244,7 @@ const NAV = [
   { id: 'vision',       icon: '👁️', label: 'Vision'   },
   { id: 'autonomy',     icon: '⏰', label: 'Auto'     },
   { id: 'observe',      icon: '🔭', label: 'Observe'  },
+  { id: 'sentinel',     icon: '🔬', label: 'Sentinel' },
   { id: 'diagnostic',   icon: '🩺', label: 'Diag'     },
   { id: 'aegis',        icon: '🛡️', label: 'AEGIS'    },
   { id: 'osint',        icon: '🔍', label: 'OSINT'    },
