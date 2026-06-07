@@ -3,6 +3,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from database.models import Base
 from app.config import settings
+import database.models_mitre  # noqa: F401 — register MITRE tables
+import database.models_ble    # noqa: F401 — register BLE tables
+import database.models_rfid      # noqa: F401 — register RFID tables
+import database.models_sdr       # noqa: F401 — register SDR tables
+import database.models_reporting # noqa: F401 — register Audit Report tables
 
 os.makedirs("./data", exist_ok=True)
 

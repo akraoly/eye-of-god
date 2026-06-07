@@ -19,6 +19,11 @@ import OmniscienceScreen      from '../screens/OmniscienceScreen';
 import AudioCaptureScreen     from '../screens/modules/AudioCaptureScreen';
 import CameraScanScreen       from '../screens/modules/CameraScanScreen';
 import NetworkSnifferScreen   from '../screens/modules/NetworkSnifferScreen';
+import BLEScannerScreen       from '../screens/modules/BLEScannerScreen';
+import SDRScreen              from '../screens/modules/SDRScreen';
+import RFIDScreen             from '../screens/modules/RFIDScreen';
+import MitreScreen            from '../screens/modules/soc/MitreScreen';
+import ReportScreen           from '../screens/modules/reporting/ReportScreen';
 
 import { colors } from '../utils/theme';
 
@@ -99,6 +104,11 @@ export default function AppNavigator() {
       <Stack.Screen name="AudioCapture"   component={AudioCaptureScreen}   options={{ title: '🎤 Audio Capture' }} />
       <Stack.Screen name="CameraScan"    component={CameraScanScreen}     options={{ title: '📷 Camera Scanner' }} />
       <Stack.Screen name="NetworkSniffer" component={NetworkSnifferScreen} options={{ title: '📡 Network Sniffer' }} />
+      <Stack.Screen name="BLEScanner"    component={BLEScannerScreen}    options={{ title: '🔵 BLE Scanner' }} />
+      <Stack.Screen name="SDR"           component={SDRScreen}           options={{ title: '📻 SDR Control' }} />
+      <Stack.Screen name="RFID"          component={RFIDScreen}          options={{ title: '💳 RFID Badge Tool' }} />
+      <Stack.Screen name="Mitre"         component={MitreScreen}         options={{ title: '🎯 MITRE ATT&CK' }} />
+      <Stack.Screen name="Reports"       component={ReportScreen}        options={{ title: '📋 Rapports d\'Audit' }} />
     </Stack.Navigator>
   );
 }

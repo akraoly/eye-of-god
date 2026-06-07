@@ -12,6 +12,16 @@ from api.routes import (
     # Capacités 1, 2, 3, 4, 5, 6, 7
     audio_capture, cameras, packet_capture,
     post_exploit, triggers, exfil, omniscience,
+    # MITRE ATT&CK
+    mitre,
+    # BLE Scanner
+    ble,
+    # RFID
+    rfid,
+    # SDR
+    sdr,
+    # Audit Reports
+    report_routes,
 )
 from core.auth.dependencies import get_current_user
 
@@ -71,3 +81,18 @@ router.include_router(post_exploit.router,   prefix="/post-exploit", tags=["Post
 router.include_router(triggers.router,       prefix="/triggers",     tags=["Triggers"],       **_protected)
 router.include_router(exfil.router,          prefix="/exfil",        tags=["Exfiltration"],   **_protected)
 router.include_router(omniscience.router,    prefix="/omniscience",  tags=["Omniscience"],    **_protected)
+
+# ── MITRE ATT&CK ──────────────────────────────────────────────────────────────
+router.include_router(mitre.router,          prefix="/mitre",         tags=["MITRE ATT&CK"],   **_protected)
+
+# ── BLE Scanner ───────────────────────────────────────────────────────────────
+router.include_router(ble.router,            prefix="/ble",           tags=["BLE Scanner"],    **_protected)
+
+# ── RFID Badge Tool ────────────────────────────────────────────────────────────
+router.include_router(rfid.router,           prefix="/rfid",          tags=["RFID Badge Tool"], **_protected)
+
+# ── SDR ─────────────────────────────────────────────────────────────────────────
+router.include_router(sdr.router,            prefix="/sdr",           tags=["SDR"],             **_protected)
+
+# ── Audit Reports ───────────────────────────────────────────────────────────────
+router.include_router(report_routes.router,  prefix="/reports/audit", tags=["Audit Reports"],   **_protected)

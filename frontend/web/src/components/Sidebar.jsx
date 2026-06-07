@@ -263,6 +263,11 @@ const NAV = [
   { id: 'triggers',     icon: '⚡', label: 'Triggers' },
   { id: 'exfil',        icon: '📤', label: 'Exfil'    },
   { id: 'omniscience',  icon: '🌍', label: 'Omni'     },
+  { id: 'ble',          icon: '🔵', label: 'BLE'      },
+  { id: 'sdr',          icon: '📻', label: 'SDR'      },
+  { id: 'rfid',         icon: '💳', label: 'RFID'     },
+  { id: 'mitre',        icon: '🎯', label: 'MITRE'    },
+  { id: 'audit-reports',icon: '📋', label: 'Audit'    },
 ]
 
 export default function Sidebar({ view, onNav, theme, onTheme, onNewChat, alertCount = 0 }) {

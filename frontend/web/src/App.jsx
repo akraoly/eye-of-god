@@ -30,6 +30,11 @@ import NetworkSnifferView from './components/NetworkSnifferView'
 import TriggersView from './components/TriggersView'
 import ExfilView from './components/ExfilView'
 import OmniscienceView from './components/OmniscienceView'
+import BLEDashboard from './components/ble/BLEDashboard'
+import SDRPanel from './components/sdr/SDRPanel'
+import RFIDPanel from './components/rfid/RFIDPanel'
+import MitreDashboard from './components/soc/MitreDashboard'
+import ReportDashboard from './components/reporting/ReportDashboard'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -103,6 +108,11 @@ function MainApp() {
           {view === 'triggers'     && <TriggersView />}
           {view === 'exfil'        && <ExfilView />}
           {view === 'omniscience'  && <OmniscienceView />}
+          {view === 'ble'          && <BLEDashboard />}
+          {view === 'sdr'          && <SDRPanel />}
+          {view === 'rfid'         && <RFIDPanel />}
+          {view === 'mitre'        && <MitreDashboard />}
+          {view === 'audit-reports'&& <ReportDashboard />}
         </main>
       </div>
     </>

@@ -5,13 +5,22 @@ import {
 import { colors } from '../utils/theme';
 
 const MODULES = [
-  { name: 'Knowledge', icon: '📚', label: 'Base de Savoir', desc: 'Recherche & ingestion', color: '#38bdf8' },
-  { name: 'Life',      icon: '🎯', label: 'Life Manager',   desc: 'Objectifs & habitudes',  color: '#6ee7b7' },
-  { name: 'Autonomy',  icon: '🤖', label: 'Autonomie',      desc: 'Tâches & moniteurs',     color: '#f59e0b' },
-  { name: 'Observe',   icon: '🔭', label: 'Observe',        desc: 'Analyse IA du système',  color: '#a78bfa' },
-  { name: 'Vision',    icon: '👁',  label: 'Vision IA',     desc: 'Capture & analyse image', color: '#00d4ff' },
-  { name: 'Offensive', icon: '⚔️', label: 'Offensive',     desc: '4 niveaux Red Team + C2', color: '#f97316' },
-  { name: 'Code',      icon: '💻', label: 'Code & Shell',   desc: 'Explorateur + terminal',  color: '#10b981' },
+  { name: 'Knowledge',   icon: '📚', label: 'Base de Savoir', desc: 'Recherche & ingestion',    color: '#38bdf8' },
+  { name: 'Life',        icon: '🎯', label: 'Life Manager',   desc: 'Objectifs & habitudes',    color: '#6ee7b7' },
+  { name: 'Autonomy',    icon: '🤖', label: 'Autonomie',      desc: 'Tâches & moniteurs',       color: '#f59e0b' },
+  { name: 'Observe',     icon: '🔭', label: 'Observe',        desc: 'Analyse IA du système',    color: '#a78bfa' },
+  { name: 'Vision',      icon: '👁',  label: 'Vision IA',    desc: 'Capture & analyse image',  color: '#00d4ff' },
+  { name: 'Offensive',   icon: '⚔️', label: 'Offensive',    desc: '4 niveaux Red Team + C2',  color: '#f97316' },
+  { name: 'Code',        icon: '💻', label: 'Code & Shell',  desc: 'Explorateur + terminal',   color: '#10b981' },
+  { name: 'Omniscience', icon: '🌍', label: 'Omniscience',   desc: 'Dashboard global',         color: '#8b5cf6' },
+  { name: 'AudioCapture',icon: '🎤', label: 'Audio Capture', desc: 'Enregistrement & détection',color: '#ec4899' },
+  { name: 'CameraScan',  icon: '📷', label: 'Caméras IP',    desc: 'ONVIF + CVE scan',         color: '#f59e0b' },
+  { name: 'NetworkSniffer',icon:'📡',label: 'Network Sniffer',desc: 'Capture & analyse réseau', color: '#14b8a6' },
+  { name: 'BLEScanner',  icon: '🔵', label: 'BLE Scanner',   desc: 'Bluetooth & trackers',     color: '#3b82f6' },
+  { name: 'SDR',         icon: '📻', label: 'SDR Control',   desc: 'HackRF · RTL-SDR · Replay',color: '#6366f1' },
+  { name: 'RFID',        icon: '💳', label: 'RFID Badge',    desc: 'Proxmark3 · Clone · Dump', color: '#d946ef' },
+  { name: 'Mitre',       icon: '🎯', label: 'MITRE ATT&CK',  desc: 'Graphe d\'attaque + heatmap',color: '#ef4444' },
+  { name: 'Reports',     icon: '📋', label: 'Rapports Audit',desc: 'PDF · HTML · DOCX',        color: '#22c55e' },
 ];
 
 export default function ModulesScreen({ navigation }) {
