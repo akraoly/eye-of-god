@@ -18,3 +18,7 @@ apscheduler==3.10.4
 # Phase 2 — Mémoire vectorielle
 chromadb==0.5.23
 sentence-transformers==3.3.1
+# Voice pipeline — STT + TTS
+SpeechRecognition>=3.16.1
+imageio-ffmpeg>=0.6.0
+edge-tts>=7.2.8
