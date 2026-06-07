@@ -47,8 +47,8 @@ export async function speak(text, opts = {}) {
 
   const options = {
     language: opts.language || 'fr-FR',
-    pitch: opts.pitch ?? 0.60,   // très grave — voix hacker anonyme
-    rate: opts.rate ?? 0.82,     // lente et posée — chaque mot compte
+    pitch: opts.pitch ?? 0.60,   // très grave — voix homme
+    rate: opts.rate ?? 1.08,     // rapide et fluide
     volume: opts.volume ?? 1.0,
     onDone: opts.onDone,
     onError: opts.onError,

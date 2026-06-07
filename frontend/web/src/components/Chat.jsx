@@ -55,8 +55,8 @@ function ttsSpeak(text, onEnd) {
   window.speechSynthesis.cancel()
   const utt = new SpeechSynthesisUtterance(cleanForTTS(text))
   utt.lang   = 'fr-FR'
-  utt.pitch  = 0.55   // très grave — voix hacker anonyme
-  utt.rate   = 0.82   // lente et posée — chaque mot compte
+  utt.pitch  = 0.55   // très grave — voix homme
+  utt.rate   = 1.08   // rapide et fluide
   utt.volume = 1.0
   const pickVoice = () => {
     const voices = window.speechSynthesis.getVoices()
