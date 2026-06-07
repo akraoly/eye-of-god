@@ -1330,3 +1330,137 @@ class CustomMonitorRule(Base):
     action      = Column(String(20), default="alert")   # alert | ignore | restart
     enabled     = Column(Boolean, default=True, index=True)
     created_at  = Column(DateTime, default=datetime.utcnow)
+
+
+# ── BLOC 5 — AEGIS Renseignement Offensif ─────────────────────────────────────
+
+class AegisCVE(Base):
+    """CVE ingéré par AEGIS depuis NVD/CISA/ExploitDB."""
+    __tablename__ = "aegis_cves"
+
+    id               = Column(Integer, primary_key=True, autoincrement=True)
+    cve_id           = Column(String(30), nullable=False, unique=True, index=True)
+    title            = Column(String(500), nullable=True)
+    description      = Column(Text, nullable=True)
+    cvss_score       = Column(Float, default=0.0, index=True)
+    cvss_vector      = Column(String(200), nullable=True)
+    severity         = Column(String(20), nullable=True, index=True)  # CRITICAL/HIGH/MEDIUM/LOW
+    cwe_ids          = Column(Text, nullable=True)          # JSON list
+    affected_products= Column(Text, nullable=True)          # JSON list
+    references       = Column(Text, nullable=True)          # JSON list of URLs
+    source           = Column(String(30), default="nvd", index=True)  # nvd|cisa|exploitdb
+    published_at     = Column(DateTime, nullable=True, index=True)
+    modified_at      = Column(DateTime, nullable=True)
+    ingested_at      = Column(DateTime, default=datetime.utcnow, index=True)
+    read             = Column(Boolean, default=False, index=True)
+    starred          = Column(Boolean, default=False, index=True)
+    has_exploit      = Column(Boolean, default=False, index=True)
+    affects_project  = Column(Boolean, default=False, index=True)  # corrélation projets
+    alert_sent       = Column(Boolean, default=False)
+    status           = Column(String(20), default="new", index=True)  # new|analyzed|exploited|mitigated|archived
+    ai_summary       = Column(Text, nullable=True)   # résumé Claude 2 phrases
+    notes            = Column(Text, nullable=True)   # notes Mr Vitch
+
+
+class AegisExploit(Base):
+    """Exploit public surveillé depuis GitHub."""
+    __tablename__ = "aegis_exploits"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    exploit_id    = Column(String(36), nullable=False, unique=True,
+                           default=lambda: str(_uuid.uuid4()))
+    cve_id        = Column(String(30), nullable=True, index=True)
+    repo_url      = Column(String(500), nullable=False, unique=True)
+    repo_name     = Column(String(200), nullable=True)
+    repo_owner    = Column(String(100), nullable=True)
+    description   = Column(Text, nullable=True)
+    tags          = Column(Text, nullable=True)          # JSON list (CVE, PoC, RCE…)
+    language      = Column(String(50), nullable=True)
+    stars         = Column(Integer, default=0)
+    ai_analysis   = Column(Text, nullable=True)   # analyse Claude
+    technique     = Column(String(200), nullable=True)  # vecteur d'attaque
+    reliability   = Column(String(20), nullable=True)   # high|medium|low|unknown
+    attack_vector = Column(String(50), nullable=True)   # NETWORK|LOCAL|PHYSICAL
+    added_at      = Column(DateTime, default=datetime.utcnow, index=True)
+    repo_created  = Column(DateTime, nullable=True)
+    status        = Column(String(20), default="new")   # new|analyzed|tested|archived
+    notes         = Column(Text, nullable=True)
+
+
+class AegisTarget(Base):
+    """Cible surveillée — pentest autorisé uniquement."""
+    __tablename__ = "aegis_targets"
+
+    id                    = Column(Integer, primary_key=True, autoincrement=True)
+    target_id             = Column(String(36), nullable=False, unique=True,
+                                   default=lambda: str(_uuid.uuid4()))
+    name                  = Column(String(200), nullable=False)
+    target_type           = Column(String(20), nullable=False, index=True)  # domain|ip|org
+    target_value          = Column(String(500), nullable=False)
+    authorization_confirmed = Column(Boolean, default=False, nullable=False)  # OBLIGATOIRE
+    authorization_note    = Column(Text, nullable=True)   # référence du mandat
+    notes                 = Column(Text, nullable=True)
+    tags                  = Column(Text, nullable=True)   # JSON list
+    created_at            = Column(DateTime, default=datetime.utcnow)
+    last_checked          = Column(DateTime, nullable=True)
+    # Résultats reconnaissance passive
+    subdomains            = Column(Text, nullable=True)   # JSON list (crt.sh)
+    technologies          = Column(Text, nullable=True)   # JSON list
+    dns_records           = Column(Text, nullable=True)   # JSON dict
+    whois_info            = Column(Text, nullable=True)
+    findings              = Column(Text, nullable=True)   # JSON list de changements détectés
+    active                = Column(Boolean, default=True, index=True)
+
+
+class AegisIntelLog(Base):
+    """Journal de renseignement opérationnel."""
+    __tablename__ = "aegis_intel_log"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    entry_id    = Column(String(36), nullable=False, unique=True,
+                         default=lambda: str(_uuid.uuid4()))
+    entry_type  = Column(String(30), nullable=False, index=True)
+    # cve_alert|exploit_found|target_change|attack_mapped|report|manual
+    title       = Column(String(500), nullable=False)
+    content     = Column(Text, nullable=True)
+    cve_id      = Column(String(30), nullable=True, index=True)
+    exploit_id  = Column(String(36), nullable=True)
+    target_id   = Column(String(36), nullable=True)
+    tags        = Column(Text, nullable=True)   # JSON list
+    severity    = Column(String(20), nullable=True, index=True)
+    status      = Column(String(20), default="new", index=True)
+    # new|analyzing|tested|mitigated|archived
+    notes       = Column(Text, nullable=True)   # annotations Mr Vitch
+    created_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class AegisATTACKMap(Base):
+    """Matrice ATT&CK personnelle de Mr Vitch."""
+    __tablename__ = "aegis_attack_map"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    technique_id   = Column(String(20), nullable=False, unique=True, index=True)  # T1059.001
+    tactic         = Column(String(50), nullable=False, index=True)
+    technique_name = Column(String(200), nullable=False)
+    level          = Column(String(20), default="studied")  # studied|practiced|mastered
+    source         = Column(String(50), nullable=True)  # ctf|pentest|lab|course
+    cve_ids        = Column(Text, nullable=True)   # JSON list de CVE liés
+    notes          = Column(Text, nullable=True)
+    first_seen     = Column(DateTime, default=datetime.utcnow)
+    last_updated   = Column(DateTime, default=datetime.utcnow)
+
+
+class AegisReport(Base):
+    """Rapport de veille généré par AEGIS (hebdomadaire ou à la demande)."""
+    __tablename__ = "aegis_reports"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    report_id    = Column(String(36), nullable=False, unique=True,
+                          default=lambda: str(_uuid.uuid4()))
+    report_type  = Column(String(20), default="weekly")   # weekly|on_demand
+    period_start = Column(DateTime, nullable=True)
+    period_end   = Column(DateTime, nullable=True)
+    title        = Column(String(300), nullable=True)
+    content      = Column(Text, nullable=False)   # markdown
+    stats        = Column(Text, nullable=True)    # JSON
+    created_at   = Column(DateTime, default=datetime.utcnow, index=True)

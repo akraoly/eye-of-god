@@ -136,6 +136,18 @@ def _start_sentinel():
         logger.warning("Sentinel: démarrage échoué: %s", e)
 
 
+def _start_aegis():
+    """Démarre les jobs AEGIS — veille CVE, exploits, recon, rapports."""
+    try:
+        from core.autonomy.scheduler import get_scheduler
+        from core.aegis.daemon import register_aegis_jobs
+        scheduler = get_scheduler()
+        if scheduler:
+            register_aegis_jobs(scheduler)
+    except Exception as e:
+        logger.warning("AEGIS: démarrage échoué: %s", e)
+
+
 def _session_summarizer_job():
     """Job APScheduler — résume les sessions inactives (> 1h)."""
     try:
@@ -175,6 +187,7 @@ async def startup():
     await _start_network_monitor()
     _start_memory_workers()
     _start_sentinel()
+    _start_aegis()
     logger.info("Système prêt")
     logger.info("=" * 50)
 

@@ -22,6 +22,8 @@ from api.routes import (
     sdr,
     # Audit Reports
     report_routes,
+    # AEGIS — Renseignement offensif
+    aegis_intel,
 )
 from core.auth.dependencies import get_current_user
 
@@ -97,3 +99,6 @@ router.include_router(sdr.router,            prefix="/sdr",           tags=["SDR
 
 # ── Audit Reports ───────────────────────────────────────────────────────────────
 router.include_router(report_routes.router,  prefix="/reports/audit", tags=["Audit Reports"],   **_protected)
+
+# ── AEGIS — Renseignement offensif ───────────────────────────────────────────
+router.include_router(aegis_intel.router,    prefix="/aegis",         tags=["AEGIS Intel"],     **_protected)
