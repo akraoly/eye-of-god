@@ -1,13 +1,55 @@
+import base64
+import logging
 from sqlalchemy.orm import Session
 from core.llm.client import llm_client
 from core.llm.context import context_builder
 from core.memory.memory_engine import memory_engine
 from core.orchestrator import orchestrator
 
+logger = logging.getLogger(__name__)
+
+# Mots-clés qui déclenchent une capture d'écran automatique
+_VISION_KEYWORDS = [
+    "regarde mon écran", "regarde l'écran", "analyse l'écran",
+    "capture l'écran", "que vois-tu", "ce que tu vois",
+    "vois-tu", "tu vois", "mon écran", "analyse cette image",
+    "regarde ça", "décris mon écran", "qu'est-ce que tu vois",
+    "look at my screen", "analyze my screen",
+]
+
+def _detect_vision_intent(message: str) -> bool:
+    msg_lower = message.lower()
+    return any(kw in msg_lower for kw in _VISION_KEYWORDS)
+
+
+def _inject_image_in_messages(messages: list, image_b64: str, media_type: str) -> list:
+    """Remplace le content du dernier message user par un bloc multimodal [image, texte]."""
+    for i in range(len(messages) - 1, -1, -1):
+        if messages[i]["role"] == "user":
+            text = messages[i]["content"]
+            if isinstance(text, str):
+                messages[i] = {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": image_b64,
+                            },
+                        },
+                        {"type": "text", "text": text},
+                    ],
+                }
+            break
+    return messages
+
 
 class ChatService:
     async def chat(self, db: Session, message: str, session_id: str = "default",
-                   vocal_input: bool = False, voice_energy: str = "normal", voice_duration: float = 0.0) -> dict:
+                   vocal_input: bool = False, voice_energy: str = "normal", voice_duration: float = 0.0,
+                   image_b64: str = "", media_type: str = "image/png") -> dict:
         # ── Mémoire cross-session : recharge l'historique si le cache est vide ──
         context_builder.warm_from_db(db=db, session_id=session_id)
 
@@ -75,6 +117,26 @@ class ChatService:
         # Construire les messages — historique court en vocal (plus rapide)
         messages = context_builder.build_messages(session_id, message, max_turns=4 if vocal_input else 12)
 
+        # Vision : auto-screenshot si mot-clé détecté, sinon image fournie
+        vision_b64 = image_b64
+        vision_type = media_type or "image/png"
+        if not vision_b64 and _detect_vision_intent(message):
+            try:
+                from core.vision.vision_engine import capture_screenshot
+                img_data, img_type = capture_screenshot()
+                vision_b64 = base64.standard_b64encode(img_data).decode()
+                vision_type = img_type
+                system += "\n\n[VISION ACTIVE] Mr Vitch a demandé une analyse visuelle. Une capture d'écran a été jointe au message — décris et analyse ce que tu vois sur l'écran."
+                logger.info("[VISION] Auto-screenshot injecté dans le message")
+            except Exception as e:
+                system += f"\n\n[VISION] Capture d'écran demandée mais échouée : {e}"
+                logger.warning(f"[VISION] Capture échouée : {e}")
+        elif vision_b64:
+            system += "\n\n[VISION ACTIVE] Mr Vitch a joint une image à ce message — analyse-la en détail en relation avec sa question."
+
+        if vision_b64:
+            messages = _inject_image_in_messages(messages, vision_b64, vision_type)
+
         # Tokens réduits en vocal : réponse courte = latence divisée par 3
         max_tok = 600 if vocal_input else 2048
 
@@ -120,7 +182,8 @@ class ChatService:
         }
 
     async def stream(self, db: Session, message: str, session_id: str = "default",
-                     vocal_input: bool = False, voice_energy: str = "normal", voice_duration: float = 0.0):
+                     vocal_input: bool = False, voice_energy: str = "normal", voice_duration: float = 0.0,
+                     image_b64: str = "", media_type: str = "image/png"):
         """Génère la réponse token par token via streaming."""
         context_builder.warm_from_db(db=db, session_id=session_id)
         memory_engine.extract_and_save(db=db, message=message)
@@ -152,6 +215,26 @@ class ChatService:
             system += system_context
 
         messages = context_builder.build_messages(session_id, message, max_turns=4 if vocal_input else 12)
+
+        # Vision : auto-screenshot si mot-clé détecté, sinon image fournie
+        vision_b64 = image_b64
+        vision_type = media_type or "image/png"
+        if not vision_b64 and _detect_vision_intent(message):
+            try:
+                from core.vision.vision_engine import capture_screenshot
+                img_data, img_type = capture_screenshot()
+                vision_b64 = base64.standard_b64encode(img_data).decode()
+                vision_type = img_type
+                system += "\n\n[VISION ACTIVE] Mr Vitch a demandé une analyse visuelle. Une capture d'écran a été jointe au message — décris et analyse ce que tu vois sur l'écran."
+                logger.info("[VISION] Auto-screenshot injecté (stream)")
+            except Exception as e:
+                system += f"\n\n[VISION] Capture d'écran demandée mais échouée : {e}"
+        elif vision_b64:
+            system += "\n\n[VISION ACTIVE] Mr Vitch a joint une image à ce message — analyse-la en détail en relation avec sa question."
+
+        if vision_b64:
+            messages = _inject_image_in_messages(messages, vision_b64, vision_type)
+
         max_tok  = 600 if vocal_input else 2048
 
         full_response = ""

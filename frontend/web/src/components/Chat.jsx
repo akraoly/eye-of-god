@@ -283,8 +283,21 @@ export default function Chat({ sessionId, onNewChat }) {
   const [pendingShanura, setPendingShanura] = useState('')
   const [autoSpeak,      setAutoSpeak]      = useState(true)
   const [speaking,       setSpeaking]       = useState(false)
+  const [attachedImage,  setAttachedImage]  = useState(null) // {b64, mediaType, preview}
   const bottomRef = useRef(null)
   const taRef     = useRef(null)
+  const imgInputRef = useRef(null)
+
+  const attachImage = (file) => {
+    if (!file || !file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const dataUrl = e.target.result
+      const b64 = dataUrl.split(',')[1]
+      setAttachedImage({ b64, mediaType: file.type, preview: dataUrl, name: file.name })
+    }
+    reader.readAsDataURL(file)
+  }
 
   // Chargement historique au montage
   useEffect(() => {
@@ -308,10 +321,11 @@ export default function Chat({ sessionId, onNewChat }) {
     ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'
   }, [input])
 
-  const send = useCallback(async (text, isVocal = false, voiceEnergy = 'normal', voiceDuration = 0) => {
+  const send = useCallback(async (text, isVocal = false, voiceEnergy = 'normal', voiceDuration = 0, imgOverride = null) => {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     const isShanura = msg.toUpperCase().includes('SHANURA:)')
+    const img = imgOverride || attachedImage
 
     if (isShanura && !sessionStorage.getItem(SHANURA_SESSION_KEY)) {
       setPendingShanura(msg)
@@ -323,7 +337,8 @@ export default function Chat({ sessionId, onNewChat }) {
     if (!isShanura) setShanuraMode(false)
     else setShanuraMode(true)
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: msg, ts: new Date(), shanura: isShanura }])
+    setAttachedImage(null)
+    setMessages(prev => [...prev, { role: 'user', content: msg, ts: new Date(), shanura: isShanura, image: img?.preview || null }])
     setLoading(true)
     setEyeState(isShanura ? 'responding' : 'thinking')
 
@@ -339,6 +354,8 @@ export default function Chat({ sessionId, onNewChat }) {
           vocal_input: isVocal,
           voice_energy: voiceEnergy,
           voice_duration: voiceDuration,
+          image_b64: img?.b64 || '',
+          media_type: img?.mediaType || 'image/png',
         }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -469,7 +486,9 @@ export default function Chat({ sessionId, onNewChat }) {
           onKey={onKey} taRef={taRef} onSend={send}
           onVoice={onVoiceTranscript} onVoiceState={setEyeState}
           autoSpeak={autoSpeak} onToggleAutoSpeak={() => { setAutoSpeak(v => !v); stopSpeak() }}
-          speaking={speaking} onStopSpeak={stopSpeak} />
+          speaking={speaking} onStopSpeak={stopSpeak}
+          attachedImage={attachedImage} onAttach={attachImage} onRemoveAttach={() => setAttachedImage(null)}
+          imgInputRef={imgInputRef} />
       </div>
     )
   }
@@ -526,6 +545,11 @@ export default function Chat({ sessionId, onNewChat }) {
                     ) : (
                       <div className={`bubble bubble-user${m.shanura ? ' bubble-shanura' : ''}`}>
                         {m.shanura && <span className="shanura-badge">⚡ SHANURA</span>}
+                        {m.image && (
+                          <div className="chat-img-preview">
+                            <img src={m.image} alt="image jointe" />
+                          </div>
+                        )}
                         {m.content}
                       </div>
                     )}
@@ -565,7 +589,9 @@ export default function Chat({ sessionId, onNewChat }) {
         onKey={onKey} taRef={taRef} onSend={send}
         onVoice={onVoiceTranscript} onVoiceState={setEyeState}
         autoSpeak={autoSpeak} onToggleAutoSpeak={() => { setAutoSpeak(v => !v); stopSpeak() }}
-        speaking={speaking} onStopSpeak={stopSpeak} />
+        speaking={speaking} onStopSpeak={stopSpeak}
+        attachedImage={attachedImage} onAttach={attachImage} onRemoveAttach={() => setAttachedImage(null)}
+        imgInputRef={imgInputRef} />
     </div>
   )
 }
@@ -610,7 +636,8 @@ function ChatHeader({ eyeState, msgCount, onNew, cyberMode, onCyberToggle }) {
 
 // ── Input bar ─────────────────────────────────────────────────────────────
 function InputBar({ input, setInput, loading, onKey, taRef, onSend, onVoice, onVoiceState,
-                    autoSpeak, onToggleAutoSpeak, speaking, onStopSpeak }) {
+                    autoSpeak, onToggleAutoSpeak, speaking, onStopSpeak,
+                    attachedImage, onAttach, onRemoveAttach, imgInputRef }) {
   const charCount = input.length
   return (
     <div className="input-area">
@@ -630,14 +657,34 @@ function InputBar({ input, setInput, loading, onKey, taRef, onSend, onVoice, onV
         )}
       </div>
 
+      {/* Preview image attachée */}
+      {attachedImage && (
+        <div className="chat-attach-preview">
+          <img src={attachedImage.preview} alt={attachedImage.name} />
+          <span className="chat-attach-name">{attachedImage.name}</span>
+          <button className="chat-attach-remove" onClick={onRemoveAttach} title="Retirer l'image">✕</button>
+        </div>
+      )}
+
       <div className="input-box">
         <VoiceInput onTranscript={onVoice} onStateChange={onVoiceState} disabled={loading} />
+        {/* Bouton image */}
+        <input ref={imgInputRef} type="file" accept="image/*" style={{ display:'none' }}
+          onChange={e => { onAttach(e.target.files[0]); e.target.value = '' }} />
+        <button
+          className={`img-attach-btn${attachedImage ? ' img-attached' : ''}`}
+          onClick={() => imgInputRef.current?.click()}
+          disabled={loading}
+          title="Joindre une image"
+        >
+          🖼
+        </button>
         <textarea
           ref={taRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={onKey}
-          placeholder="Message, commande, ou question…"
+          placeholder="Message, commande, ou question… (ex: regarde mon écran)"
           rows={1}
           disabled={loading}
           autoFocus
@@ -647,7 +694,7 @@ function InputBar({ input, setInput, loading, onKey, taRef, onSend, onVoice, onV
             {charCount}
           </span>
         )}
-        <button className="send-btn" onClick={() => onSend()} disabled={loading || !input.trim()} title="Envoyer">
+        <button className="send-btn" onClick={() => onSend()} disabled={loading || (!input.trim() && !attachedImage)} title="Envoyer">
           ➤
         </button>
       </div>
@@ -655,6 +702,7 @@ function InputBar({ input, setInput, loading, onKey, taRef, onSend, onVoice, onV
         <span><kbd>Enter</kbd> envoyer</span>
         <span><kbd>Shift+Enter</kbd> saut de ligne</span>
         <span>🎙️ vocal</span>
+        <span>🖼 image</span>
       </div>
     </div>
   )

@@ -2583,3 +2583,69 @@ kbd { background: var(--glass2); border: 1px solid var(--border2); border-radius
   transition: opacity 0.15s;
 }
 .diag-term-btn-refuse:hover { opacity: 0.85; }
+
+/* ── Chat Vision — bouton image + preview ────────────────────────────────── */
+.img-attach-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 1rem;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.img-attach-btn:hover { background: rgba(167,139,250,0.12); border-color: var(--accent); }
+.img-attach-btn.img-attached { border-color: var(--accent); background: rgba(167,139,250,0.18); }
+.img-attach-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.chat-attach-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(167,139,250,0.08);
+  border: 1px solid rgba(167,139,250,0.25);
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.chat-attach-preview img {
+  height: 48px;
+  width: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.chat-attach-name {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-attach-remove {
+  background: transparent;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition: color 0.1s;
+}
+.chat-attach-remove:hover { color: var(--red); }
+
+.chat-img-preview {
+  margin-bottom: 8px;
+}
+.chat-img-preview img {
+  max-width: 260px;
+  max-height: 180px;
+  border-radius: 10px;
+  border: 1px solid rgba(167,139,250,0.3);
+  object-fit: cover;
+  display: block;
+}

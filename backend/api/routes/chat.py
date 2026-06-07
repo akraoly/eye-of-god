@@ -16,6 +16,8 @@ class ChatRequest(BaseModel):
     vocal_input: bool = False
     voice_energy: str = "normal"
     voice_duration: float = 0.0
+    image_b64: str = ""
+    media_type: str = "image/png"
 
 
 class ChatResponse(BaseModel):
@@ -33,6 +35,8 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         vocal_input=request.vocal_input,
         voice_energy=request.voice_energy,
         voice_duration=request.voice_duration,
+        image_b64=request.image_b64,
+        media_type=request.media_type,
     )
     return ChatResponse(**result)
 
@@ -53,6 +57,8 @@ async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
                 vocal_input=request.vocal_input,
                 voice_energy=request.voice_energy,
                 voice_duration=request.voice_duration,
+                image_b64=request.image_b64,
+                media_type=request.media_type,
             ):
                 full_response += chunk
                 payload = json.dumps({"chunk": chunk}, ensure_ascii=False)
