@@ -1,17 +1,81 @@
 import os
 import socket
 import time
+import uuid
+import asyncio
+import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 import psutil
 from sqlalchemy.orm import Session
 from app.config import settings
 from database.db import get_db
+from database.models import TerminalLog
 from core.auth.dependencies import get_current_user
 from services.agent_service import agent_service
 
 router = APIRouter()
+
+# ── Classif commandes ─────────────────────────────────────────────────────────
+_READ_ONLY = frozenset([
+    "ps", "top", "df", "free", "netstat", "cat", "ls", "find", "grep",
+    "uptime", "uname", "whoami", "id", "ip", "ifconfig", "date", "pwd",
+    "echo", "which", "env", "printenv", "lsof", "ss", "hostname", "w",
+    "who", "last", "history", "dmesg", "journalctl", "systemctl status",
+    "head", "tail", "wc", "sort", "uniq", "awk", "sed", "cut",
+    "stat", "file", "du", "lsblk", "mount",
+])
+_DESTRUCTIVE = frozenset([
+    "rm", "mv", "chmod", "chown", "systemctl", "apt", "pip", "npm",
+    "kill", "killall", "pkill", "reboot", "shutdown", "halt", "poweroff",
+    "mkfs", "dd", "fdisk", "format", "truncate", "shred", "wipe",
+    "useradd", "userdel", "passwd", "visudo", "crontab",
+])
+
+# File d'attente en mémoire pour les commandes pending
+_pending_queue: dict[str, dict] = {}
+
+
+def _classify(cmd: str) -> str:
+    """Retourne 'readonly' ou 'destructive'."""
+    first = cmd.strip().split()[0] if cmd.strip() else ""
+    if first in _DESTRUCTIVE:
+        return "destructive"
+    return "readonly"
+
+
+async def _run(cmd: str, timeout: int = 30) -> tuple[str, str, int]:
+    """Exécute une commande shell, retourne (stdout, stderr, exit_code)."""
+    try:
+        proc = await asyncio.create_subprocess_shell(
+            cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.communicate()
+            return "", f"Timeout après {timeout}s", -1
+        return (
+            stdout.decode("utf-8", errors="replace"),
+            stderr.decode("utf-8", errors="replace"),
+            proc.returncode,
+        )
+    except Exception as e:
+        return "", str(e), -1
+
+
+class ExecuteRequest(BaseModel):
+    command: str
+
+
+class ApproveRequest(BaseModel):
+    job_id: str
+    approved: bool
 
 _BOOT_TIME = time.time()
 
@@ -209,6 +273,150 @@ async def diagnostic(db: Session = Depends(get_db)):
         "top_processes": procs,
         "logs": _recent_logs(30),
     }
+
+
+# ── Exécution sécurisée avec autorisation ────────────────────────────────────
+
+@router.post("/execute")
+async def execute_command(
+    body: ExecuteRequest,
+    db: Session = Depends(get_db),
+    _user=Depends(get_current_user),
+):
+    """
+    Exécute une commande shell.
+    - Lecture seule  → exécution immédiate.
+    - Destructive    → mise en file d'attente, statut 'pending', attente approbation.
+    """
+    cmd = body.command.strip()
+    if not cmd:
+        raise HTTPException(status_code=400, detail="Commande vide")
+
+    job_id = str(uuid.uuid4())
+    kind = _classify(cmd)
+
+    if kind == "readonly":
+        stdout, stderr, exit_code = await _run(cmd)
+        log = TerminalLog(
+            job_id=job_id,
+            command=cmd,
+            stdout=stdout,
+            stderr=stderr,
+            exit_code=exit_code,
+            status="executed",
+            approved=None,
+            executed_at=datetime.utcnow(),
+        )
+        db.add(log)
+        db.commit()
+        return {
+            "job_id": job_id,
+            "status": "executed",
+            "command": cmd,
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit_code": exit_code,
+        }
+    else:
+        # Commande destructive → pending
+        _pending_queue[job_id] = {"command": cmd, "created_at": datetime.utcnow().isoformat()}
+        log = TerminalLog(
+            job_id=job_id,
+            command=cmd,
+            status="pending",
+            approved=None,
+        )
+        db.add(log)
+        db.commit()
+        return {
+            "job_id": job_id,
+            "status": "pending",
+            "command": cmd,
+            "message": f"⚠️ Commande destructive détectée. Autorisation de Mr Vitch requise avant exécution.",
+        }
+
+
+@router.post("/approve")
+async def approve_command(
+    body: ApproveRequest,
+    db: Session = Depends(get_db),
+    _user=Depends(get_current_user),
+):
+    """Approuve ou refuse une commande en attente."""
+    job_id = body.job_id
+    if job_id not in _pending_queue:
+        raise HTTPException(status_code=404, detail="Job introuvable ou déjà traité")
+
+    entry = _pending_queue.pop(job_id)
+    cmd = entry["command"]
+
+    log = db.query(TerminalLog).filter(TerminalLog.job_id == job_id).first()
+
+    if not body.approved:
+        if log:
+            log.status = "refused"
+            log.approved = False
+            db.commit()
+        return {"job_id": job_id, "status": "refused", "command": cmd}
+
+    # Exécution approuvée
+    stdout, stderr, exit_code = await _run(cmd)
+    if log:
+        log.stdout = stdout
+        log.stderr = stderr
+        log.exit_code = exit_code
+        log.status = "approved"
+        log.approved = True
+        log.executed_at = datetime.utcnow()
+        db.commit()
+
+    return {
+        "job_id": job_id,
+        "status": "approved",
+        "command": cmd,
+        "stdout": stdout,
+        "stderr": stderr,
+        "exit_code": exit_code,
+    }
+
+
+@router.get("/terminal-logs")
+def get_terminal_logs(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    _user=Depends(get_current_user),
+):
+    """Retourne l'historique des commandes exécutées."""
+    logs = (
+        db.query(TerminalLog)
+        .order_by(TerminalLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": l.id,
+            "job_id": l.job_id,
+            "command": l.command,
+            "stdout": l.stdout or "",
+            "stderr": l.stderr or "",
+            "exit_code": l.exit_code,
+            "status": l.status,
+            "approved": l.approved,
+            "created_at": l.created_at.isoformat() if l.created_at else None,
+            "executed_at": l.executed_at.isoformat() if l.executed_at else None,
+        }
+        for l in logs
+    ]
+
+
+@router.get("/pending-commands")
+def get_pending_commands(_user=Depends(get_current_user)):
+    """Liste les commandes en attente d'autorisation."""
+    return [
+        {"job_id": jid, "command": e["command"], "created_at": e["created_at"]}
+        for jid, e in _pending_queue.items()
+    ]
 
 
 # ── Terminal PTY WebSocket (MODULE 10) ────────────────────────────────────────

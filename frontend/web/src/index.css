@@ -2490,3 +2490,96 @@ kbd { background: var(--glass2); border: 1px solid var(--border2); border-radius
 }
 .terminal-container .xterm { padding: 8px; }
 .terminal-container .xterm-viewport { border-radius: 8px; }
+
+/* ── Terminal sécurisé ─────────────────────────────────────────────────────── */
+.diag-terminal-card { position: relative; }
+.diag-term-output {
+  background: rgba(0,2,10,0.95); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; min-height: 160px; max-height: 300px; overflow-y: auto;
+  font-family: var(--font-ui); font-size: 0.75rem; line-height: 1.6; margin-bottom: 8px;
+}
+.diag-term-placeholder { color: var(--text3); font-style: italic; }
+.diag-term-line { display: flex; gap: 8px; word-break: break-all; }
+.diag-term-ts { color: #374151; flex-shrink: 0; font-size: 0.65rem; padding-top: 2px; }
+.diag-term-text { flex: 1; white-space: pre-wrap; }
+.diag-term-cmd  .diag-term-text { color: var(--accent); font-weight: 700; }
+.diag-term-out  .diag-term-text { color: #d1fae5; }
+.diag-term-err  .diag-term-text { color: #fca5a5; }
+.diag-term-info .diag-term-text { color: #a5b4fc; }
+.diag-term-warn .diag-term-text { color: #fbbf24; }
+.diag-term-spinner { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.diag-term-input-row {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,2,10,0.95); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 7px 10px; margin-bottom: 8px;
+}
+.diag-term-prompt { color: var(--accent); font-weight: 800; font-family: var(--font-ui); font-size: 0.9rem; flex-shrink: 0; }
+.diag-term-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-family: var(--font-ui); font-size: 0.8rem;
+  caret-color: var(--accent);
+}
+.diag-term-input::placeholder { color: var(--text3); }
+.diag-term-input:disabled { opacity: 0.5; }
+.diag-term-run-btn {
+  background: var(--accent); border: none; border-radius: 6px; color: #000;
+  font-size: 0.75rem; font-weight: 800; padding: 4px 10px; cursor: pointer;
+  transition: opacity 0.15s; flex-shrink: 0;
+}
+.diag-term-run-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.diag-term-run-btn:hover:not(:disabled) { opacity: 0.8; }
+
+.diag-term-log-table { font-size: 0.72rem; margin-top: 4px; }
+.diag-term-log-header {
+  display: grid; grid-template-columns: 1fr 80px 40px 70px;
+  padding: 4px 8px; color: var(--text3); border-bottom: 1px solid var(--border);
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.diag-term-log-row {
+  display: grid; grid-template-columns: 1fr 80px 40px 70px;
+  padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  align-items: center;
+}
+.diag-term-log-row:hover { background: rgba(255,255,255,0.03); }
+.diag-term-log-cmd { color: var(--text2); font-family: var(--font-ui); }
+.diag-term-log-status { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+.diag-term-log-executed { color: #4ade80; }
+.diag-term-log-approved  { color: #60a5fa; }
+.diag-term-log-refused   { color: #f87171; }
+.diag-term-log-pending   { color: #fbbf24; }
+
+/* Modale de confirmation */
+.diag-term-modal-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.diag-term-modal {
+  background: rgba(5,10,30,0.98); border: 1px solid rgba(251,191,36,0.5);
+  border-radius: 14px; padding: 28px 32px; max-width: 460px; width: 90%;
+  box-shadow: 0 0 40px rgba(251,191,36,0.15); text-align: center;
+}
+.diag-term-modal-icon { font-size: 2.5rem; margin-bottom: 8px; }
+.diag-term-modal-title { font-size: 1.05rem; font-weight: 800; color: #fbbf24; margin-bottom: 6px; }
+.diag-term-modal-sub { font-size: 0.8rem; color: var(--text2); margin-bottom: 12px; }
+.diag-term-modal-cmd {
+  background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; font-family: var(--font-ui); font-size: 0.85rem;
+  color: #f87171; margin-bottom: 10px; word-break: break-all; text-align: left;
+}
+.diag-term-modal-warn { font-size: 0.72rem; color: #9ca3af; margin-bottom: 20px; }
+.diag-term-modal-actions { display: flex; gap: 12px; justify-content: center; }
+.diag-term-btn-approve {
+  background: linear-gradient(135deg, #059669, #10b981); border: none; border-radius: 8px;
+  color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px 24px; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.diag-term-btn-approve:hover { opacity: 0.85; }
+.diag-term-btn-refuse {
+  background: linear-gradient(135deg, #dc2626, #ef4444); border: none; border-radius: 8px;
+  color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px 24px; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.diag-term-btn-refuse:hover { opacity: 0.85; }

@@ -105,6 +105,22 @@ class LearningEvent(Base):
     learned_at = Column(DateTime, default=datetime.utcnow)
 
 
+class TerminalLog(Base):
+    """Log d'exécution de commandes système — avec autorisation pour les commandes destructives."""
+    __tablename__ = "terminal_logs"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    job_id     = Column(String(36), nullable=False, unique=True, index=True)
+    command    = Column(Text, nullable=False)
+    stdout     = Column(Text, nullable=True)
+    stderr     = Column(Text, nullable=True)
+    exit_code  = Column(Integer, nullable=True)
+    status     = Column(String(20), nullable=False, default="executed")  # executed | pending | approved | refused
+    approved   = Column(Boolean, nullable=True)   # None=N/A, True=approuvée, False=refusée
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    executed_at= Column(DateTime, nullable=True)
+
+
 class ActionLog(Base):
     __tablename__ = "action_logs"
 

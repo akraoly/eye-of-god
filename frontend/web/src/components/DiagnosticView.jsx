@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiFetch } from '../utils/auth'
 
 function fetchDiag() {
@@ -46,6 +46,201 @@ function Bar({ value, max = 100 }) {
     </div>
   )
 }
+
+// ── Terminal sécurisé ─────────────────────────────────────────────────────────
+
+function TerminalPanel() {
+  const [cmd, setCmd]           = useState('')
+  const [lines, setLines]       = useState([])
+  const [loading, setLoading]   = useState(false)
+  const [pending, setPending]   = useState(null)   // { job_id, command }
+  const [logs, setLogs]         = useState([])
+  const [showLogs, setShowLogs] = useState(false)
+  const outputRef = useRef(null)
+  const inputRef  = useRef(null)
+
+  const scrollBottom = () => {
+    setTimeout(() => {
+      if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight
+    }, 30)
+  }
+
+  const addLine = (type, text) => {
+    setLines(prev => [...prev, { type, text, ts: new Date().toLocaleTimeString('fr-FR') }])
+    scrollBottom()
+  }
+
+  const loadLogs = async () => {
+    try {
+      const r = await apiFetch('/system/terminal-logs')
+      const data = await r.json()
+      setLogs(Array.isArray(data) ? data : [])
+    } catch {}
+  }
+
+  const execute = async () => {
+    const c = cmd.trim()
+    if (!c || loading) return
+    setCmd('')
+    setLoading(true)
+    addLine('cmd', `$ ${c}`)
+    try {
+      const r = await apiFetch('/system/execute', {
+        method: 'POST',
+        body: JSON.stringify({ command: c }),
+      })
+      const data = await r.json()
+      if (data.status === 'pending') {
+        addLine('warn', data.message)
+        setPending({ job_id: data.job_id, command: data.command })
+      } else {
+        if (data.stdout) addLine('out', data.stdout)
+        if (data.stderr) addLine('err', data.stderr)
+        if (!data.stdout && !data.stderr) addLine('info', `✓ exit ${data.exit_code}`)
+        loadLogs()
+      }
+    } catch (e) {
+      addLine('err', `Erreur réseau : ${e.message}`)
+    } finally {
+      setLoading(false)
+      inputRef.current?.focus()
+    }
+  }
+
+  const decide = async (approved) => {
+    if (!pending) return
+    setLoading(true)
+    try {
+      const r = await apiFetch('/system/approve', {
+        method: 'POST',
+        body: JSON.stringify({ job_id: pending.job_id, approved }),
+      })
+      const data = await r.json()
+      if (data.status === 'refused') {
+        addLine('warn', `⛔ Commande refusée : ${pending.command}`)
+      } else {
+        addLine('info', `✅ Approuvée — exit ${data.exit_code}`)
+        if (data.stdout) addLine('out', data.stdout)
+        if (data.stderr) addLine('err', data.stderr)
+        loadLogs()
+      }
+    } catch (e) {
+      addLine('err', `Erreur : ${e.message}`)
+    } finally {
+      setPending(null)
+      setLoading(false)
+      inputRef.current?.focus()
+    }
+  }
+
+  const onKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); execute() }
+  }
+
+  useEffect(() => { loadLogs() }, [])
+
+  return (
+    <div className="diag-card diag-terminal-card">
+      <div className="diag-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>💻 Exécution sécurisée</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text3)' }}>
+            🟢 lecture libre · 🟡 destructif → autorisation
+          </span>
+          <button
+            onClick={() => { setShowLogs(v => !v); if (!showLogs) loadLogs() }}
+            style={{ fontSize: '0.7rem', background: 'var(--glass)', border: '1px solid var(--border2)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', color: 'var(--text2)' }}
+          >
+            {showLogs ? 'Masquer logs' : '📋 Historique'}
+          </button>
+          <button
+            onClick={() => setLines([])}
+            style={{ fontSize: '0.7rem', background: 'var(--glass)', border: '1px solid var(--border2)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', color: 'var(--text2)' }}
+          >
+            Vider
+          </button>
+        </div>
+      </div>
+
+      {/* Output scrollable */}
+      <div ref={outputRef} className="diag-term-output">
+        {lines.length === 0 && (
+          <div className="diag-term-placeholder">Aucune commande exécutée — tape une commande ci-dessous</div>
+        )}
+        {lines.map((l, i) => (
+          <div key={i} className={`diag-term-line diag-term-${l.type}`}>
+            <span className="diag-term-ts">{l.ts}</span>
+            <span className="diag-term-text">{l.text}</span>
+          </div>
+        ))}
+        {loading && <div className="diag-term-line diag-term-info"><span className="diag-term-spinner">⟳</span> Exécution…</div>}
+      </div>
+
+      {/* Input */}
+      <div className="diag-term-input-row">
+        <span className="diag-term-prompt">$</span>
+        <input
+          ref={inputRef}
+          className="diag-term-input"
+          value={cmd}
+          onChange={e => setCmd(e.target.value)}
+          onKeyDown={onKey}
+          placeholder="ps aux | grep python · ls -la · df -h · rm fichier…"
+          disabled={loading || !!pending}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <button
+          className="diag-term-run-btn"
+          onClick={execute}
+          disabled={loading || !cmd.trim() || !!pending}
+        >
+          ▶
+        </button>
+      </div>
+
+      {/* Historique */}
+      {showLogs && (
+        <div className="diag-term-log-table">
+          <div className="diag-term-log-header">
+            <span>Commande</span><span>Statut</span><span>Exit</span><span>Date</span>
+          </div>
+          {logs.length === 0 && <div style={{ padding: '8px 0', color: 'var(--text3)', fontSize: '0.75rem' }}>Aucun log</div>}
+          {logs.map(l => (
+            <div key={l.id} className="diag-term-log-row">
+              <span className="diag-term-log-cmd" title={l.command}>{l.command.slice(0, 60)}{l.command.length > 60 ? '…' : ''}</span>
+              <span className={`diag-term-log-status diag-term-log-${l.status}`}>{l.status}</span>
+              <span style={{ color: l.exit_code === 0 ? '#4ade80' : l.exit_code === null ? 'var(--text3)' : '#f87171', fontSize: '0.72rem' }}>
+                {l.exit_code ?? '—'}
+              </span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text3)' }}>
+                {l.created_at ? new Date(l.created_at).toLocaleTimeString('fr-FR') : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modale de confirmation */}
+      {pending && (
+        <div className="diag-term-modal-overlay">
+          <div className="diag-term-modal">
+            <div className="diag-term-modal-icon">⚠️</div>
+            <div className="diag-term-modal-title">Autorisation requise</div>
+            <div className="diag-term-modal-sub">Mr Vitch, confirmez-vous l'exécution de :</div>
+            <div className="diag-term-modal-cmd">{pending.command}</div>
+            <div className="diag-term-modal-warn">Cette commande est classifiée <strong>destructive</strong> et peut modifier ou supprimer des données.</div>
+            <div className="diag-term-modal-actions">
+              <button className="diag-term-btn-approve" onClick={() => decide(true)}>✅ Approuver</button>
+              <button className="diag-term-btn-refuse"  onClick={() => decide(false)}>⛔ Refuser</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 export default function DiagnosticView() {
   const [data,    setData]    = useState(null)
@@ -233,6 +428,10 @@ export default function DiagnosticView() {
               </div>
             </div>
           </div>
+
+          {/* ── Terminal sécurisé ── */}
+          <div className="diag-section-title">💻 Terminal sécurisé</div>
+          <TerminalPanel />
         </>
       )}
 
