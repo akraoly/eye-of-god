@@ -20,7 +20,8 @@ async function transcribeViaBackend(blob, mimeType) {
   }
   const data = await res.json()
   if (data.error && !data.text) throw new Error(data.error)
-  return data.text || ''
+  // Retourner texte + métadonnées vocales
+  return { text: data.text || '', voice_energy: data.voice_energy || 'normal', voice_duration: data.voice_duration || 0 }
 }
 
 export default function VoiceInput({ onTranscript, onStateChange, disabled }) {
@@ -115,10 +116,12 @@ export default function VoiceInput({ onTranscript, onStateChange, disabled }) {
             setTimeout(() => { setActive(false); setStatus(''); onStateChange?.('idle') }, 2000)
             return
           }
-          const text = await transcribeViaBackend(blob, mimeRef.current)
+          const result = await transcribeViaBackend(blob, mimeRef.current)
+          const text = result?.text ?? result
+          const voiceMeta = { energy: result?.voice_energy || 'normal', duration: result?.voice_duration || 0 }
           if (text) {
             setStatus(`✓ "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`)
-            onTranscript?.(text)
+            onTranscript?.(text, voiceMeta)
           } else {
             setStatus('Rien capté — parle plus près du micro')
           }

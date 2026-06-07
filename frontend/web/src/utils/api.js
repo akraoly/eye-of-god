@@ -1,9 +1,9 @@
 import { apiFetch } from './auth'
 
-export async function sendMessage(message, sessionId = 'default') {
+export async function sendMessage(message, sessionId = 'default', vocalInput = false, voiceEnergy = 'normal', voiceDuration = 0) {
   const res = await apiFetch('/chat/', {
     method: 'POST',
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({ message, session_id: sessionId, vocal_input: vocalInput, voice_energy: voiceEnergy, voice_duration: voiceDuration }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

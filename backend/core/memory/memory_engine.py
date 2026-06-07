@@ -108,6 +108,45 @@ class MemoryEngine:
     def get_user_profile(self, db: Session) -> dict:
         return memory_storage.get_profile(db=db)
 
+    def track_vocal_usage(self, db: Session):
+        """Enregistre que Mr Vitch utilise la voix — l'IA s'y adapte."""
+        memory_storage.save_memory(
+            db=db,
+            memory_type="user",
+            key="mode_interaction_préféré",
+            value="vocal — Mr Vitch parle à voix haute à l'IA, réponses conversationnelles attendues",
+            importance=0.95,
+        )
+
+    def learn_communication_style(self, db: Session, message: str):
+        """Détecte et mémorise le style de communication de Mr Vitch."""
+        words = len(message.split())
+        is_technical = bool(re.search(
+            r'\b(exploit|payload|ROP|shellcode|CVE|nmap|python|bash|gcc|kernel|heap|stack|overflow|pentest|reverse)\b',
+            message, re.IGNORECASE
+        ))
+        is_command = words <= 6 and not message.endswith('?')
+        is_question = message.strip().endswith('?')
+
+        if is_technical and is_command:
+            style = "commandes courtes techniques — Mr Vitch est direct, va à l'essentiel, expert"
+        elif is_technical:
+            style = "discussions techniques approfondies — Mr Vitch veut des détails d'expert"
+        elif is_command:
+            style = "ordres directs — Mr Vitch est concis, pas besoin de longueur"
+        elif is_question:
+            style = "questions ouvertes — Mr Vitch cherche à comprendre en profondeur"
+        else:
+            return
+
+        memory_storage.save_memory(
+            db=db,
+            memory_type="user",
+            key="style_communication",
+            value=style,
+            importance=0.80,
+        )
+
     def index_existing_memories(self, db: Session):
         """Ré-indexe toutes les mémoires existantes dans le vector store (migration)."""
         mems = memory_storage.get_memories(db=db, limit=1000)

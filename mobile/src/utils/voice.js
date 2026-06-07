@@ -155,7 +155,12 @@ export async function stopRecordingAndTranscribe(language = 'fr-FR') {
     }
 
     const data = await res.json();
-    return data.text || '';
+    // Retourner le texte + les métadonnées vocales pour la détection d'émotion
+    return {
+      text: data.text || '',
+      voice_energy: data.voice_energy || 'normal',
+      voice_duration: data.voice_duration || 0,
+    };
   } catch (e) {
     _recording = null;
     throw e;

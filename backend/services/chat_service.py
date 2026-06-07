@@ -6,12 +6,14 @@ from core.orchestrator import orchestrator
 
 
 class ChatService:
-    async def chat(self, db: Session, message: str, session_id: str = "default") -> dict:
+    async def chat(self, db: Session, message: str, session_id: str = "default",
+                   vocal_input: bool = False, voice_energy: str = "normal", voice_duration: float = 0.0) -> dict:
         # ── Mémoire cross-session : recharge l'historique si le cache est vide ──
         context_builder.warm_from_db(db=db, session_id=session_id)
 
-        # Extraire les infos importantes du message
+        # Extraire les infos importantes + apprendre le style de communication
         memory_engine.extract_and_save(db=db, message=message)
+        memory_engine.learn_communication_style(db=db, message=message)
 
         # Mémoires sémantiquement proches
         memories = memory_engine.get_relevant_memories(db=db, query=message)
@@ -32,6 +34,17 @@ class ChatService:
         tool_outputs = orchestration.get("tool_outputs", [])
         system_context = orchestration.get("system_context", "")
         shanura_mode = orchestration.get("shanura_mode", False)
+
+        # Mode vocal : l'IA répond comme à voix haute, adapte selon énergie détectée
+        if vocal_input:
+            from core.llm.prompts import VOCAL_MODE_PROMPT, VOCAL_STYLE_LEARNING_PROMPT
+            energy_hint = ""
+            if voice_energy == "intense":
+                energy_hint = "\nTon vocal détecté : INTENSE/URGENT — Mr Vitch parle avec force et urgence. Réponds avec la même énergie, sois direct et percutant."
+            elif voice_energy == "calme":
+                energy_hint = "\nTon vocal détecté : CALME/POSÉ — Mr Vitch parle doucement. Réponds avec sérénité, prends le temps."
+            system = system + VOCAL_MODE_PROMPT + energy_hint + VOCAL_STYLE_LEARNING_PROMPT
+            memory_engine.track_vocal_usage(db=db)
 
         # Mode SHANURA : prompt omnipotence
         if shanura_mode:

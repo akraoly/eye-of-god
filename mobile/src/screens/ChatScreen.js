@@ -27,7 +27,7 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
-  async function send(text = input.trim()) {
+  async function send(text = input.trim(), isVocal = false, voiceEnergy = 'normal', voiceDuration = 0) {
     if (!text || loading) return;
     setInput('');
     Keyboard.dismiss();
@@ -41,7 +41,7 @@ export default function ChatScreen() {
     try {
       const data = await apiJSON('/api/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: text, session_id: sessionId }),
+        body: JSON.stringify({ message: text, session_id: sessionId, vocal_input: isVocal, voice_energy: voiceEnergy, voice_duration: voiceDuration }),
       });
 
       const aiMsg = {
@@ -77,9 +77,12 @@ export default function ChatScreen() {
       setRecording(false);
       setLoading(true);
       try {
-        const text = await stopRecordingAndTranscribe('fr-FR');
+        const result = await stopRecordingAndTranscribe('fr-FR');
+        const text = typeof result === 'string' ? result : result?.text;
+        const voiceEnergy = result?.voice_energy || 'normal';
+        const voiceDuration = result?.voice_duration || 0;
         if (text?.trim()) {
-          await send(text.trim());
+          await send(text.trim(), true, voiceEnergy, voiceDuration);
         } else {
           Alert.alert('Voix', 'Transcription vide — réessaie en parlant plus clairement.');
           setLoading(false);

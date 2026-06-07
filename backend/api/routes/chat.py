@@ -11,6 +11,9 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
+    vocal_input: bool = False       # True quand le message vient de la voix (STT)
+    voice_energy: str = "normal"    # "calme" | "normal" | "intense" — détecté par analyse audio
+    voice_duration: float = 0.0     # durée de l'enregistrement en secondes
 
 
 class ChatResponse(BaseModel):
@@ -25,6 +28,9 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         db=db,
         message=request.message,
         session_id=request.session_id,
+        vocal_input=request.vocal_input,
+        voice_energy=request.voice_energy,
+        voice_duration=request.voice_duration,
     )
     return ChatResponse(**result)
 

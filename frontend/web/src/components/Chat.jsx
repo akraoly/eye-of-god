@@ -277,7 +277,7 @@ export default function Chat({ sessionId, onNewChat }) {
     ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'
   }, [input])
 
-  const send = useCallback(async (text) => {
+  const send = useCallback(async (text, isVocal = false, voiceEnergy = 'normal', voiceDuration = 0) => {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     const isShanura = msg.toUpperCase().includes('SHANURA:)')
@@ -297,7 +297,7 @@ export default function Chat({ sessionId, onNewChat }) {
     setLoading(true)
     setEyeState(isShanura ? 'responding' : 'thinking')
     try {
-      const data = await sendMessage(msg, sessionId)
+      const data = await sendMessage(msg, sessionId, isVocal, voiceEnergy, voiceDuration)
       setEyeState('responding')
       setMessages(prev => [...prev, {
         role: 'assistant', content: data.response, ts: new Date(),
@@ -323,7 +323,10 @@ export default function Chat({ sessionId, onNewChat }) {
   }, [input, loading, sessionId])
 
   const onKey = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
-  const onVoiceTranscript = text => { setInput(text); send(text) }
+  const onVoiceTranscript = (text, voiceMeta = {}) => {
+    setInput(text)
+    send(text, true, voiceMeta.energy || 'normal', voiceMeta.duration || 0)
+  }
   const stopSpeak = () => { ttsStop(); setSpeaking(false) }
 
   // ── Spinner ───────────────────────────────────────────────────────────
