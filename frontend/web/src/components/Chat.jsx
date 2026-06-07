@@ -56,14 +56,16 @@ function ttsSpeak(text, onEnd) {
   window.speechSynthesis.cancel()
   const utt = new SpeechSynthesisUtterance(cleanForTTS(text))
   utt.lang   = 'fr-FR'
-  utt.pitch  = 0.75
+  utt.pitch  = 0.40
   utt.rate   = 1.15
   utt.volume = 1.0
   const pickVoice = () => {
     const voices = window.speechSynthesis.getVoices()
-    // Priorité : Thomas (Apple), Pierre, voix masculine, puis n'importe quel fr
+    // Priorité : voix masculine explicite, puis Thomas/Pierre (Apple), puis fr générique
     return voices.find(v => v.lang.startsWith('fr') && /thomas/i.test(v.name))
-      || voices.find(v => v.lang.startsWith('fr') && /pierre|male|man|henri|nicolas/i.test(v.name))
+      || voices.find(v => v.lang.startsWith('fr') && /pierre|henri|nicolas|male|man|homm/i.test(v.name))
+      || voices.find(v => /fr/i.test(v.lang) && /standard-b|neural2-b|wavenet-b/i.test(v.name))
+      || voices.find(v => v.lang.startsWith('fr') && !/amelie|céline|celine|florence|juliette|marie|female|femme|fille/i.test(v.name))
       || voices.find(v => v.lang === 'fr-FR')
       || voices.find(v => v.lang.startsWith('fr'))
   }

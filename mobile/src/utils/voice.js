@@ -47,7 +47,7 @@ export async function speak(text, opts = {}) {
 
   const options = {
     language: opts.language || 'fr-FR',
-    pitch: opts.pitch ?? 0.75,
+    pitch: opts.pitch ?? 0.40,
     rate: opts.rate ?? 1.15,
     volume: opts.volume ?? 1.0,
     onDone: opts.onDone,
