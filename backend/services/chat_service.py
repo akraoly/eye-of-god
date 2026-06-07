@@ -149,8 +149,12 @@ class ChatService:
         # Tokens réduits en vocal : réponse courte = latence divisée par 3
         max_tok = 600 if vocal_input else 2048
 
-        # Appel Claude
-        response = await llm_client.complete(messages=messages, system=system, max_tokens=max_tok)
+        # Appel Claude avec boucle tool-use terminal
+        response, tool_log = await llm_client.complete_with_tools(
+            messages=messages, system=system, max_tokens=max_tok
+        )
+        if tool_log:
+            logger.info("terminal: %d commande(s) exécutée(s)", len(tool_log))
 
         # Mettre à jour la mémoire courte
         context_builder.add_message(session_id, "user", message)
@@ -198,7 +202,8 @@ class ChatService:
             "response": response,
             "session_id": session_id,
             "memories_used": len(memories),
-            "tool_executed": len(tool_outputs) > 0,
+            "tool_executed": len(tool_outputs) > 0 or len(tool_log) > 0,
+            "terminal_calls": len(tool_log),
             "intent": intent,
             "agents_used": agents_used,
             "vector_backend": vb,
@@ -271,7 +276,7 @@ class ChatService:
         max_tok  = 600 if vocal_input else 2048
 
         full_response = ""
-        async for chunk in llm_client.stream(messages=messages, system=system, max_tokens=max_tok):
+        async for chunk in llm_client.stream_with_tools(messages=messages, system=system, max_tokens=max_tok):
             full_response += chunk
             yield chunk
 
