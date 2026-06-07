@@ -12,6 +12,24 @@ import AutonomyView from './components/AutonomyView'
 import MemoryView from './components/MemoryView'
 import ObserveView from './components/ObserveView'
 import DiagnosticView from './components/DiagnosticView'
+import AegisView from './components/AegisView'
+import OsintView from './components/OsintView'
+import CredentialsView from './components/CredentialsView'
+import ThreatIntelView from './components/ThreatIntelView'
+import ForensicsView from './components/ForensicsView'
+import PrivEscView from './components/PrivEscView'
+import LateralView from './components/LateralView'
+import LabView from './components/LabView'
+import ReportsView from './components/ReportsView'
+import SelfImproveView from './components/SelfImproveView'
+import TerminalView from './components/TerminalView'
+import AudioCaptureView from './components/AudioCaptureView'
+import CameraScanView from './components/CameraScanView'
+import PostExploitView from './components/PostExploitView'
+import NetworkSnifferView from './components/NetworkSnifferView'
+import TriggersView from './components/TriggersView'
+import ExfilView from './components/ExfilView'
+import OmniscienceView from './components/OmniscienceView'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -56,17 +74,35 @@ function MainApp() {
           alertCount={alertCount}
         />
         <main className="main">
-          {view === 'chat'      && <Chat sessionId={sessionId} onNewChat={handleNewChat} />}
-          {view === 'soc'       && <SocView />}
-          {view === 'offensive' && <OffensiveView />}
-          {view === 'memory'    && <MemoryView key="memory" />}
-          {view === 'code'      && <CodeView />}
-          {view === 'knowledge' && <KnowledgeView />}
-          {view === 'life'      && <LifeView />}
-          {view === 'vision'    && <VisionView />}
-          {view === 'autonomy'  && <AutonomyView onUnreadChange={setAlertCount} />}
-          {view === 'observe'     && <ObserveView />}
-          {view === 'diagnostic'  && <DiagnosticView />}
+          {view === 'chat'         && <Chat sessionId={sessionId} onNewChat={handleNewChat} />}
+          {view === 'soc'          && <SocView />}
+          {view === 'offensive'    && <OffensiveView />}
+          {view === 'memory'       && <MemoryView key="memory" />}
+          {view === 'code'         && <CodeView />}
+          {view === 'knowledge'    && <KnowledgeView />}
+          {view === 'life'         && <LifeView />}
+          {view === 'vision'       && <VisionView />}
+          {view === 'autonomy'     && <AutonomyView onUnreadChange={setAlertCount} />}
+          {view === 'observe'      && <ObserveView />}
+          {view === 'diagnostic'   && <DiagnosticView />}
+          {view === 'aegis'        && <AegisView />}
+          {view === 'osint'        && <OsintView />}
+          {view === 'credentials'  && <CredentialsView />}
+          {view === 'threat-intel' && <ThreatIntelView />}
+          {view === 'forensics'    && <ForensicsView />}
+          {view === 'privesc'      && <PrivEscView />}
+          {view === 'lateral'      && <LateralView />}
+          {view === 'lab'          && <LabView />}
+          {view === 'reports'      && <ReportsView />}
+          {view === 'self-improve' && <SelfImproveView />}
+          {view === 'terminal'     && <TerminalView />}
+          {view === 'audio'        && <AudioCaptureView />}
+          {view === 'cameras'      && <CameraScanView />}
+          {view === 'post-exploit' && <PostExploitView />}
+          {view === 'sniffer'      && <NetworkSnifferView />}
+          {view === 'triggers'     && <TriggersView />}
+          {view === 'exfil'        && <ExfilView />}
+          {view === 'omniscience'  && <OmniscienceView />}
         </main>
       </div>
     </>

@@ -682,3 +682,538 @@ class UBAProfile(Base):
     anomaly_count = Column(Integer, default=0)
     is_high_risk  = Column(Boolean, default=False, index=True)
     created_at    = Column(DateTime, default=datetime.utcnow)
+
+
+# ── MODULE 2 — Pentest Jobs ──────────────────────────────────────────────────
+
+class PentestJob(Base):
+    """Job de pentest autonome — lancé par AutoPentestAgent."""
+    __tablename__ = "pentest_jobs"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    job_id     = Column(String(20), nullable=False, unique=True, index=True)
+    target     = Column(String(255), nullable=False, index=True)
+    status     = Column(String(20), default="pending", index=True)   # pending|running|completed|failed|stopped
+    notes      = Column(Text, nullable=True)
+    summary    = Column(Text, nullable=True)   # JSON
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PentestStep(Base):
+    """Étape d'un job de pentest."""
+    __tablename__ = "pentest_steps"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    job_id      = Column(String(20), nullable=False, index=True)
+    name        = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    status      = Column(String(20), default="pending")   # pending|running|done|error|skipped
+    output      = Column(Text, nullable=True)
+    data        = Column(Text, nullable=True)   # JSON
+    duration    = Column(Float, default=0.0)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+
+# ── MODULE 3 — Mémoire Tactique ──────────────────────────────────────────────
+
+class TacticalOperation(Base):
+    """Opération indexée dans la mémoire tactique — pour contexte historique."""
+    __tablename__ = "tactical_operations"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    job_id     = Column(String(20), nullable=True, index=True)
+    target     = Column(String(255), nullable=False, index=True)
+    ports      = Column(Text, nullable=True)   # JSON list
+    services   = Column(Text, nullable=True)   # JSON dict
+    cves       = Column(Text, nullable=True)   # JSON list
+    summary    = Column(Text, nullable=True)   # JSON complet
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MODULES 5-20 — Nouvelles tables
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── MODULE 5 — Exploit Generation ────────────────────────────────────────────
+
+class ExploitGenJob(Base):
+    __tablename__ = "exploit_gen_jobs"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    job_id      = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    job_type    = Column(String(30), nullable=False)
+    status      = Column(String(20), default="pending", index=True)
+    platform    = Column(String(20), nullable=True)
+    arch        = Column(String(10), nullable=True)
+    payload     = Column(String(200), nullable=True)
+    format      = Column(String(20), nullable=True)
+    lhost       = Column(String(100), nullable=True)
+    lport       = Column(Integer, nullable=True)
+    encoder     = Column(String(100), nullable=True)
+    output_path = Column(String(500), nullable=True)
+    result      = Column(Text, nullable=True)
+    error       = Column(Text, nullable=True)
+    celery_task = Column(String(36), nullable=True)
+    created_at  = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at  = Column(DateTime, default=datetime.utcnow)
+
+
+# ── MODULE 6 — Implant Beacons ────────────────────────────────────────────────
+
+class ImplantBeacon(Base):
+    __tablename__ = "implant_beacons"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    beacon_id   = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    hostname    = Column(String(255), nullable=False, index=True)
+    ip          = Column(String(45), nullable=True, index=True)
+    os_type     = Column(String(50), nullable=True)
+    arch        = Column(String(10), nullable=True)
+    privilege   = Column(String(30), nullable=True)
+    protocol    = Column(String(20), nullable=True)
+    status      = Column(String(20), default="active", index=True)
+    last_seen   = Column(DateTime, nullable=True, index=True)
+    first_seen  = Column(DateTime, default=datetime.utcnow)
+    c2_host     = Column(String(255), nullable=True)
+    c2_port     = Column(Integer, nullable=True)
+    tags        = Column(JSON, nullable=True)
+    notes       = Column(Text, nullable=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+
+# ── MODULE 7 — OSINT Jobs ─────────────────────────────────────────────────────
+
+class OsintJob(Base):
+    __tablename__ = "osint_jobs"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    job_id      = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    target      = Column(String(500), nullable=False, index=True)
+    status      = Column(String(20), default="pending", index=True)
+    results     = Column(JSON, nullable=True)
+    celery_task = Column(String(36), nullable=True)
+    created_at  = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at  = Column(DateTime, default=datetime.utcnow)
+
+
+# ── MODULE 9 — Cracked Credentials ───────────────────────────────────────────
+
+class CrackedCredential(Base):
+    __tablename__ = "cracked_credentials"
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    cred_id      = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    target       = Column(String(255), nullable=False, index=True)
+    username     = Column(String(255), nullable=False, index=True)
+    password_enc = Column(Text, nullable=True)
+    hash_value   = Column(String(512), nullable=True)
+    hash_type    = Column(String(50), nullable=True)
+    source       = Column(String(50), nullable=True)
+    cracked_at   = Column(DateTime, default=datetime.utcnow, index=True)
+    is_valid     = Column(Boolean, default=False)
+
+
+# ── MODULE 11 — Generated Reports ────────────────────────────────────────────
+
+class GeneratedReport(Base):
+    __tablename__ = "generated_reports"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    report_id   = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    report_type = Column(String(50), nullable=False)
+    title       = Column(String(500), nullable=False)
+    target      = Column(String(255), nullable=True)
+    filename    = Column(String(255), nullable=False)
+    format      = Column(String(10), default="pdf")
+    file_path   = Column(String(500), nullable=False)
+    file_size   = Column(Integer, default=0)
+    created_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── MODULE 12 — Threat Intel Feeds ───────────────────────────────────────────
+
+class ThreatFeedEntry(Base):
+    __tablename__ = "threat_feed_entries"
+    id                   = Column(Integer, primary_key=True, autoincrement=True)
+    feed_id              = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    source               = Column(String(30), nullable=False, index=True)
+    entry_type           = Column(String(20), nullable=False, index=True)
+    identifier           = Column(String(100), nullable=False, index=True)
+    title                = Column(String(255), nullable=True)
+    description          = Column(Text, nullable=True)
+    severity             = Column(String(20), nullable=True, index=True)
+    cvss_score           = Column(Float, default=0.0)
+    published_at         = Column(DateTime, nullable=True)
+    fetched_at           = Column(DateTime, default=datetime.utcnow, index=True)
+    affects_known_target = Column(Boolean, default=False, index=True)
+    raw_data             = Column(Text, nullable=True)
+
+
+class ThreatIntelJob(Base):
+    __tablename__ = "threat_intel_jobs"
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    last_run        = Column(DateTime, default=datetime.utcnow, index=True)
+    entries_fetched = Column(Integer, default=0)
+    alerts_created  = Column(Integer, default=0)
+    status          = Column(String(20), default="success")
+    error_message   = Column(Text, nullable=True)
+
+
+# ── MODULE 13 — Fuzzing ───────────────────────────────────────────────────────
+
+class FuzzingJob(Base):
+    __tablename__ = "fuzzing_jobs"
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    job_id        = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    fuzzer_type   = Column(String(20), nullable=False, index=True)
+    target        = Column(String(500), nullable=False)
+    target_type   = Column(String(20), nullable=False)
+    status        = Column(String(20), default="running", index=True)
+    crashes_found = Column(Integer, default=0)
+    hangs_found   = Column(Integer, default=0)
+    execs_per_sec = Column(Float, default=0.0)
+    total_paths   = Column(Integer, default=0)
+    output_dir    = Column(String(500), nullable=True)
+    crash_dir     = Column(String(500), nullable=True)
+    started_at    = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at    = Column(DateTime, default=datetime.utcnow)
+    stopped_at    = Column(DateTime, nullable=True)
+
+
+# ── MODULE 14 — Reverse Engineering ──────────────────────────────────────────
+
+class REAnalysis(Base):
+    __tablename__ = "re_analyses"
+    id               = Column(Integer, primary_key=True, autoincrement=True)
+    analysis_id      = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    binary_name      = Column(String(255), nullable=False)
+    binary_hash      = Column(String(64), nullable=True, index=True)
+    file_type        = Column(String(30), nullable=True)
+    arch             = Column(String(20), nullable=True)
+    protections      = Column(Text, nullable=True)
+    strings_count    = Column(Integer, default=0)
+    functions_count  = Column(Integer, default=0)
+    vulnerabilities  = Column(Text, nullable=True)
+    claude_analysis  = Column(Text, nullable=True)
+    ghidra_available = Column(Boolean, default=False)
+    decompiled_path  = Column(String(500), nullable=True)
+    status           = Column(String(20), default="pending", index=True)
+    created_at       = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── MODULE 15 — Virtual Lab ───────────────────────────────────────────────────
+
+class LabInstance(Base):
+    __tablename__ = "lab_instances"
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    lab_id        = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    template_name = Column(String(100), nullable=False, index=True)
+    lab_name      = Column(String(255), nullable=True)
+    container_id  = Column(String(100), nullable=True)
+    network_id    = Column(String(100), nullable=True)
+    target_ip     = Column(String(45), nullable=True)
+    exposed_ports = Column(Text, nullable=True)
+    status        = Column(String(20), default="running", index=True)
+    created_at    = Column(DateTime, default=datetime.utcnow, index=True)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+
+
+# ── MODULE 16 — Honeypots ─────────────────────────────────────────────────────
+
+class HoneypotConfig(Base):
+    __tablename__ = "honeypot_configs"
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    honeypot_id    = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    port           = Column(Integer, nullable=False, index=True)
+    service_type   = Column(String(30), nullable=False)
+    fake_banner    = Column(Text, nullable=True)
+    is_active      = Column(Boolean, default=True, index=True)
+    captures_count = Column(Integer, default=0)
+    created_at     = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class HoneypotCapture(Base):
+    __tablename__ = "honeypot_captures"
+    id                 = Column(Integer, primary_key=True, autoincrement=True)
+    capture_id         = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    honeypot_id        = Column(String(36), nullable=False, index=True)
+    attacker_ip        = Column(String(45), nullable=False, index=True)
+    attacker_port      = Column(Integer, nullable=True)
+    timestamp          = Column(DateTime, default=datetime.utcnow, index=True)
+    raw_data           = Column(Text, nullable=True)
+    parsed_credentials = Column(Text, nullable=True)
+    mitre_techniques   = Column(Text, nullable=True)
+    severity           = Column(String(10), default="low", index=True)
+
+
+# ── MODULE 17 — Forensics ─────────────────────────────────────────────────────
+
+class ForensicsCase(Base):
+    __tablename__ = "forensics_cases"
+    id               = Column(Integer, primary_key=True, autoincrement=True)
+    case_id          = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    filename         = Column(String(255), nullable=False)
+    file_hash        = Column(String(64), nullable=True, index=True)
+    file_type        = Column(String(50), nullable=True)
+    file_size        = Column(Integer, default=0)
+    iocs             = Column(Text, nullable=True)
+    analysis_results = Column(Text, nullable=True)
+    sandbox_output   = Column(Text, nullable=True)
+    is_malicious     = Column(Boolean, default=False, index=True)
+    malware_family   = Column(String(100), nullable=True)
+    stix_report      = Column(Text, nullable=True)
+    status           = Column(String(20), default="pending", index=True)
+    created_at       = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── MODULE 18 — PrivEsc ───────────────────────────────────────────────────────
+
+class PrivEscScan(Base):
+    __tablename__ = "privesc_scans"
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    scan_id           = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    target            = Column(String(255), nullable=True, index=True)
+    os_type           = Column(String(20), nullable=False, index=True)
+    findings          = Column(Text, nullable=True)
+    high_risk_count   = Column(Integer, default=0)
+    medium_risk_count = Column(Integer, default=0)
+    auto_exploitable  = Column(Text, nullable=True)
+    status            = Column(String(20), default="pending", index=True)
+    created_at        = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── MODULE 19 — Lateral Movement ─────────────────────────────────────────────
+
+class LateralMovement(Base):
+    __tablename__ = "lateral_movements"
+    id               = Column(Integer, primary_key=True, autoincrement=True)
+    op_id            = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    operation_type   = Column(String(50), nullable=False, index=True)
+    source_host      = Column(String(255), nullable=True)
+    target_host      = Column(String(255), nullable=False, index=True)
+    technique        = Column(String(20), nullable=True)
+    credentials_used = Column(Text, nullable=True)
+    result           = Column(Text, nullable=True)
+    success          = Column(Boolean, default=False, index=True)
+    created_at       = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── MODULE 20 — Self-Improvement ──────────────────────────────────────────────
+
+class OperationOutcome(Base):
+    __tablename__ = "operation_outcomes"
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    outcome_id     = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(_uuid.uuid4()))
+    operation_type = Column(String(50), nullable=False, index=True)
+    target_profile = Column(Text, nullable=True)
+    technique      = Column(String(200), nullable=False)
+    success        = Column(Boolean, default=False, index=True)
+    context        = Column(Text, nullable=True)
+    reason         = Column(Text, nullable=True)
+    tags           = Column(Text, nullable=True)
+    created_at     = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class TechniqueLearning(Base):
+    __tablename__ = "technique_learnings"
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    technique_id   = Column(String(50), nullable=False, unique=True, index=True)
+    technique_name = Column(String(300), nullable=False)
+    category       = Column(String(100), nullable=False, default="unknown", index=True)
+    success_rate   = Column(Float, default=0.0, index=True)
+    success_count  = Column(Integer, default=0)
+    failure_count  = Column(Integer, default=0)
+    last_used      = Column(DateTime, nullable=True, index=True)
+    contexts       = Column(Text, nullable=True)
+    notes          = Column(Text, nullable=True)
+    source_url     = Column(String(500), nullable=True)
+    created_at     = Column(DateTime, default=datetime.utcnow)
+    updated_at     = Column(DateTime, default=datetime.utcnow)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAPACITÉS 1-7 — 10 nouveaux modèles
+# ══════════════════════════════════════════════════════════════════════════════
+
+import uuid as _uuid
+
+# ── Capacité 1 — Audio Capture ───────────────────────────────────────────────
+
+class AudioRecording(Base):
+    """Audio recording captured from a target microphone via implant or local mic."""
+    __tablename__ = "audio_recordings"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    recording_id = Column(String(36), nullable=False, unique=True, index=True,
+                          default=lambda: str(_uuid.uuid4()))
+    session_id   = Column(String(100), nullable=True, index=True)
+    target_id    = Column(String(100), nullable=True, index=True)
+    mic_name     = Column(String(255), nullable=True)
+    duration     = Column(Integer, default=0)
+    file_path    = Column(String(500), nullable=True)
+    file_size    = Column(Integer, default=0)
+    format       = Column(String(10), default="wav")
+    keyword      = Column(String(255), nullable=True)
+    analyzed     = Column(Boolean, default=False)
+    created_at   = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── Capacité 2 — IP Camera Scanner ──────────────────────────────────────────
+
+class Camera(Base):
+    """Discovered IP camera — ONVIF / RTSP / HTTP."""
+    __tablename__ = "cameras"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    camera_id     = Column(String(36), nullable=False, unique=True, index=True,
+                           default=lambda: str(_uuid.uuid4()))
+    ip            = Column(String(45), nullable=False, index=True)
+    port          = Column(Integer, default=80)
+    model         = Column(String(255), nullable=True)
+    firmware      = Column(String(255), nullable=True)
+    manufacturer  = Column(String(100), nullable=True, index=True)
+    username      = Column(String(100), nullable=True)
+    password_enc  = Column(Text, nullable=True)
+    rtsp_url      = Column(String(500), nullable=True)
+    http_url      = Column(String(500), nullable=True)
+    has_mic       = Column(Boolean, default=False)
+    has_ptz       = Column(Boolean, default=False)
+    discovered_at = Column(DateTime, default=datetime.utcnow, index=True)
+    last_seen     = Column(DateTime, nullable=True)
+    status        = Column(String(20), default="unknown", index=True)
+    vulns         = Column(Text, nullable=True)
+    scan_job_id   = Column(String(36), nullable=True)
+
+
+class CameraSnapshot(Base):
+    """Snapshot captured from an IP camera."""
+    __tablename__ = "camera_snapshots"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id = Column(String(36), nullable=False, unique=True, index=True,
+                         default=lambda: str(_uuid.uuid4()))
+    camera_id   = Column(String(36), nullable=True, index=True)
+    file_path   = Column(String(500), nullable=True)
+    taken_at    = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── Capacité 3 — Post-Exploit (Keylogger, Clipboard, Forms) ─────────────────
+
+class KeystrokeLog(Base):
+    """Keystrokes captured via Meterpreter keyscan or local keylogger."""
+    __tablename__ = "keystroke_logs"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    log_id       = Column(String(36), nullable=False, unique=True, index=True,
+                          default=lambda: str(_uuid.uuid4()))
+    session_id   = Column(String(100), nullable=False, index=True)
+    target_id    = Column(String(255), nullable=True, index=True)
+    keystrokes   = Column(Text, nullable=True)
+    window_title = Column(String(500), nullable=True)
+    app_name     = Column(String(255), nullable=True)
+    captured_at  = Column(DateTime, default=datetime.utcnow, index=True)
+    is_processed = Column(Boolean, default=False)
+
+
+class CapturedForm(Base):
+    """Form submissions captured by the JavaScript form grabber."""
+    __tablename__ = "captured_forms"
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    form_id           = Column(String(36), nullable=False, unique=True, index=True,
+                               default=lambda: str(_uuid.uuid4()))
+    session_id        = Column(String(100), nullable=False, index=True)
+    target_id         = Column(String(255), nullable=True, index=True)
+    url               = Column(String(2000), nullable=True)
+    form_data         = Column(JSON, nullable=True)
+    screenshot_before = Column(String(500), nullable=True)
+    screenshot_after  = Column(String(500), nullable=True)
+    captured_at       = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ClipboardCapture(Base):
+    """Clipboard content captured from a session."""
+    __tablename__ = "clipboard_captures"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    capture_id   = Column(String(36), nullable=False, unique=True, index=True,
+                          default=lambda: str(_uuid.uuid4()))
+    session_id   = Column(String(100), nullable=False, index=True)
+    content      = Column(Text, nullable=True)
+    content_type = Column(String(20), default="text")
+    size         = Column(Integer, default=0)
+    captured_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── Capacité 4 — Network Sniffer ─────────────────────────────────────────────
+
+class PacketCapture(Base):
+    """Network packet capture session (tcpdump)."""
+    __tablename__ = "packet_captures"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    capture_id     = Column(String(36), nullable=False, unique=True, index=True,
+                            default=lambda: str(_uuid.uuid4()))
+    interface      = Column(String(50), nullable=False)
+    bpf_filter     = Column(String(500), nullable=True)
+    status         = Column(String(20), default="running", index=True)
+    packet_count   = Column(Integer, default=0)
+    pcap_file_path = Column(String(500), nullable=True)
+    file_size      = Column(Integer, default=0)
+    creds_found    = Column(Integer, default=0)
+    started_at     = Column(DateTime, default=datetime.utcnow, index=True)
+    stopped_at     = Column(DateTime, nullable=True)
+
+
+# ── Capacité 5 — Automation Triggers ─────────────────────────────────────────
+
+class AutoTrigger(Base):
+    """IF-THEN automation rule."""
+    __tablename__ = "auto_triggers"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    trigger_id     = Column(String(36), nullable=False, unique=True, index=True,
+                            default=lambda: str(_uuid.uuid4()))
+    name           = Column(String(255), nullable=False)
+    condition_type = Column(String(50), nullable=False, index=True)
+    condition      = Column(JSON, nullable=False)
+    action_type    = Column(String(50), nullable=False, index=True)
+    action         = Column(JSON, nullable=False)
+    enabled        = Column(Boolean, default=True, index=True)
+    last_triggered = Column(DateTime, nullable=True)
+    trigger_count  = Column(Integer, default=0)
+    created_at     = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class TriggerLog(Base):
+    """Execution log for an automation trigger."""
+    __tablename__ = "trigger_logs"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    log_id        = Column(String(36), nullable=False, unique=True, index=True,
+                           default=lambda: str(_uuid.uuid4()))
+    trigger_id    = Column(String(36), nullable=False, index=True)
+    event_data    = Column(JSON, nullable=True)
+    action_result = Column(JSON, nullable=True)
+    success       = Column(Boolean, default=False)
+    triggered_at  = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ── Capacité 6 — Exfiltration ────────────────────────────────────────────────
+
+class ExfilJob(Base):
+    """Data exfiltration job — tracks status and telemetry."""
+    __tablename__ = "exfil_jobs"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    exfil_id     = Column(String(36), nullable=False, unique=True, index=True,
+                          default=lambda: str(_uuid.uuid4()))
+    channel      = Column(String(30), nullable=False, index=True)
+    status       = Column(String(20), default="pending", index=True)
+    data_size    = Column(Integer, default=0)
+    chunks_total = Column(Integer, default=0)
+    chunks_sent  = Column(Integer, default=0)
+    encrypted    = Column(Boolean, default=False)
+    compressed   = Column(Boolean, default=False)
+    scheduled_at = Column(DateTime, nullable=True)
+    started_at   = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    checksum     = Column(String(64), nullable=True)
+    error_msg    = Column(Text, nullable=True)
+    created_at   = Column(DateTime, default=datetime.utcnow, index=True)

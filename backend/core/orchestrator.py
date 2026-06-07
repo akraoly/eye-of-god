@@ -144,6 +144,22 @@ class Orchestrator:
             tool_outputs=tool_outputs,
         )
 
+        # Injection mémoire tactique pour les requêtes cyber/pentest
+        if intent == "cyber":
+            try:
+                from core.memory.tactical_memory import tactical_memory
+                import re as _re
+                # Extraire la cible éventuelle du message
+                ip_match = _re.search(r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b', message)
+                domain_match = _re.search(r'\b([a-zA-Z0-9-]+\.[a-zA-Z]{2,})\b', message)
+                target = (ip_match or domain_match)
+                if target:
+                    tactical_ctx = tactical_memory.get_context_for_prompt(target.group(1))
+                    if tactical_ctx:
+                        system_context = tactical_ctx + "\n" + system_context
+            except Exception:
+                pass
+
         return {
             "intent": intent,
             "agents_used": agents_used,

