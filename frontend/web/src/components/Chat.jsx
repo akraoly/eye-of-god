@@ -60,6 +60,7 @@ async function ttsSpeak(text, onEnd) {
   if (!clean) { onEnd?.(); return }
   try {
     const token = auth.getToken()
+    console.log('[TTS] → appel backend /api/voice/tts, token:', !!token)
     const res = await fetch('/api/voice/tts', {
       method: 'POST',
       headers: {
@@ -68,16 +69,32 @@ async function ttsSpeak(text, onEnd) {
       },
       body: JSON.stringify({ text: clean }),
     })
+    console.log('[TTS] ← réponse HTTP', res.status, res.headers.get('content-type'))
     if (!res.ok) throw new Error(`TTS HTTP ${res.status}`)
     const blob = await res.blob()
-    const url  = URL.createObjectURL(blob)
+    console.log('[TTS] blob reçu:', blob.size, 'bytes', blob.type)
+    const url   = URL.createObjectURL(blob)
     const audio = new Audio(url)
+    audio.volume = 1.0
     _currentAudio = audio
     audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; onEnd?.() }
-    audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; onEnd?.() }
-    audio.play()
+    audio.onerror = (e) => { console.error('[TTS] audio.onerror', e); URL.revokeObjectURL(url); _currentAudio = null; onEnd?.() }
+    const playPromise = audio.play()
+    if (playPromise !== undefined) {
+      playPromise.catch(e => {
+        console.error('[TTS] audio.play() bloqué (autoplay?):', e.message)
+        // Autoplay bloqué — attendre une interaction puis rejouer
+        const resume = () => {
+          audio.play().catch(() => {})
+          document.removeEventListener('click', resume)
+          document.removeEventListener('keydown', resume)
+        }
+        document.addEventListener('click', resume, { once: true })
+        document.addEventListener('keydown', resume, { once: true })
+      })
+    }
   } catch (e) {
-    console.warn('[TTS]', e.message)
+    console.error('[TTS] erreur:', e.message)
     onEnd?.()
   }
 }
