@@ -5,6 +5,38 @@ import * as Speech from 'expo-speech';
 import { Audio } from 'expo-av';
 import { API_BASE, getToken } from './api';
 
+// ─── Nettoyage texte avant TTS ────────────────────────────────────────────────
+function cleanForTTS(raw) {
+  return raw
+    .replace(/```[\s\S]*?```/g, ', exemple de code, ')
+    .replace(/`[^`]+`/g, '')
+    .replace(/#{1,6}\s*(.+)/g, '$1. ')
+    .replace(/\*{1,3}([^*\n]+)\*{1,3}/g, '$1')
+    .replace(/_{1,2}([^_\n]+)_{1,2}/g, '$1')
+    .replace(/~~([^~\n]+)~~/g, '$1')
+    .replace(/^[-*+]\s+(.+)/gm, '$1. ')
+    .replace(/^\d+\.\s+(.+)/gm, '$1. ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\|/g, ', ')
+    .replace(/[-]{3,}/g, '')
+    .replace(/[✅❌⚠️🔴🟠🟡🟢🔵⭕✓✗→←↑↓►◄•·🎯🔥💡⚡🛡️🔒🔓]/g, '')
+    .replace(/[*#_~`^<>{}[\]\\]/g, '')
+    .replace(/([.!?])\1+/g, '$1')
+    .replace(/\.{2,}/g, '.')
+    .replace(/,{2,}/g, ',')
+    .replace(/\s*:\s*\n/g, ', ')
+    .replace(/\n{2,}/g, '. ')
+    .replace(/\n/g, ', ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[,\s]+\./g, '.')
+    .replace(/\.\s*,/g, '.')
+    .replace(/\.{2,}/g, '.')
+    .replace(/\s+,/g, ',')
+    .replace(/—/g, ', ')
+    .trim()
+    .slice(0, 3000);
+}
+
 // ─── TTS : parler un texte avec une voix d'homme ───────────────────────────
 
 export async function speak(text, opts = {}) {
@@ -15,8 +47,8 @@ export async function speak(text, opts = {}) {
 
   const options = {
     language: opts.language || 'fr-FR',
-    pitch: opts.pitch ?? 0.85,          // < 1 = voix plus grave (homme)
-    rate: opts.rate ?? 0.92,            // légèrement plus lent pour clarté
+    pitch: opts.pitch ?? 0.60,   // très grave — voix hacker anonyme
+    rate: opts.rate ?? 0.82,     // lente et posée — chaque mot compte
     volume: opts.volume ?? 1.0,
     onDone: opts.onDone,
     onError: opts.onError,
@@ -33,7 +65,7 @@ export async function speak(text, opts = {}) {
     if (male) options.voice = male.identifier;
   } catch (_) {}
 
-  Speech.speak(text, options);
+  Speech.speak(cleanForTTS(text), options);
 }
 
 export function stopSpeaking() {

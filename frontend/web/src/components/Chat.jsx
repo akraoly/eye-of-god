@@ -6,17 +6,64 @@ import VoiceInput from './VoiceInput'
 import MatrixRain from './MatrixRain'
 import { sendMessage, loadHistory, resetSession } from '../utils/api'
 
+// ── Nettoyage texte avant TTS ─────────────────────────────────────────────────
+function cleanForTTS(raw) {
+  return raw
+    // Blocs de code → annoncés verbalement
+    .replace(/```[\s\S]*?```/g, ', exemple de code, ')
+    .replace(/`[^`]+`/g, '')
+    // Titres → lus comme du texte normal avec pause après
+    .replace(/#{1,6}\s*(.+)/g, '$1. ')
+    // Gras / italique / barré → garder le contenu
+    .replace(/\*{1,3}([^*\n]+)\*{1,3}/g, '$1')
+    .replace(/_{1,2}([^_\n]+)_{1,2}/g, '$1')
+    .replace(/~~([^~\n]+)~~/g, '$1')
+    // Listes à puces → chaque item ponctué pour une pause naturelle
+    .replace(/^[-*+]\s+(.+)/gm, '$1. ')
+    .replace(/^\d+\.\s+(.+)/gm, '$1. ')
+    // Liens et images
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    // Tableaux
+    .replace(/\|/g, ', ')
+    .replace(/[-]{3,}/g, '')
+    // Emojis et symboles graphiques
+    .replace(/[✅❌⚠️🔴🟠🟡🟢🔵⭕✓✗→←↑↓►◄•·🎯🔥💡⚡🛡️🔒🔓]/g, '')
+    .replace(/[*#_~`^<>{}[\]\\]/g, '')
+    // Ponctuation répétée
+    .replace(/([.!?])\1+/g, '$1')
+    .replace(/\.{2,}/g, '.')
+    .replace(/,{2,}/g, ',')
+    // Deux points isolés en fin de segment → virgule (pause douce)
+    .replace(/\s*:\s*\n/g, ', ')
+    // Espaces et lignes
+    .replace(/\n{2,}/g, '. ')
+    .replace(/\n/g, ', ')
+    .replace(/[ \t]{2,}/g, ' ')
+    // Nettoyage final
+    .replace(/[,\s]+\./g, '.')
+    .replace(/\.\s*,/g, '.')
+    .replace(/\.{2,}/g, '.')
+    .replace(/\s+,/g, ',')
+    .replace(/—/g, ', ')
+    .trim()
+    .slice(0, 3000)
+}
+
 // ── TTS voix homme ───────────────────────────────────────────────────────────
 function ttsSpeak(text, onEnd) {
   if (!window.speechSynthesis || !text) return
   window.speechSynthesis.cancel()
-  const utt = new SpeechSynthesisUtterance(text.slice(0, 3000))
-  utt.lang = 'fr-FR'
-  utt.pitch = 0.78
-  utt.rate = 0.93
+  const utt = new SpeechSynthesisUtterance(cleanForTTS(text))
+  utt.lang   = 'fr-FR'
+  utt.pitch  = 0.55   // très grave — voix hacker anonyme
+  utt.rate   = 0.82   // lente et posée — chaque mot compte
+  utt.volume = 1.0
   const pickVoice = () => {
     const voices = window.speechSynthesis.getVoices()
-    return voices.find(v => v.lang.startsWith('fr') && /thomas|pierre|male|man|henri/i.test(v.name))
+    // Priorité : Thomas (Apple), Pierre, voix masculine, puis n'importe quel fr
+    return voices.find(v => v.lang.startsWith('fr') && /thomas/i.test(v.name))
+      || voices.find(v => v.lang.startsWith('fr') && /pierre|male|man|henri|nicolas/i.test(v.name))
+      || voices.find(v => v.lang === 'fr-FR')
       || voices.find(v => v.lang.startsWith('fr'))
   }
   const v = pickVoice()
