@@ -108,8 +108,8 @@ export default function OmniscienceView() {
     apiFetch('/omniscience/activity?limit=50').then(r => r.json()).then(d => setActivities(d.events || [])).catch(() => {})
     // Alerts
     apiFetch('/soc/alerts?limit=30').then(r => r.json()).then(d => setAlerts(d.alerts || [])).catch(() => {})
-    // Camera snapshots
-    apiFetch('/cameras/recent-snapshots?limit=4').then(r => r.json()).then(d => setSnapshots(d.snapshots || [])).catch(() => {})
+    // Camera snapshots (uses /cameras/ list endpoint, no dedicated recent-snapshots route)
+    apiFetch('/cameras/').then(r => r.json()).then(d => setSnapshots((d.cameras || []).slice(0, 4))).catch(() => {})
     // Network map
     apiFetch('/omniscience/network-map').then(r => r.json()).then(d => {
       const nodes = (d.nodes || []).map((n, i) => ({

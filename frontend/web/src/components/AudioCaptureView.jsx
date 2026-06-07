@@ -78,6 +78,7 @@ export default function AudioCaptureView() {
   const [playingId,     setPlayingId]     = useState(null)
   const [error,         setError]         = useState('')
   const [loading,       setLoading]       = useState(false)
+  const [recordJobId,   setRecordJobId]   = useState(null)
   const audioRef = useRef(null)
   const recordTimerRef = useRef(null)
 
@@ -120,17 +121,18 @@ export default function AudioCaptureView() {
     setError('')
     setLoading(true)
     try {
-      const r = await apiFetch('/audio/record', {
+      const r = await apiFetch('/audio/record/start', {
         method: 'POST',
         body: JSON.stringify({
           session_id: sessionId,
           duration,
           quality,
-          microphone: selectedMic || undefined,
-          keyword: keywordActive && keyword ? keyword : undefined,
+          mic_id: selectedMic || undefined,
         }),
       })
       if (!r.ok) throw new Error('Erreur démarrage')
+      const startData = await r.json().catch(() => ({}))
+      setRecordJobId(startData.job_id || null)
       setRecording(true)
       recordTimerRef.current = setTimeout(() => {
         setRecording(false)
@@ -145,7 +147,7 @@ export default function AudioCaptureView() {
     if (recordTimerRef.current) clearTimeout(recordTimerRef.current)
     setRecording(false)
     try {
-      await apiFetch('/audio/record/stop', { method: 'POST', body: JSON.stringify({ session_id: sessionId }) })
+      if (recordJobId) await apiFetch(`/audio/record/stop/${recordJobId}`, { method: 'POST' }).catch(() => {})
     } catch {}
     loadRecordings()
   }
@@ -159,7 +161,7 @@ export default function AudioCaptureView() {
     }
     if (audioRef.current) {
       const token = localStorage.getItem('eye_token') || ''
-      audioRef.current.src = `/api/audio/recordings/${rec.id}/stream?token=${token}`
+      audioRef.current.src = `/api/audio/download/${rec.id}?token=${token}`
       audioRef.current.play()
       setPlayingId(rec.id)
       audioRef.current.onended = () => setPlayingId(null)
@@ -417,7 +419,7 @@ export default function AudioCaptureView() {
                     }}>
                       {playingId === rec.id ? '⏸' : '▶'}
                     </button>
-                    <a href={`/api/audio/recordings/${rec.id}/download`} download
+                    <a href={`/api/audio/download/${rec.id}`} download
                       style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', color: 'var(--text2)', fontSize: '0.72rem', textDecoration: 'none' }}>
                       ⬇
                     </a>

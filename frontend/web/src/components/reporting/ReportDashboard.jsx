@@ -102,7 +102,7 @@ export default function ReportDashboard() {
     if (!cid?.trim()) return
     setLoadingReports(true)
     try {
-      const res = await apiFetch(`/api/reports/audit/campaign/${cid.trim()}`)
+      const res = await apiFetch(`/reports/audit/campaign/${cid.trim()}`)
       if (res.ok) {
         const data = await res.json()
         setReports(data.reports || [])
@@ -146,7 +146,7 @@ export default function ReportDashboard() {
     clearInterval(pollRef.current)
     pollRef.current = setInterval(async () => {
       try {
-        const res = await apiFetch(`/api/reports/audit/status/${reportId}`)
+        const res = await apiFetch(`/reports/audit/status/${reportId}`)
         if (res.ok) {
           const data = await res.json()
           if (data.status === 'ready' || data.status === 'error') {
@@ -182,7 +182,7 @@ export default function ReportDashboard() {
     startProgress()
 
     try {
-      const res = await apiFetch('/api/reports/audit/generate', {
+      const res = await apiFetch('/reports/audit/generate', {
         method: 'POST',
         body: JSON.stringify({
           campaign_id: campaignId.trim(),
@@ -217,7 +217,7 @@ export default function ReportDashboard() {
 
   const handleDownload = async (reportId, filename) => {
     try {
-      const res = await apiFetch(`/api/reports/audit/download/${reportId}`)
+      const res = await apiFetch(`/reports/audit/download/${reportId}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -236,7 +236,7 @@ export default function ReportDashboard() {
   const handleDelete = async (reportId) => {
     if (!window.confirm('Supprimer ce rapport ?')) return
     try {
-      const res = await apiFetch(`/api/reports/audit/${reportId}`, { method: 'DELETE' })
+      const res = await apiFetch(`/reports/audit/${reportId}`, { method: 'DELETE' })
       if (res.ok) {
         setReports(prev => prev.filter(r => r.report_id !== reportId))
       }

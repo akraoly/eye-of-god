@@ -169,7 +169,7 @@ function OutcomeForm() {
     setError(null)
     setSaved(false)
     try {
-      const res = await apiFetch('/self-improve/outcome', {
+      const res = await apiFetch('/self-improve/record', {
         method: 'POST',
         body: JSON.stringify(form),
       })

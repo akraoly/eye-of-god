@@ -112,9 +112,8 @@ function GtfoBins() {
     setError(null)
     setResult(null)
     try {
-      const res = await apiFetch('/privesc/gtfobins', {
-        method: 'POST',
-        body: JSON.stringify({ binary: binary.trim() }),
+      const res = await apiFetch(`/privesc/gtfobins/${encodeURIComponent(binary.trim())}`, {
+        method: 'GET',
       })
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
       setResult(await res.json())

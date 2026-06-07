@@ -263,7 +263,7 @@ export default function CameraScanView() {
   const testCreds = async (cam) => {
     setCredsLoading(prev => ({ ...prev, [cam.ip]: true }))
     try {
-      const r = await apiFetch('/cameras/test-creds', {
+      const r = await apiFetch('/cameras/creds-test', {
         method: 'POST', body: JSON.stringify({ ip: cam.ip, port: cam.port }),
       })
       const d = await r.json()

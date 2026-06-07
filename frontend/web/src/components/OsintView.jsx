@@ -142,7 +142,7 @@ export default function OsintView() {
   const esRef = useRef(null)
 
   const loadHistory = () => {
-    apiFetch('/osint/recon/history').then(r => r.json()).then(d => setHistory(d.jobs || d || [])).catch(() => {})
+    apiFetch('/osint/jobs').then(r => r.json()).then(d => setHistory(d.jobs || d || [])).catch(() => {})
   }
 
   useEffect(() => {

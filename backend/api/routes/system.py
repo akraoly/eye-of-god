@@ -179,14 +179,18 @@ async def metrics():
     }
 
 
+class DispatchRequest(BaseModel):
+    task: str
+
+
 @router.get("/agents")
-async def list_agents():
+async def list_agents(_user=Depends(get_current_user)):
     return agent_service.list_agents()
 
 
 @router.post("/agents/dispatch")
-async def dispatch_agent(task: str):
-    return await agent_service.dispatch(task=task)
+async def dispatch_agent(body: DispatchRequest, _user=Depends(get_current_user)):
+    return await agent_service.dispatch(task=body.task)
 
 
 @router.get("/diagnostic")

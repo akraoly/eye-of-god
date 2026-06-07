@@ -146,13 +146,13 @@ function PsDeobfuscate() {
     setLoading(true)
     setError(null)
     try {
-      const res = await apiFetch('/forensics/deobfuscate', {
+      const res = await apiFetch('/forensics/powershell', {
         method: 'POST',
-        body: JSON.stringify({ code: input, language: 'powershell' }),
+        body: JSON.stringify({ script: input }),
       })
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
       const data = await res.json()
-      setOutput(data.deobfuscated || data.result || data.output || JSON.stringify(data))
+      setOutput(data.deobfuscated || data.result || data.output || data.analysis || JSON.stringify(data))
     } catch (err) {
       setError(err.message)
     } finally {

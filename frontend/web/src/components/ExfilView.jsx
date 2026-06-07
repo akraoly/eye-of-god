@@ -103,9 +103,9 @@ export default function ExfilView() {
     setTestLoading(true); setTestOk(null); setLatency(null); setError('')
     const t0 = Date.now()
     try {
-      const r = await apiFetch('/exfil/test', {
+      const r = await apiFetch(`/exfil/test/${channel.toLowerCase()}`, {
         method: 'POST',
-        body: JSON.stringify({ channel: channel.toLowerCase(), config }),
+        body: JSON.stringify({ config }),
       })
       const d = await r.json()
       setTestOk(d.success || r.ok)

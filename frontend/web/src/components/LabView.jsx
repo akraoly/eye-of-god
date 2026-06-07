@@ -54,9 +54,9 @@ function DeployModal({ template, onClose, onDeploy }) {
     setDeploying(true)
     setError(null)
     try {
-      const res = await apiFetch('/lab/deploy', {
+      const res = await apiFetch('/lab/create', {
         method: 'POST',
-        body: JSON.stringify({ template_id: template?.id || template?.name, lab_name: name.trim() }),
+        body: JSON.stringify({ template: template?.id || template?.name, lab_name: name.trim() }),
       })
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
       const data = await res.json()

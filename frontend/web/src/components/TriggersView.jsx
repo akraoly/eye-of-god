@@ -143,7 +143,7 @@ export default function TriggersView() {
     apiFetch('/triggers').then(r => r.json()).then(d => setTriggers(d.triggers || [])).catch(() => {})
   }
   const loadTimeline = () => {
-    apiFetch('/triggers/timeline').then(r => r.json()).then(d => setTimeline(d.events || [])).catch(() => {})
+    apiFetch('/triggers/logs/all').then(r => r.json()).then(d => setTimeline(d.logs || d.events || [])).catch(() => {})
   }
 
   useEffect(() => {

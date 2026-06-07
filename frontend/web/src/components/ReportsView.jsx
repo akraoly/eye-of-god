@@ -91,7 +91,7 @@ export default function ReportsView() {
   const [success, setSuccess]     = useState(null)
 
   const loadReports = () => {
-    apiFetch('/reports/').then(r => r.json()).then(d => setReports(d.reports || d || [])).catch(() => {})
+    apiFetch('/reports/list').then(r => r.json()).then(d => setReports(d.reports || d || [])).catch(() => {})
   }
 
   useEffect(() => {
