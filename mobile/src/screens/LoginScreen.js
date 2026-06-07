@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { API_BASE, setToken } from '../utils/api';
-import { colors } from '../utils/theme';
+import { colors, fonts } from '../utils/theme';
 
 export default function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('');
