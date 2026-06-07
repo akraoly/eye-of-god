@@ -38,6 +38,11 @@ class ChatService:
             from core.llm.prompts import SHANURA_MODE_PROMPT
             system = system + SHANURA_MODE_PROMPT
 
+        # SystemAgent actif : injecter le persona médecin
+        if "system" in agents_used and not shanura_mode:
+            from core.llm.prompts import SYSTEM_AGENT_PROMPT
+            system = system + SYSTEM_AGENT_PROMPT
+
         # Injecter les sorties des agents dans le system prompt
         if system_context:
             system = system + system_context
