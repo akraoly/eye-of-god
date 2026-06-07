@@ -118,31 +118,55 @@ class LearningEngine:
         category: Optional[str] = None,
         limit: int = 10,
     ) -> list:
-        """Recherche full-text dans KnowledgeEntry par titre, contenu et résumé."""
+        """Recherche full-text dans KnowledgeEntry — logique OR, stop-words filtrés."""
+        _STOP = {
+            "comment", "est", "les", "des", "sur", "une", "pour", "dans",
+            "avec", "par", "que", "qui", "quoi", "quel", "quelle", "quels",
+            "quelles", "mais", "donc", "car", "ni", "ou", "et", "je", "tu",
+            "il", "elle", "nous", "vous", "ils", "elles", "me", "te", "se",
+            "la", "le", "un", "du", "au", "aux", "en", "de", "à", "ce",
+            "how", "what", "the", "is", "are", "to", "in", "on", "a",
+        }
         try:
             q = db.query(KnowledgeEntry)
             if category and category in VALID_CATEGORIES:
                 q = q.filter(KnowledgeEntry.category == category)
 
-            # Recherche par mots-clés dans titre et résumé et contenu
-            keywords = query.lower().split()
-            for kw in keywords[:5]:  # limiter à 5 mots-clés
-                q = q.filter(
-                    or_(
-                        func.lower(KnowledgeEntry.title).contains(kw),
-                        func.lower(KnowledgeEntry.summary).contains(kw),
-                        func.lower(KnowledgeEntry.content).contains(kw),
-                        func.lower(KnowledgeEntry.tags).contains(kw),
-                    )
-                )
+            # Extraire les mots significatifs (longueur ≥ 3, hors stop-words)
+            all_words = query.lower().split()
+            keywords = [w for w in all_words if len(w) >= 3 and w not in _STOP][:8]
 
+            if not keywords:
+                keywords = [w for w in all_words if len(w) >= 2][:5]
+
+            if not keywords:
+                return []
+
+            # Logique OR : au moins un mot-clé doit correspondre
+            conditions = []
+            for kw in keywords:
+                conditions.append(func.lower(KnowledgeEntry.title).contains(kw))
+                conditions.append(func.lower(KnowledgeEntry.summary).contains(kw))
+                conditions.append(func.lower(KnowledgeEntry.content).contains(kw))
+                conditions.append(func.lower(KnowledgeEntry.tags).contains(kw))
+
+            q = q.filter(or_(*conditions))
+
+            # Scorer : nb de mots-clés trouvés dans le titre (priorité)
             entries = q.order_by(
                 KnowledgeEntry.importance.desc(),
                 KnowledgeEntry.updated_at.desc(),
-            ).limit(limit).all()
+            ).limit(limit * 3).all()
 
-            return [self._entry_to_dict(e) for e in entries]
-        except Exception as e:
+            # Re-ranking : compter les hits par entrée
+            def _score(e):
+                text = f"{e.title} {e.summary or ''} {e.content or ''} {e.tags or ''}".lower()
+                return sum(1 for kw in keywords if kw in text)
+
+            entries.sort(key=_score, reverse=True)
+            return [self._entry_to_dict(e) for e in entries[:limit]]
+
+        except Exception:
             return []
 
     def list_knowledge(
