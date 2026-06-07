@@ -7,31 +7,48 @@ import {
   TextInput, ActivityIndicator, FlatList, Switch, Alert,
 } from 'react-native';
 import { colors } from '../../utils/theme';
-import { apiJSON, apiFetch } from '../../utils/api';
+import { apiJSON, apiFetch, API_BASE } from '../../utils/api';
+import { getToken } from '../../utils/api';
 
-// ── Waveform bars ─────────────────────────────────────────────────────────────
-function WaveformBars({ active }) {
-  const [heights, setHeights] = useState(Array(16).fill(4));
-  const timerRef = useRef(null);
+const WS_BASE = API_BASE.replace(/^http/, 'ws');
+
+// ── Waveform bars (data-driven) ───────────────────────────────────────────────
+function WaveformBars({ active, data }) {
+  const [heights, setHeights] = useState(Array(32).fill(4));
+  const mockRef = useRef(null);
 
   useEffect(() => {
-    if (active) {
-      timerRef.current = setInterval(() => {
-        setHeights(Array(16).fill(0).map(() => 4 + Math.random() * 32));
+    if (data && data.length > 0) {
+      // Real samples from WebSocket — map to bar heights
+      const step = Math.floor(data.length / 32) || 1;
+      setHeights(
+        Array.from({ length: 32 }, (_, i) => {
+          const val = Math.abs(data[i * step] || 0);
+          return 4 + Math.min(val * 36, 36);
+        })
+      );
+    }
+  }, [data]);
+
+  // Mock fallback when active but no WS data
+  useEffect(() => {
+    if (active && (!data || data.length === 0)) {
+      mockRef.current = setInterval(() => {
+        setHeights(Array(32).fill(0).map(() => 4 + Math.random() * 32));
       }, 100);
     } else {
-      clearInterval(timerRef.current);
-      setHeights(Array(16).fill(4));
+      clearInterval(mockRef.current);
+      if (!active) setHeights(Array(32).fill(4));
     }
-    return () => clearInterval(timerRef.current);
-  }, [active]);
+    return () => clearInterval(mockRef.current);
+  }, [active, data]);
 
   return (
     <View style={s.waveform}>
       {heights.map((h, i) => (
         <View key={i} style={[s.waveBar, {
           height: h,
-          backgroundColor: active ? `hsl(${180 + i * 5}, 80%, 55%)` : colors.textDim,
+          backgroundColor: active ? `hsl(${160 + i * 4}, 80%, 55%)` : colors.textDim,
         }]} />
       ))}
     </View>
@@ -56,18 +73,24 @@ function useRecordTimer(running) {
 }
 
 export default function AudioCaptureScreen() {
-  const [sessions,      setSessions]      = useState([]);
-  const [sessionId,     setSessionId]     = useState('');
-  const [microphones,   setMicrophones]   = useState([]);
-  const [micLoading,    setMicLoading]    = useState(false);
-  const [selectedMic,   setSelectedMic]   = useState('');
-  const [duration,      setDuration]      = useState(30);
-  const [quality,       setQuality]       = useState('medium');
-  const [recording,     setRecording]     = useState(false);
-  const [recordings,    setRecordings]    = useState([]);
-  const [keyword,       setKeyword]       = useState('');
-  const [keywordActive, setKeywordActive] = useState(false);
-  const [loading,       setLoading]       = useState(false);
+  const [sessions,        setSessions]        = useState([]);
+  const [sessionId,       setSessionId]       = useState('');
+  const [microphones,     setMicrophones]     = useState([]);
+  const [micLoading,      setMicLoading]      = useState(false);
+  const [selectedMic,     setSelectedMic]     = useState('');
+  const [duration,        setDuration]        = useState(30);
+  const [quality,         setQuality]         = useState('medium');
+  const [recording,       setRecording]       = useState(false);
+  const [recordings,      setRecordings]      = useState([]);
+  const [keyword,         setKeyword]         = useState('');
+  const [keywordActive,   setKeywordActive]   = useState(false);
+  const [loading,         setLoading]         = useState(false);
+  const [isStreaming,     setIsStreaming]      = useState(false);
+  const [waveformData,    setWaveformData]     = useState([]);
+  const [packetsReceived, setPacketsReceived] = useState(0);
+  const wsRef       = useRef(null);
+  const ppsRef      = useRef(0);
+  const ppsTimer    = useRef(null);
   const timer = useRecordTimer(recording);
   const recordTimeout = useRef(null);
 
@@ -87,6 +110,72 @@ export default function AudioCaptureScreen() {
     const t = setInterval(loadRecordings, 5000);
     return () => clearInterval(t);
   }, [loadRecordings]);
+
+  const startStream = useCallback(async () => {
+    if (!sessionId) { Alert.alert('Erreur', 'Sélectionner une session'); return; }
+    if (wsRef.current) wsRef.current.close();
+    setPacketsReceived(0);
+    ppsRef.current = 0;
+
+    let token = '';
+    try { token = await getToken(); } catch {}
+    const url = `${WS_BASE}/api/audio/stream/${sessionId}?token=${token}`;
+
+    try {
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setIsStreaming(true);
+        ppsTimer.current = setInterval(() => {
+          setPacketsReceived(ppsRef.current);
+        }, 1000);
+      };
+
+      ws.onmessage = (evt) => {
+        ppsRef.current += 1;
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg.samples && Array.isArray(msg.samples)) {
+            setWaveformData(msg.samples);
+          } else if (typeof evt.data === 'string' && evt.data.startsWith('[')) {
+            setWaveformData(JSON.parse(evt.data));
+          }
+        } catch {
+          // binary chunk — generate mock from length
+          setWaveformData(Array(64).fill(0).map(() => Math.random()));
+        }
+      };
+
+      ws.onerror = () => {
+        setIsStreaming(false);
+        clearInterval(ppsTimer.current);
+      };
+
+      ws.onclose = () => {
+        setIsStreaming(false);
+        clearInterval(ppsTimer.current);
+      };
+    } catch (e) {
+      Alert.alert('Stream', `WebSocket unavailable: ${e.message}`);
+    }
+  }, [sessionId]);
+
+  const stopStream = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    clearInterval(ppsTimer.current);
+    setIsStreaming(false);
+    setWaveformData([]);
+    setPacketsReceived(0);
+  }, []);
+
+  useEffect(() => () => {
+    if (wsRef.current) wsRef.current.close();
+    clearInterval(ppsTimer.current);
+  }, []);
 
   const listMics = async () => {
     if (!sessionId) { Alert.alert('Erreur', 'Sélectionner une session'); return; }
@@ -219,11 +308,14 @@ export default function AudioCaptureScreen() {
       {/* Record controls */}
       <View style={s.card}>
         <Text style={s.cardLabel}>VISUALISATION</Text>
-        <WaveformBars active={recording} />
+        <WaveformBars active={recording || isStreaming} data={waveformData} />
         {recording && (
           <Text style={s.timerText}>⏺ {timer} / {fmtDur(duration)}</Text>
         )}
-        <View style={{ marginTop: 12 }}>
+        {isStreaming && (
+          <Text style={s.streamBadge}>📡 LIVE · {packetsReceived} pkt/s</Text>
+        )}
+        <View style={{ marginTop: 12, gap: 8 }}>
           {!recording ? (
             <TouchableOpacity onPress={startRecording} disabled={loading || !sessionId}
               style={[s.recordBtn, { opacity: !sessionId ? 0.4 : 1 }]}>
@@ -232,6 +324,16 @@ export default function AudioCaptureScreen() {
           ) : (
             <TouchableOpacity onPress={stopRecording} style={s.stopBtn}>
               <Text style={s.stopBtnText}>⏹ Arrêter</Text>
+            </TouchableOpacity>
+          )}
+          {!isStreaming ? (
+            <TouchableOpacity onPress={startStream} disabled={!sessionId}
+              style={[s.streamBtn, { opacity: !sessionId ? 0.4 : 1 }]}>
+              <Text style={s.streamBtnText}>📡 Start Stream</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={stopStream} style={s.streamStopBtn}>
+              <Text style={s.streamBtnText}>⏹ Stop Stream</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -297,4 +399,8 @@ const s = StyleSheet.create({
   recMeta: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   keywordHit: { color: colors.yellow, fontSize: 11, marginTop: 2 },
   empty: { color: colors.textMuted, fontSize: 13, textAlign: 'center', paddingVertical: 16 },
+  streamBadge: { color: '#22d3ee', fontSize: 12, fontWeight: '700', textAlign: 'center', marginTop: 6 },
+  streamBtn: { borderWidth: 1, borderColor: '#22d3ee', borderRadius: 8, padding: 12, alignItems: 'center', backgroundColor: '#22d3ee20' },
+  streamStopBtn: { borderWidth: 1, borderColor: colors.textDim, borderRadius: 8, padding: 12, alignItems: 'center', backgroundColor: colors.textDim + '20' },
+  streamBtnText: { color: '#22d3ee', fontWeight: '800', fontSize: 14 },
 });
