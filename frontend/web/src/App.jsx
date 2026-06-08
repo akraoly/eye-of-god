@@ -53,6 +53,8 @@ import GPSSpoofing from './components/GPSSpoofing'
 import MeshRadio from './components/MeshRadio'
 import Steganography from './components/Steganography'
 import AnonymizerControl from './components/AnonymizerControl'
+import WifiDashboard from './components/wifi/WifiDashboard'
+import WifiCrackPanel from './components/wifi/WifiCrackPanel'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -148,6 +150,8 @@ function MainApp() {
           {view === 'mesh'         && <MeshRadio />}
           {view === 'stego'        && <Steganography />}
           {view === 'anonymizer'   && <AnonymizerControl />}
+          {view === 'wifi'         && <WifiDashboard />}
+          {view === 'wifi-crack'   && <WifiCrackPanel />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>

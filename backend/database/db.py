@@ -8,6 +8,7 @@ import database.models_ble    # noqa: F401 — register BLE tables
 import database.models_rfid      # noqa: F401 — register RFID tables
 import database.models_sdr       # noqa: F401 — register SDR tables
 import database.models_reporting # noqa: F401 — register Audit Report tables
+import database.models_wifi      # noqa: F401 — register WiFi tables
 
 os.makedirs("./data", exist_ok=True)
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from api.routes import wifi_routes
 from api.routes import (
     chat, memory, user, system, exploit, code, knowledge, life,
     observe, soc, offensive, c2, auth, vision, autonomy, voice,
@@ -154,3 +155,6 @@ router.include_router(gps_routes.router,        prefix="/gps",        tags=["GPS
 router.include_router(mesh_routes.router,       prefix="/mesh",       tags=["Mesh Radio LoRa"],    **_protected)
 router.include_router(stego_routes.router,      prefix="/stego",      tags=["Steganography"],      **_protected)
 router.include_router(anonymizer_routes.router, prefix="/anonymizer", tags=["Anonymizer"],         **_protected)
+
+# ── WiFi — Scanner / Cracking / Post-Exploit / Automation / Agent ─────────────
+router.include_router(wifi_routes.router,       prefix="/wifi",       tags=["WiFi"],               **_protected)
