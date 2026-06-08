@@ -49,6 +49,35 @@ def _migrate_db():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 last_tested DATETIME DEFAULT CURRENT_TIMESTAMP
             )""",
+            """CREATE TABLE IF NOT EXISTS fuzzing_targets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_id VARCHAR(36) UNIQUE NOT NULL,
+                vendor VARCHAR(100) NOT NULL,
+                model VARCHAR(100) NOT NULL,
+                firmware_path VARCHAR(500),
+                crashes_found INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS cloned_voices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                voice_id VARCHAR(36) UNIQUE NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                model_path VARCHAR(500),
+                quality_score REAL,
+                language VARCHAR(10) DEFAULT 'fr',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS vishing_campaigns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                campaign_id VARCHAR(36) UNIQUE NOT NULL,
+                voice_id VARCHAR(36) NOT NULL,
+                scenario VARCHAR(50) NOT NULL,
+                target_phone VARCHAR(50),
+                duration INTEGER,
+                objectives_met INTEGER DEFAULT 0,
+                recording_path VARCHAR(500),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
         ]:
             try:
                 conn.execute(sa.text(create_sql))

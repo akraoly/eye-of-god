@@ -38,6 +38,14 @@ from api.routes import (
     hardware_routes,
     # Printer Network Exploitation
     printer_routes,
+    # Phase D — Zero-Day Fuzzing, Deepfake, IMSI, GPS, Mesh, Stego, Anonymizer
+    zeroday_routes,
+    deepfake_routes,
+    imsi_routes,
+    gps_routes,
+    mesh_routes,
+    stego_routes,
+    anonymizer_routes,
 )
 from core.auth.dependencies import get_current_user
 
@@ -137,3 +145,12 @@ router.include_router(hardware_routes.router, prefix="/hardware",     tags=["Har
 
 # ── Printer Exploitation ──────────────────────────────────────────────────────
 router.include_router(printer_routes.router, prefix="/printers",      tags=["Printer Exploit"],  **_protected)
+
+# ── Phase D — Zero-Day / Deepfake / IMSI / GPS / Mesh / Stego / Anonymizer ───
+router.include_router(zeroday_routes.router,    prefix="/zeroday",    tags=["Zero-Day Fuzzing"],   **_protected)
+router.include_router(deepfake_routes.router,   prefix="/deepfake",   tags=["Deepfake Vishing"],   **_protected)
+router.include_router(imsi_routes.router,       prefix="/imsi",       tags=["IMSI Catcher"],       **_protected)
+router.include_router(gps_routes.router,        prefix="/gps",        tags=["GPS Spoofing"],       **_protected)
+router.include_router(mesh_routes.router,       prefix="/mesh",       tags=["Mesh Radio LoRa"],    **_protected)
+router.include_router(stego_routes.router,      prefix="/stego",      tags=["Steganography"],      **_protected)
+router.include_router(anonymizer_routes.router, prefix="/anonymizer", tags=["Anonymizer"],         **_protected)

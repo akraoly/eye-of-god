@@ -1497,3 +1497,44 @@ class CloudTarget(Base):
     notes       = Column(Text, nullable=True)           # JSON findings
     created_at  = Column(DateTime, default=datetime.utcnow)
     last_tested = Column(DateTime, default=datetime.utcnow)
+
+
+class FuzzingTarget(Base):
+    """Cible Fuzzing — firmware IoT ou binaire analysé."""
+    __tablename__ = "fuzzing_targets"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    target_id     = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    vendor        = Column(String(100), nullable=False)
+    model         = Column(String(100), nullable=False)
+    firmware_path = Column(String(500), nullable=True)
+    crashes_found = Column(Integer, default=0)
+    created_at    = Column(DateTime, default=datetime.utcnow)
+
+
+class ClonedVoice(Base):
+    """Voix clonée — modèle XTTS v2 pour vishing."""
+    __tablename__ = "cloned_voices"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    voice_id        = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    name            = Column(String(255), nullable=False)
+    model_path      = Column(String(500), nullable=True)
+    quality_score   = Column(Float, nullable=True)
+    language        = Column(String(10), default="fr")
+    created_at      = Column(DateTime, default=datetime.utcnow)
+
+
+class VishingCampaign(Base):
+    """Campagne vishing — historique des appels synthétiques."""
+    __tablename__ = "vishing_campaigns"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    campaign_id     = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    voice_id        = Column(String(36), nullable=False)
+    scenario        = Column(String(50), nullable=False)
+    target_phone    = Column(String(50), nullable=True)
+    duration        = Column(Integer, nullable=True)
+    objectives_met  = Column(Boolean, default=False)
+    recording_path  = Column(String(500), nullable=True)
+    created_at      = Column(DateTime, default=datetime.utcnow)

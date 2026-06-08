@@ -46,6 +46,13 @@ import CloudEnum from './components/CloudEnum'
 import MobileServices from './components/MobileServices'
 import HardwareImplants from './components/HardwareImplants'
 import PrinterExploit from './components/PrinterExploit'
+import ZeroDayFuzzing from './components/ZeroDayFuzzing'
+import DeepfakeVishing from './components/DeepfakeVishing'
+import IMSICatcher from './components/IMSICatcher'
+import GPSSpoofing from './components/GPSSpoofing'
+import MeshRadio from './components/MeshRadio'
+import Steganography from './components/Steganography'
+import AnonymizerControl from './components/AnonymizerControl'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -134,6 +141,13 @@ function MainApp() {
           {view === 'mobile'       && <MobileServices />}
           {view === 'implants'     && <HardwareImplants />}
           {view === 'printers'     && <PrinterExploit />}
+          {view === 'zeroday'      && <ZeroDayFuzzing />}
+          {view === 'deepfake'     && <DeepfakeVishing />}
+          {view === 'imsi'         && <IMSICatcher />}
+          {view === 'gps'          && <GPSSpoofing />}
+          {view === 'mesh'         && <MeshRadio />}
+          {view === 'stego'        && <Steganography />}
+          {view === 'anonymizer'   && <AnonymizerControl />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>

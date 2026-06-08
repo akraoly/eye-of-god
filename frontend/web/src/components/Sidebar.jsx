@@ -280,6 +280,13 @@ const NAV = [
   { id: 'mobile',       icon: '📱', label: 'Mobile'      },
   { id: 'implants',     icon: '🔌', label: 'Implants HW' },
   { id: 'printers',     icon: '🖨️', label: 'Imprimantes' },
+  { id: 'zeroday',      icon: '🔬', label: 'Zero-Day'    },
+  { id: 'deepfake',     icon: '🎭', label: 'Deepfake'    },
+  { id: 'imsi',         icon: '📡', label: 'IMSI Catch'  },
+  { id: 'gps',          icon: '🛰',  label: 'GPS Spoof'   },
+  { id: 'mesh',         icon: '📻', label: 'Mesh Radio'  },
+  { id: 'stego',        icon: '🕵️', label: 'Stéganogr.'  },
+  { id: 'anonymizer',   icon: '🥷', label: 'Anonymizer'  },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 
