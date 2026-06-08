@@ -293,6 +293,7 @@ const NAV = [
   { id: 'zero-click',  icon: '📱', label: 'Zero-Click'  },
   { id: 'bloc3',       icon: '🔬', label: 'Fuzzing Ind.' },
   { id: 'bloc4',       icon: '🏔️', label: 'Air-Gap'     },
+  { id: 'bloc5',       icon: '🎭', label: 'Deepfake Vid.' },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 

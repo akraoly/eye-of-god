@@ -59,6 +59,7 @@ import FirmwareImplants from './components/firmware/FirmwareImplants'
 import MobileZeroClick from './components/mobile/MobileZeroClick'
 import ZeroDayBloc3 from './components/zeroday/ZeroDayBloc3'
 import AirGapBloc4 from './components/airgap/AirGapBloc4'
+import DeepfakeBloc5 from './components/deepfake/DeepfakeBloc5'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -160,6 +161,7 @@ function MainApp() {
           {view === 'zero-click'   && <MobileZeroClick />}
           {view === 'bloc3'        && <ZeroDayBloc3 />}
           {view === 'bloc4'        && <AirGapBloc4 />}
+          {view === 'bloc5'        && <DeepfakeBloc5 />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>
