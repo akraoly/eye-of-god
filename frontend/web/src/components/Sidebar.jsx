@@ -290,6 +290,7 @@ const NAV = [
   { id: 'wifi',         icon: '📶', label: 'WiFi Scan'   },
   { id: 'wifi-crack',   icon: '🔓', label: 'WiFi Crack'  },
   { id: 'firmware',     icon: '⚡', label: 'Firmware'    },
+  { id: 'zero-click',  icon: '📱', label: 'Zero-Click'  },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 

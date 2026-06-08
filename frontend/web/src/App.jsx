@@ -56,6 +56,7 @@ import AnonymizerControl from './components/AnonymizerControl'
 import WifiDashboard from './components/wifi/WifiDashboard'
 import WifiCrackPanel from './components/wifi/WifiCrackPanel'
 import FirmwareImplants from './components/firmware/FirmwareImplants'
+import MobileZeroClick from './components/mobile/MobileZeroClick'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -154,6 +155,7 @@ function MainApp() {
           {view === 'wifi'         && <WifiDashboard />}
           {view === 'wifi-crack'   && <WifiCrackPanel />}
           {view === 'firmware'     && <FirmwareImplants />}
+          {view === 'zero-click'   && <MobileZeroClick />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>
