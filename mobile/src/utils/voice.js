@@ -1,9 +1,9 @@
 /**
- * Utilitaires voix — STT (expo-av → backend) + TTS (expo-speech, voix homme).
+ * Utilitaires voix — STT (expo-av v16 → backend) + TTS (expo-speech, voix homme).
  */
 import * as Speech from 'expo-speech';
 import { Audio } from 'expo-av';
-import { API_BASE, getToken } from './api';
+import { API_BASE, getToken, triggerLogout } from './api';
 
 // ─── Nettoyage texte avant TTS ────────────────────────────────────────────────
 function cleanForTTS(raw) {
@@ -42,7 +42,6 @@ function cleanForTTS(raw) {
 export async function speak(text, opts = {}) {
   if (!text?.trim()) return;
 
-  // Arrêter toute lecture en cours
   Speech.stop();
 
   const options = {
@@ -55,7 +54,6 @@ export async function speak(text, opts = {}) {
     ...opts,
   };
 
-  // Sur Android, cherche une voix masculine si disponible
   try {
     const voices = await Speech.getAvailableVoicesAsync?.() || [];
     const male = voices.find(v =>
@@ -80,6 +78,27 @@ export async function isSpeaking() {
 
 let _recording = null;
 
+// Options d'enregistrement compatibles expo-av v16
+const RECORDING_OPTIONS = {
+  android: {
+    extension: '.m4a',
+    outputFormat: Audio.AndroidOutputFormat?.MPEG_4 ?? 2,
+    audioEncoder: Audio.AndroidAudioEncoder?.AAC ?? 3,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 128000,
+  },
+  ios: {
+    extension: '.m4a',
+    outputFormat: Audio.IOSOutputFormat?.MPEG4AAC ?? 'aac ',
+    audioQuality: Audio.IOSAudioQuality?.HIGH ?? 0x60,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 128000,
+  },
+  web: {},
+};
+
 export async function startRecording() {
   try {
     const { status } = await Audio.requestPermissionsAsync();
@@ -90,31 +109,12 @@ export async function startRecording() {
       playsInSilentModeIOS: true,
     });
 
-    const rec = new Audio.Recording();
-    await rec.prepareToRecordAsync({
-      android: {
-        extension: '.m4a',
-        outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-        audioEncoder: Audio.AndroidAudioEncoder.AAC,
-        sampleRate: 16000,
-        numberOfChannels: 1,
-        bitRate: 128000,
-      },
-      ios: {
-        extension: '.m4a',
-        outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-        audioQuality: Audio.IOSAudioQuality.HIGH,
-        sampleRate: 16000,
-        numberOfChannels: 1,
-        bitRate: 128000,
-      },
-      web: {},
-    });
-
-    await rec.startAsync();
+    // expo-av v16 : API createAsync recommandée
+    const { recording: rec } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
     _recording = rec;
     return rec;
   } catch (e) {
+    _recording = null;
     throw new Error(`Enregistrement impossible : ${e.message}`);
   }
 }
@@ -122,16 +122,16 @@ export async function startRecording() {
 export async function stopRecordingAndTranscribe(language = 'fr-FR') {
   if (!_recording) throw new Error('Aucun enregistrement en cours');
 
+  let uri = null;
   try {
     await _recording.stopAndUnloadAsync();
-    const uri = _recording.getURI();
+    uri = _recording.getURI();
     _recording = null;
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
 
-    if (!uri) throw new Error('URI audio manquant');
+    if (!uri) throw new Error('URI audio manquant après enregistrement');
 
-    // Envoyer au backend pour transcription
     const token = await getToken();
     const formData = new FormData();
     formData.append('file', {
@@ -141,21 +141,42 @@ export async function stopRecordingAndTranscribe(language = 'fr-FR') {
     });
     formData.append('language', language);
 
-    const res = await fetch(`${API_BASE}/api/voice/transcribe`, {
-      method: 'POST',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: formData,
-    });
+    // Timeout 45s — Google STT peut être lent
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/api/voice/transcribe`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // NE PAS mettre Content-Type : React Native le gère avec le boundary
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      if (fetchErr.name === 'AbortError') {
+        throw new Error('Délai dépassé — serveur trop lent (>45s)');
+      }
+      // "Network request failed" → diagnostic précis
+      throw new Error(`Serveur inaccessible (${API_BASE}) — vérifie que le backend tourne`);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (res.status === 401) {
+      triggerLogout();
+      throw new Error('Session expirée — reconnecte-toi');
+    }
 
     if (!res.ok) {
-      const err = await res.text();
+      const err = await res.text().catch(() => `HTTP ${res.status}`);
       throw new Error(err || `HTTP ${res.status}`);
     }
 
     const data = await res.json();
-    // Retourner le texte + les métadonnées vocales pour la détection d'émotion
     return {
       text: data.text || '',
       voice_energy: data.voice_energy || 'normal',

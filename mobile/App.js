@@ -1,24 +1,41 @@
 import 'react-native-gesture-handler';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { getToken } from './src/utils/api';
+import { getToken, removeToken, isTokenValid, setLogoutCallback } from './src/utils/api';
 import LoginScreen from './src/screens/LoginScreen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { colors } from './src/utils/theme';
 
 export default function App() {
-  const [token, setToken] = useState(null);
+  const [token, setTokenState] = useState(null);
   const [checking, setChecking] = useState(true);
 
+  const logout = useCallback(() => {
+    setTokenState(null);
+  }, []);
+
   useEffect(() => {
+    // Enregistrer le callback de logout global (pour 401 dans apiFetch / voice)
+    setLogoutCallback(logout);
+
+    // Valider le token au démarrage — si expiré, vider et montrer le login
     getToken().then(t => {
-      setToken(t);
+      if (isTokenValid(t)) {
+        setTokenState(t);
+      } else {
+        removeToken();
+        setTokenState(null);
+      }
       setChecking(false);
     });
-  }, []);
+  }, [logout]);
+
+  function handleLogin(t) {
+    setTokenState(t);
+  }
 
   if (checking) {
     return (
@@ -37,7 +54,7 @@ export default function App() {
             <AppNavigator />
           </NavigationContainer>
         ) : (
-          <LoginScreen onLogin={t => setToken(t)} />
+          <LoginScreen onLogin={handleLogin} />
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
