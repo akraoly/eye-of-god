@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from api.routes import wifi_routes
+from api.routes import firmware_routes
 from api.routes import (
     chat, memory, user, system, exploit, code, knowledge, life,
     observe, soc, offensive, c2, auth, vision, autonomy, voice,
@@ -158,3 +159,6 @@ router.include_router(anonymizer_routes.router, prefix="/anonymizer", tags=["Ano
 
 # ── WiFi — Scanner / Cracking / Post-Exploit / Automation / Agent ─────────────
 router.include_router(wifi_routes.router,       prefix="/wifi",       tags=["WiFi"],               **_protected)
+
+# ── Firmware Implants — Bloc 2 Supra-Étatiques ───────────────────────────────
+router.include_router(firmware_routes.router,   prefix="/firmware",   tags=["Firmware Implants"],  **_protected)

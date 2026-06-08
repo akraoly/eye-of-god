@@ -289,6 +289,7 @@ const NAV = [
   { id: 'anonymizer',   icon: '🥷', label: 'Anonymizer'  },
   { id: 'wifi',         icon: '📶', label: 'WiFi Scan'   },
   { id: 'wifi-crack',   icon: '🔓', label: 'WiFi Crack'  },
+  { id: 'firmware',     icon: '⚡', label: 'Firmware'    },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 
