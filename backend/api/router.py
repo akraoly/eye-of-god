@@ -4,6 +4,7 @@ from api.routes import firmware_routes
 from api.routes import airgap_routes
 from api.routes import geoint_routes
 from api.routes import automation_routes
+from api.routes import quantum_routes
 from api.routes import (
     chat, memory, user, system, exploit, code, knowledge, life,
     observe, soc, offensive, c2, auth, vision, autonomy, voice,
@@ -174,3 +175,6 @@ router.include_router(geoint_routes.router,     prefix="/geoint",     tags=["OSI
 
 # ── Automation Stratégique — Bloc 7 Supra-Étatiques ─────────────────────────
 router.include_router(automation_routes.router, prefix="/automation",  tags=["Automation Stratégique"], **_protected)
+
+# ── Quantum & Cryptographie — Bloc 8 Supra-Étatiques ────────────────────────
+router.include_router(quantum_routes.router,    prefix="/quantum-crypto", tags=["Quantum & Cryptographie"], **_protected)

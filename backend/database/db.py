@@ -15,6 +15,7 @@ import database.models_zeroday      # noqa: F401 — register Zero-Day Industrie
 import database.models_airgap       # noqa: F401 — register Air-Gap Exploitation tables
 import database.models_geoint       # noqa: F401 — register OSINT Géopolitique tables
 import database.models_automation   # noqa: F401 — register Automation Stratégique tables
+import database.models_quantum      # noqa: F401 — register Quantum & Cryptographie tables
 
 os.makedirs("./data", exist_ok=True)
 
