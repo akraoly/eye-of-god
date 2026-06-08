@@ -64,6 +64,9 @@ import GeointBloc6 from './components/geoint/GeointBloc6'
 import AutomationBloc7 from './components/automation/AutomationBloc7'
 import QuantumBloc8 from './components/quantum/QuantumBloc8'
 import InfluenceBloc9 from './components/influence/InfluenceBloc9'
+import ElectronicWarfareView from './components/ew/ElectronicWarfareView'
+import SurveillanceStratView from './components/surveillance_strat/SurveillanceStratView'
+import NeutralizationView from './components/neutralization/NeutralizationView'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -170,6 +173,9 @@ function MainApp() {
           {view === 'bloc7'        && <AutomationBloc7 />}
           {view === 'bloc8'        && <QuantumBloc8 />}
           {view === 'bloc9'        && <InfluenceBloc9 />}
+          {view === 'bloc11'       && <ElectronicWarfareView />}
+          {view === 'bloc12'       && <SurveillanceStratView />}
+          {view === 'bloc13'       && <NeutralizationView />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>

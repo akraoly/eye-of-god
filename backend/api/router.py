@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends
 from api.routes import wifi_routes
+from api.routes import ew_routes
+from api.routes import surveillance_routes
+from api.routes import neutralization_routes
 from api.routes import firmware_routes
 from api.routes import airgap_routes
 from api.routes import geoint_routes
@@ -182,3 +185,12 @@ router.include_router(quantum_routes.router,    prefix="/quantum-crypto", tags=[
 
 # ── Influence Stratégique — Bloc 9 Supra-Étatiques ──────────────────────────
 router.include_router(influence_routes.router,  prefix="/influence",  tags=["Influence Stratégique"], **_protected)
+
+# ── Guerre Électronique — Bloc 11 Supra-Étatiques ────────────────────────────
+router.include_router(ew_routes.router,          prefix="/ew",         tags=["Guerre Électronique"],   **_protected)
+
+# ── Surveillance Stratégique — Bloc 12 Supra-Étatiques ───────────────────────
+router.include_router(surveillance_routes.router, prefix="/surveillance", tags=["Surveillance Stratégique"], **_protected)
+
+# ── Neutralisation — Bloc 13 Supra-Étatiques ─────────────────────────────────
+router.include_router(neutralization_routes.router, prefix="/neutralization", tags=["Neutralisation"], **_protected)
