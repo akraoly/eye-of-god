@@ -26,6 +26,36 @@ def _migrate_db():
             except Exception:
                 pass  # Colonne déjà existante
 
+        # Créer les nouvelles tables si elles n'existent pas
+        for create_sql in [
+            """CREATE TABLE IF NOT EXISTS ad_targets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_id VARCHAR(36) UNIQUE NOT NULL,
+                dc_ip VARCHAR(50) NOT NULL,
+                domain VARCHAR(255) NOT NULL,
+                hostname VARCHAR(255),
+                os_version VARCHAR(255),
+                notes TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_tested DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS cloud_targets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_id VARCHAR(36) UNIQUE NOT NULL,
+                provider VARCHAR(20) NOT NULL,
+                account_id VARCHAR(255),
+                region VARCHAR(50),
+                notes TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_tested DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
+        ]:
+            try:
+                conn.execute(sa.text(create_sql))
+                conn.commit()
+            except Exception:
+                pass
+
 
 def _ensure_admin():
     db = SessionLocal()

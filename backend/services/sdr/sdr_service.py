@@ -802,6 +802,213 @@ class SDRService:
         bladerf = bool(shutil.which("bladeRF-cli"))
         return not (hackrf or rtlsdr or bladerf)
 
+    # ── ADS-B (1090 MHz — aircraft tracking) ──────────────────────────────────
+
+    async def decode_adsb(self, duration_s: int = 30) -> dict[str, Any]:
+        """Decode ADS-B Mode S messages from aircraft at 1090 MHz."""
+        sim = self.get_simulation_mode()
+        if sim or not shutil.which("dump1090"):
+            await asyncio.sleep(min(duration_s, 2))
+            flights = [
+                {"icao": "3C4521", "callsign": "AFR447", "lat": 48.8566, "lon": 2.3522, "altitude_ft": 35000, "speed_kts": 487, "heading": 275, "squawk": "1234", "category": "Heavy"},
+                {"icao": "4B1901", "callsign": "EZY123", "lat": 48.9021, "lon": 2.5601, "altitude_ft": 12000, "speed_kts": 312, "heading": 90, "squawk": "7000", "category": "Medium"},
+                {"icao": "0A1234", "callsign": "PRIVATE", "lat": 49.0123, "lon": 2.1234, "altitude_ft": 3500, "speed_kts": 120, "heading": 180, "squawk": "7700", "category": "Light", "alert": True},
+                {"icao": "400A45", "callsign": "BAW301", "lat": 47.9876, "lon": 1.9876, "altitude_ft": 38000, "speed_kts": 501, "heading": 340, "squawk": "2457", "category": "Heavy"},
+            ]
+            return {"method": "ADS-B 1090MHz", "aircraft": flights, "count": len(flights), "duration_s": duration_s, "simulated": True}
+
+        proc = await asyncio.create_subprocess_exec(
+            "dump1090", "--raw", "--quiet",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        aircraft = {}
+        try:
+            deadline = asyncio.get_event_loop().time() + duration_s
+            while asyncio.get_event_loop().time() < deadline:
+                try:
+                    line = await asyncio.wait_for(proc.stdout.readline(), timeout=1)
+                    if not line:
+                        break
+                    msg = line.decode("ascii", errors="ignore").strip().lstrip("*").rstrip(";")
+                    if len(msg) >= 14:
+                        icao = msg[2:8].upper()
+                        aircraft[icao] = {"icao": icao, "raw": msg}
+                except asyncio.TimeoutError:
+                    pass
+        finally:
+            proc.kill()
+            await proc.communicate()
+        return {"method": "ADS-B 1090MHz", "aircraft": list(aircraft.values()), "count": len(aircraft), "simulated": False}
+
+    async def listen_adsb_live(self, callback_url: str = "") -> dict[str, Any]:
+        """Start async ADS-B listener (returns WebSocket feed info)."""
+        return {"feed_url": "ws://localhost:30006", "port": 30006, "protocol": "raw_adsb", "note": "Démarrer dump1090 manuellement: dump1090 --net"}
+
+    # ── AIS (162 MHz — vessel tracking) ───────────────────────────────────────
+
+    async def decode_ais(self, duration_s: int = 30) -> dict[str, Any]:
+        """Decode AIS VHF messages from vessels at 161.975/162.025 MHz."""
+        sim = self.get_simulation_mode()
+        if sim or not shutil.which("rtl_ais"):
+            await asyncio.sleep(min(duration_s, 2))
+            vessels = [
+                {"mmsi": "228036900", "name": "MARIE FRANCE", "callsign": "FGEX", "type": "Cargo", "lat": 43.2965, "lon": 5.3698, "speed_kts": 12.4, "heading": 95, "destination": "FRSML", "draught_m": 8.2},
+                {"mmsi": "244820500", "name": "AMSTERDAM TRADER", "callsign": "PBAM", "type": "Tanker", "lat": 43.3011, "lon": 5.3791, "speed_kts": 0.0, "heading": 270, "destination": "FRMRS", "draught_m": 11.5, "moored": True},
+                {"mmsi": "311001800", "name": "LIBERTY SPIRIT", "callsign": "C6AB5", "type": "Passenger", "lat": 43.2901, "lon": 5.3501, "speed_kts": 18.2, "heading": 220, "destination": "GBSOU"},
+            ]
+            return {"method": "AIS VHF 162MHz", "vessels": vessels, "count": len(vessels), "duration_s": duration_s, "simulated": True}
+        return {"method": "AIS", "vessels": [], "error": "rtl_ais requis", "simulated": False}
+
+    # ── Drone detection (433/868/2400 MHz) ────────────────────────────────────
+
+    async def detect_drone_signals(self, scan_duration_s: int = 20) -> dict[str, Any]:
+        """Scan for drone controller/telemetry signals (OcuSync, ExpressLRS, WiFi)."""
+        sim = self.get_simulation_mode()
+        if sim:
+            await asyncio.sleep(min(scan_duration_s, 2))
+            detected = [
+                {"protocol": "DJI OcuSync 3.0", "frequency_mhz": 2404.5, "strength_dbm": -62, "drone_model": "DJI Mini 3 Pro", "controller_mac": "AA:BB:CC:11:22:33", "telemetry_lat": 48.858, "telemetry_lon": 2.294, "altitude_m": 45},
+                {"protocol": "ExpressLRS 2.4G", "frequency_mhz": 2450.0, "strength_dbm": -71, "drone_model": "Unknown FPV", "controller_mac": None},
+                {"protocol": "Parrot ANAFI Link", "frequency_mhz": 5845.0, "strength_dbm": -68, "drone_model": "Parrot ANAFI USA", "controller_mac": "DD:EE:FF:44:55:66"},
+            ]
+            return {"detected_drones": detected, "count": len(detected), "scan_duration_s": scan_duration_s, "frequencies_scanned": ["433MHz", "868MHz", "2.4GHz", "5.8GHz"], "simulated": True}
+        return {"detected_drones": [], "error": "RTL-SDR + gqrx requis", "simulated": False}
+
+    async def hijack_dji_drone(self, target_mac: str, frequency_mhz: float = 2404.5) -> dict[str, Any]:
+        """Attempt DroneID / deauth against DJI drone (simulation only without hardware)."""
+        sim = self.get_simulation_mode()
+        if sim:
+            await asyncio.sleep(3)
+            return {
+                "target_mac": target_mac, "frequency_mhz": frequency_mhz,
+                "method": "Deauth + frequency jamming",
+                "result": "SIMULATED — drone telemetry disrupted",
+                "drone_response": "Return-to-home triggered",
+                "simulated": True,
+                "warning": "Brouillage radio illégal sans autorisation explicite ARCEP",
+            }
+        return {"error": "HackRF requis pour émission", "simulated": False}
+
+    # ── Pagers (POCSAG/FLEX at 152-160 MHz) ───────────────────────────────────
+
+    async def decode_pocsag(self, frequency_mhz: float = 153.350, duration_s: int = 60) -> dict[str, Any]:
+        """Decode POCSAG pager messages."""
+        sim = self.get_simulation_mode()
+        if sim or not shutil.which("multimon-ng"):
+            await asyncio.sleep(min(duration_s, 2))
+            messages = [
+                {"timestamp": "2026-06-08T14:23:11", "capcode": "1234567", "type": "NUMERIC", "message": "0123456789 RAPPEL"},
+                {"timestamp": "2026-06-08T14:25:33", "capcode": "7654321", "type": "ALPHA", "message": "CODE BLEU SALLE 3 - URGENCE MEDICALE"},
+                {"timestamp": "2026-06-08T14:28:07", "capcode": "9998877", "type": "ALPHA", "message": "Technicien Dupont: intervention UPS datacenter B3"},
+                {"timestamp": "2026-06-08T14:31:55", "capcode": "1111222", "type": "NUMERIC", "message": "01 44 22 33 44"},
+            ]
+            return {"protocol": "POCSAG", "frequency_mhz": frequency_mhz, "messages": messages, "count": len(messages), "simulated": True}
+
+        tmp = tempfile.mktemp(suffix=".wav")
+        await asyncio.create_subprocess_exec(
+            "rtl_fm", "-f", str(int(frequency_mhz * 1e6)), "-s", "22050", "-", "|",
+            "sox", "-r", "22050", "-t", "raw", "-e", "signed", "-b", "16", "-c", "1", "-", tmp,
+            "trim", "0", str(duration_s),
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+        )
+        proc = await asyncio.create_subprocess_exec(
+            "multimon-ng", "-t", "wav", "-a", "POCSAG512", "-a", "POCSAG1200", "-a", "POCSAG2400", tmp,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await proc.communicate()
+        messages = [{"raw": line} for line in stdout.decode().splitlines() if "POCSAG" in line]
+        return {"protocol": "POCSAG", "frequency_mhz": frequency_mhz, "messages": messages, "simulated": False}
+
+    async def decode_flex(self, frequency_mhz: float = 931.8625, duration_s: int = 60) -> dict[str, Any]:
+        """Decode FLEX pager protocol messages."""
+        sim = self.get_simulation_mode()
+        if sim:
+            await asyncio.sleep(min(duration_s, 2))
+            return {
+                "protocol": "FLEX",
+                "frequency_mhz": frequency_mhz,
+                "messages": [
+                    {"timestamp": "2026-06-08T14:35:00", "capcode": "00445522", "type": "ALPHANUMERIC", "message": "ALERTE INCENDIE BÂTIMENT A — EVACUATION IMMEDIATE"},
+                    {"timestamp": "2026-06-08T14:38:12", "capcode": "00112233", "type": "ALPHANUMERIC", "message": "Astreinte sécurité: connexion anormale détectée sur DC01"},
+                ],
+                "count": 2, "simulated": True,
+            }
+        return {"protocol": "FLEX", "messages": [], "error": "multimon-ng requis", "simulated": False}
+
+    # ── Weather Satellite (137 MHz — NOAA/Meteor) ─────────────────────────────
+
+    async def receive_weather_satellite(self, satellite: str = "NOAA-19", duration_s: int = 840) -> dict[str, Any]:
+        """Receive APT/LRPT image from weather satellite pass."""
+        sat_frequencies = {"NOAA-15": 137.620, "NOAA-18": 137.9125, "NOAA-19": 137.100, "Meteor-M2": 137.100}
+        freq = sat_frequencies.get(satellite, 137.100)
+        sim = self.get_simulation_mode()
+
+        if sim:
+            await asyncio.sleep(min(duration_s, 3))
+            out_dir = _RECORDINGS_DIR / f"satellite_{satellite}_{int(time.time())}"
+            out_dir.mkdir(exist_ok=True)
+            img_path = str(out_dir / "apt_image.png")
+            wav_path = str(out_dir / "recording.wav")
+            _SDRService_write_satellite_placeholder(img_path)
+            return {
+                "satellite": satellite, "frequency_mhz": freq,
+                "image_path": img_path, "wav_path": wav_path,
+                "image_type": "APT" if "NOAA" in satellite else "LRPT",
+                "duration_s": duration_s, "quality": "SIMULATED",
+                "simulated": True,
+            }
+
+        if not shutil.which("rtl_fm"):
+            return {"error": "rtl_fm requis", "simulated": False}
+        out_dir = _RECORDINGS_DIR / f"satellite_{satellite}_{int(time.time())}"
+        out_dir.mkdir(exist_ok=True)
+        wav_path = str(out_dir / "recording.wav")
+        proc = await asyncio.create_subprocess_exec(
+            "rtl_fm", "-f", str(int(freq * 1e6)), "-s", "60000", "-g", "42",
+            "-p", "0", "-E", "deemp", "-F", "9",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+        )
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=duration_s)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.communicate()
+        return {"satellite": satellite, "frequency_mhz": freq, "wav_path": wav_path, "simulated": False}
+
+    async def decode_acars(self, frequency_mhz: float = 129.125, duration_s: int = 60) -> dict[str, Any]:
+        """Decode ACARS aircraft data link messages at VHF."""
+        sim = self.get_simulation_mode()
+        if sim:
+            await asyncio.sleep(min(duration_s, 2))
+            return {
+                "protocol": "ACARS",
+                "frequency_mhz": frequency_mhz,
+                "messages": [
+                    {"registration": "F-GSPA", "flight": "AF447", "label": "H1", "block_id": "7", "content": "/POSN48.856,E002.352,0423,350,EDDF,0745,LFPG,0801"},
+                    {"registration": "G-EUUB", "flight": "BA3019", "label": "QK", "block_id": "2", "content": "OUT/1422 OFF/1434"},
+                    {"registration": "D-AIWS", "flight": "DLH123", "label": "SQ", "block_id": "5", "content": "WEATHER UPDATE: LFPG VIS 8000M SCT025"},
+                ],
+                "count": 3, "simulated": True,
+            }
+        return {"protocol": "ACARS", "messages": [], "error": "acarsdec requis", "simulated": False}
+
+
+def _SDRService_write_satellite_placeholder(path: str):
+    """Write a minimal placeholder PNG for satellite image."""
+    import struct, zlib
+    def _png_chunk(name, data):
+        crc = zlib.crc32(name + data)
+        return struct.pack(">I", len(data)) + name + data + struct.pack(">I", crc)
+    w, h = 64, 64
+    raw = b"".join(b"\x00" + b"\x80" * w for _ in range(h))
+    idat = zlib.compress(raw)
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n")
+        f.write(_png_chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 0, 0, 0, 0)))
+        f.write(_png_chunk(b"IDAT", idat))
+        f.write(_png_chunk(b"IEND", b""))
+
     # ── Utilities ─────────────────────────────────────────────────────────────
 
     @staticmethod

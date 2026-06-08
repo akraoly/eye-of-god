@@ -275,7 +275,12 @@ const NAV = [
   { id: 'audit-reports',icon: '📋', label: 'Audit'    },
   { id: 'rag',          icon: '🧬', label: 'RAG'      },
   { id: 'users',        icon: '👥', label: 'Users'    },
-  { id: 'settings',     icon: '⚙️', label: 'Paramètres'},
+  { id: 'ad',           icon: '🏢', label: 'Active Directory' },
+  { id: 'cloud',        icon: '☁️', label: 'Cloud Enum'  },
+  { id: 'mobile',       icon: '📱', label: 'Mobile'      },
+  { id: 'implants',     icon: '🔌', label: 'Implants HW' },
+  { id: 'printers',     icon: '🖨️', label: 'Imprimantes' },
+  { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 
 function useBackendStatus() {

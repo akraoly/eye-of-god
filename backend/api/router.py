@@ -18,7 +18,7 @@ from api.routes import (
     ble,
     # RFID
     rfid,
-    # SDR
+    # SDR (extended with ADS-B, AIS, Drones, Pagers, Satellites)
     sdr,
     # Audit Reports
     report_routes,
@@ -28,6 +28,16 @@ from api.routes import (
     rag_routes,
     # Multi-user admin
     users_admin,
+    # Active Directory Attacks
+    ad_routes,
+    # Cloud Enumeration (AWS/Azure/GCP/Firebase)
+    cloud_routes,
+    # Mobile Exploitation (Android/iOS)
+    mobile_routes,
+    # Hardware Implants (BadUSB/Ducky/Bunny/O.MG/PoisonTap/Lan Turtle)
+    hardware_routes,
+    # Printer Network Exploitation
+    printer_routes,
 )
 from core.auth.dependencies import get_current_user
 
@@ -112,3 +122,18 @@ router.include_router(rag_routes.router,     prefix="/rag",           tags=["RAG
 
 # ── Multi-user management ─────────────────────────────────────────────────────
 router.include_router(users_admin.router,    prefix="/users",         tags=["Users Admin"],     **_protected)
+
+# ── Active Directory Attacks ─────────────────────────────────────────────────
+router.include_router(ad_routes.router,      prefix="/ad",            tags=["Active Directory"], **_protected)
+
+# ── Cloud Enumeration ─────────────────────────────────────────────────────────
+router.include_router(cloud_routes.router,   prefix="/cloud",         tags=["Cloud Enum"],       **_protected)
+
+# ── Mobile Exploitation ───────────────────────────────────────────────────────
+router.include_router(mobile_routes.router,  prefix="/mobile",        tags=["Mobile"],           **_protected)
+
+# ── Hardware Implants ─────────────────────────────────────────────────────────
+router.include_router(hardware_routes.router, prefix="/hardware",     tags=["Hardware Implants"], **_protected)
+
+# ── Printer Exploitation ──────────────────────────────────────────────────────
+router.include_router(printer_routes.router, prefix="/printers",      tags=["Printer Exploit"],  **_protected)

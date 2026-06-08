@@ -1468,3 +1468,32 @@ class AegisReport(Base):
     content      = Column(Text, nullable=False)   # markdown
     stats        = Column(Text, nullable=True)    # JSON
     created_at   = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ADTarget(Base):
+    """Cible Active Directory — enregistrement de session pentest."""
+    __tablename__ = "ad_targets"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    target_id   = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    dc_ip       = Column(String(50), nullable=False)
+    domain      = Column(String(255), nullable=False)
+    hostname    = Column(String(255), nullable=True)
+    os_version  = Column(String(255), nullable=True)
+    notes       = Column(Text, nullable=True)      # JSON findings
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    last_tested = Column(DateTime, default=datetime.utcnow)
+
+
+class CloudTarget(Base):
+    """Cible Cloud — compte AWS/Azure/GCP pour énumération."""
+    __tablename__ = "cloud_targets"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    target_id   = Column(String(36), nullable=False, unique=True, default=lambda: str(_uuid.uuid4()))
+    provider    = Column(String(20), nullable=False)    # aws | azure | gcp | firebase
+    account_id  = Column(String(255), nullable=True)    # AWS account ID / Azure subscription
+    region      = Column(String(50), nullable=True)
+    notes       = Column(Text, nullable=True)           # JSON findings
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    last_tested = Column(DateTime, default=datetime.utcnow)

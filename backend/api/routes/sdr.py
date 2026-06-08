@@ -408,3 +408,124 @@ async def jam(
         frequency_mhz=req.frequency_mhz,
         duration=req.duration,
     )
+
+
+# ── ADS-B ─────────────────────────────────────────────────────────────────────
+
+class ADSBRequest(BaseModel):
+    duration_s: int = Field(30, ge=5, le=300)
+    authorization_confirmed: bool = False
+
+
+@router.post("/adsb/decode")
+async def adsb_decode(req: ADSBRequest, _user=Depends(get_current_user)):
+    """Decode ADS-B aircraft transponder messages at 1090 MHz."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="ADS-B decode nécessite authorization_confirmed=true")
+    return await sdr_service.decode_adsb(req.duration_s)
+
+
+@router.get("/adsb/live")
+async def adsb_live(_user=Depends(get_current_user)):
+    """Info pour flux ADS-B live en temps réel."""
+    return await sdr_service.listen_adsb_live()
+
+
+# ── AIS ───────────────────────────────────────────────────────────────────────
+
+class AISRequest(BaseModel):
+    duration_s: int = Field(30, ge=5, le=300)
+    authorization_confirmed: bool = False
+
+
+@router.post("/ais/decode")
+async def ais_decode(req: AISRequest, _user=Depends(get_current_user)):
+    """Decode AIS vessel tracking messages at 162 MHz."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="AIS decode nécessite authorization_confirmed=true")
+    return await sdr_service.decode_ais(req.duration_s)
+
+
+# ── Drones ────────────────────────────────────────────────────────────────────
+
+class DroneDetectRequest(BaseModel):
+    scan_duration_s: int = Field(20, ge=5, le=120)
+    authorization_confirmed: bool = False
+
+
+class DroneHijackRequest(BaseModel):
+    target_mac: str
+    frequency_mhz: float = 2404.5
+    authorization_confirmed: bool = False
+
+
+@router.post("/drones/detect")
+async def drone_detect(req: DroneDetectRequest, _user=Depends(get_current_user)):
+    """Scan for drone RF signals (OcuSync, ExpressLRS, WiFi-based)."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="Drone detection nécessite authorization_confirmed=true")
+    return await sdr_service.detect_drone_signals(req.scan_duration_s)
+
+
+@router.post("/drones/hijack")
+async def drone_hijack(req: DroneHijackRequest, _user=Depends(get_current_user)):
+    """Attempt drone deauth / frequency disruption (pentest autorisé requis)."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="Drone hijack nécessite authorization_confirmed=true")
+    return await sdr_service.hijack_dji_drone(req.target_mac, req.frequency_mhz)
+
+
+# ── Pagers ────────────────────────────────────────────────────────────────────
+
+class PagerRequest(BaseModel):
+    frequency_mhz: float = Field(153.350)
+    duration_s: int = Field(60, ge=10, le=600)
+    authorization_confirmed: bool = False
+
+
+@router.post("/pagers/pocsag")
+async def pager_pocsag(req: PagerRequest, _user=Depends(get_current_user)):
+    """Decode POCSAG pager messages."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="Décodage pagers nécessite authorization_confirmed=true")
+    return await sdr_service.decode_pocsag(req.frequency_mhz, req.duration_s)
+
+
+@router.post("/pagers/flex")
+async def pager_flex(req: PagerRequest, _user=Depends(get_current_user)):
+    """Decode FLEX pager messages."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="Décodage FLEX nécessite authorization_confirmed=true")
+    return await sdr_service.decode_flex(req.frequency_mhz, req.duration_s)
+
+
+# ── ACARS ─────────────────────────────────────────────────────────────────────
+
+class ACARSRequest(BaseModel):
+    frequency_mhz: float = Field(129.125)
+    duration_s: int = Field(60, ge=10, le=600)
+    authorization_confirmed: bool = False
+
+
+@router.post("/acars/decode")
+async def acars_decode(req: ACARSRequest, _user=Depends(get_current_user)):
+    """Decode ACARS aircraft data link messages."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="ACARS decode nécessite authorization_confirmed=true")
+    return await sdr_service.decode_acars(req.frequency_mhz, req.duration_s)
+
+
+# ── Weather Satellite ─────────────────────────────────────────────────────────
+
+class SatelliteRequest(BaseModel):
+    satellite: str = Field("NOAA-19", description="NOAA-15 | NOAA-18 | NOAA-19 | Meteor-M2")
+    duration_s: int = Field(840, ge=60, le=1200)
+    authorization_confirmed: bool = False
+
+
+@router.post("/satellite/receive")
+async def satellite_receive(req: SatelliteRequest, _user=Depends(get_current_user)):
+    """Receive APT/LRPT image from weather satellite pass."""
+    if not req.authorization_confirmed:
+        raise HTTPException(403, detail="Réception satellite nécessite authorization_confirmed=true")
+    return await sdr_service.receive_weather_satellite(req.satellite, req.duration_s)

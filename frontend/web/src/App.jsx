@@ -41,6 +41,11 @@ import MitreDashboard from './components/soc/MitreDashboard'
 import ReportDashboard from './components/reporting/ReportDashboard'
 import RAGDashboard from './components/RAGDashboard'
 import UsersManager from './components/admin/UsersManager'
+import ADServices from './components/ADServices'
+import CloudEnum from './components/CloudEnum'
+import MobileServices from './components/MobileServices'
+import HardwareImplants from './components/HardwareImplants'
+import PrinterExploit from './components/PrinterExploit'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -124,6 +129,11 @@ function MainApp() {
           {view === 'sentinel'     && <SystemMonitorView />}
           {view === 'rag'          && <RAGDashboard />}
           {view === 'users'        && <UsersManager />}
+          {view === 'ad'           && <ADServices />}
+          {view === 'cloud'        && <CloudEnum />}
+          {view === 'mobile'       && <MobileServices />}
+          {view === 'implants'     && <HardwareImplants />}
+          {view === 'printers'     && <PrinterExploit />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>
