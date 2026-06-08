@@ -5,6 +5,7 @@ from api.routes import airgap_routes
 from api.routes import geoint_routes
 from api.routes import automation_routes
 from api.routes import quantum_routes
+from api.routes import influence_routes
 from api.routes import (
     chat, memory, user, system, exploit, code, knowledge, life,
     observe, soc, offensive, c2, auth, vision, autonomy, voice,
@@ -178,3 +179,6 @@ router.include_router(automation_routes.router, prefix="/automation",  tags=["Au
 
 # ── Quantum & Cryptographie — Bloc 8 Supra-Étatiques ────────────────────────
 router.include_router(quantum_routes.router,    prefix="/quantum-crypto", tags=["Quantum & Cryptographie"], **_protected)
+
+# ── Influence Stratégique — Bloc 9 Supra-Étatiques ──────────────────────────
+router.include_router(influence_routes.router,  prefix="/influence",  tags=["Influence Stratégique"], **_protected)

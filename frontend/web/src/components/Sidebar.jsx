@@ -297,6 +297,7 @@ const NAV = [
   { id: 'bloc6',       icon: '🌍', label: 'OSINT Géo.'   },
   { id: 'bloc7',       icon: '⚙️', label: 'Automation'  },
   { id: 'bloc8',       icon: '⚛️', label: 'Quantum'     },
+  { id: 'bloc9',       icon: '🌐', label: 'Influence'   },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 
