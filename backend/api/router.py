@@ -3,6 +3,7 @@ from api.routes import wifi_routes
 from api.routes import ew_routes
 from api.routes import surveillance_routes
 from api.routes import neutralization_routes
+from api.routes import space_warfare_routes
 from api.routes import firmware_routes
 from api.routes import airgap_routes
 from api.routes import geoint_routes
@@ -194,3 +195,6 @@ router.include_router(surveillance_routes.router, prefix="/surveillance", tags=[
 
 # ── Neutralisation — Bloc 13 Supra-Étatiques ─────────────────────────────────
 router.include_router(neutralization_routes.router, prefix="/neutralization", tags=["Neutralisation"], **_protected)
+
+# ── Guerre Spatiale & Orbital — Bloc 14 Supra-Étatiques ──────────────────────
+router.include_router(space_warfare_routes.router, prefix="/space", tags=["Guerre Spatiale"], **_protected)

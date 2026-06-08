@@ -67,6 +67,7 @@ import InfluenceBloc9 from './components/influence/InfluenceBloc9'
 import ElectronicWarfareView from './components/ew/ElectronicWarfareView'
 import SurveillanceStratView from './components/surveillance_strat/SurveillanceStratView'
 import NeutralizationView from './components/neutralization/NeutralizationView'
+import SpaceWarfareView from './components/space_warfare/SpaceWarfareView'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -176,6 +177,7 @@ function MainApp() {
           {view === 'bloc11'       && <ElectronicWarfareView />}
           {view === 'bloc12'       && <SurveillanceStratView />}
           {view === 'bloc13'       && <NeutralizationView />}
+          {view === 'bloc14'       && <SpaceWarfareView />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>

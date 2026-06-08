@@ -18,6 +18,7 @@ import database.models_automation   # noqa: F401 — register Automation Straté
 import database.models_quantum      # noqa: F401 — register Quantum & Cryptographie tables
 import database.models_influence    # noqa: F401 — register Influence Stratégique tables
 import database.models_ew           # noqa: F401 — register EW/Surveillance/Neutralisation tables
+import database.models_space        # noqa: F401 — register Guerre Spatiale tables
 
 os.makedirs("./data", exist_ok=True)
 

@@ -301,6 +301,7 @@ const NAV = [
   { id: 'bloc11',      icon: '⚡', label: 'EW / Guerre Élec.' },
   { id: 'bloc12',      icon: '👁', label: 'Surveillance Strat.' },
   { id: 'bloc13',      icon: '💣', label: 'Neutralisation' },
+  { id: 'bloc14',      icon: '🚀', label: 'Guerre Spatiale' },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 
