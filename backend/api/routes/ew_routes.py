@@ -55,12 +55,15 @@ def jam_list_bands():
 
 @router.get("/jamming/scan")
 def jam_scan_spectrum(center_hz: float = 433_000_000, span_hz: float = 50_000_000):
-    return _jam.scan_spectrum(center_hz, span_hz)
+    start = (center_hz - span_hz / 2) / 1e6
+    end   = (center_hz + span_hz / 2) / 1e6
+    return _jam.scan_spectrum(start, end)
 
 @router.post("/jamming/frequency")
 def jam_frequency(req: JamFreqReq):
     _auth(req.authorization_confirmed)
-    return _jam.jam_frequency(req.frequency_hz, req.power_dbm, req.waveform, req.duration_s)
+    freq_mhz = req.frequency_hz / 1e6
+    return _jam.jam_frequency(freq_mhz, power=req.power_dbm, waveform=req.waveform)
 
 @router.post("/jamming/band")
 def jam_band(req: JamBandReq):
@@ -70,7 +73,7 @@ def jam_band(req: JamBandReq):
 @router.post("/jamming/sweep")
 def jam_sweep(req: SweepReq):
     _auth(req.authorization_confirmed)
-    return _jam.sweep_jam(req.start_hz, req.stop_hz, req.step_hz, req.dwell_ms)
+    return _jam.sweep_jam(req.start_hz / 1e6, req.stop_hz / 1e6, req.step_hz / 1e6, req.dwell_ms / 1000)
 
 @router.delete("/jamming/{jam_id}")
 def jam_stop(jam_id: str):
@@ -97,8 +100,8 @@ class DroneHijackReq(BaseModel):
 
 
 @router.get("/drone/detect")
-def drone_detect(observer_lat: float = 48.85, observer_lon: float = 2.35, radius_m: float = 2000):
-    return _drone.detect_drones(observer_lat, observer_lon, radius_m)
+def drone_detect(radius_m: float = 2000):
+    return _drone.detect_drones(radius_m)
 
 @router.get("/drone/contacts")
 def drone_contacts():
@@ -239,6 +242,10 @@ def radar_types():
 def radar_jam_techniques():
     return _radar.list_jamming_techniques()
 
+@router.get("/radar/threat-assessment")
+def radar_threat():
+    return _radar.threat_assessment()
+
 @router.get("/radar/{radar_id}")
 def radar_classify(radar_id: str):
     return _radar.classify_radar(radar_id)
@@ -254,10 +261,6 @@ def radar_deception_jam(req: DeceptionJamReq):
 @router.post("/radar/false-targets")
 def radar_false_targets(req: FalseTargetReq):
     return _radar.false_target_generation(req.radar_id, req.num_targets)
-
-@router.get("/radar/threat-assessment")
-def radar_threat():
-    return _radar.threat_assessment()
 
 
 # ── Cellular ──────────────────────────────────────────────────────────────────

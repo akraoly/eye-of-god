@@ -1,7 +1,7 @@
 """DB models — Blocs 11/12/13: EW, Surveillance Stratégique, Neutralisation"""
 from sqlalchemy import Column, Integer, String, Float, Boolean, Text, DateTime
 from sqlalchemy.sql import func
-from database.base import Base
+from database.db import Base
 
 
 class EWJammingSession(Base):
