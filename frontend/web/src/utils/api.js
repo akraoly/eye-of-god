@@ -1,4 +1,5 @@
 import { apiFetch } from './auth'
+export { apiFetch }
 
 export async function sendMessage(message, sessionId = 'default', vocalInput = false, voiceEnergy = 'normal', voiceDuration = 0) {
   const res = await apiFetch('/chat/', {
