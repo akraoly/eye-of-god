@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from api.routes import wifi_routes
 from api.routes import firmware_routes
 from api.routes import airgap_routes
+from api.routes import geoint_routes
 from api.routes import (
     chat, memory, user, system, exploit, code, knowledge, life,
     observe, soc, offensive, c2, auth, vision, autonomy, voice,
@@ -166,3 +167,6 @@ router.include_router(firmware_routes.router,   prefix="/firmware",   tags=["Fir
 
 # ── Air-Gap Exploitation — Bloc 4 Supra-Étatiques ────────────────────────────
 router.include_router(airgap_routes.router,     prefix="/airgap",     tags=["Air-Gap Exploitation"], **_protected)
+
+# ── OSINT Géopolitique — Bloc 6 Supra-Étatiques ──────────────────────────────
+router.include_router(geoint_routes.router,     prefix="/geoint",     tags=["OSINT Géopolitique"],   **_protected)

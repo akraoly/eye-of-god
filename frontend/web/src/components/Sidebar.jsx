@@ -294,6 +294,7 @@ const NAV = [
   { id: 'bloc3',       icon: '🔬', label: 'Fuzzing Ind.' },
   { id: 'bloc4',       icon: '🏔️', label: 'Air-Gap'     },
   { id: 'bloc5',       icon: '🎭', label: 'Deepfake Vid.' },
+  { id: 'bloc6',       icon: '🌍', label: 'OSINT Géo.'   },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 

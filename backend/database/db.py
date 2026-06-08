@@ -13,6 +13,7 @@ import database.models_firmware      # noqa: F401 — register Firmware Implant 
 import database.models_mobile_zero  # noqa: F401 — register Mobile Zero-Click tables
 import database.models_zeroday      # noqa: F401 — register Zero-Day Industriel tables
 import database.models_airgap       # noqa: F401 — register Air-Gap Exploitation tables
+import database.models_geoint       # noqa: F401 — register OSINT Géopolitique tables
 
 os.makedirs("./data", exist_ok=True)
 
