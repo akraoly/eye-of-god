@@ -11,6 +11,7 @@ import database.models_reporting # noqa: F401 — register Audit Report tables
 import database.models_wifi      # noqa: F401 — register WiFi tables
 import database.models_firmware      # noqa: F401 — register Firmware Implant tables
 import database.models_mobile_zero  # noqa: F401 — register Mobile Zero-Click tables
+import database.models_zeroday      # noqa: F401 — register Zero-Day Industriel tables
 
 os.makedirs("./data", exist_ok=True)
 

@@ -57,6 +57,7 @@ import WifiDashboard from './components/wifi/WifiDashboard'
 import WifiCrackPanel from './components/wifi/WifiCrackPanel'
 import FirmwareImplants from './components/firmware/FirmwareImplants'
 import MobileZeroClick from './components/mobile/MobileZeroClick'
+import ZeroDayBloc3 from './components/zeroday/ZeroDayBloc3'
 import LoginPage from './pages/Login'
 import { auth } from './utils/auth'
 import './App.css'
@@ -156,6 +157,7 @@ function MainApp() {
           {view === 'wifi-crack'   && <WifiCrackPanel />}
           {view === 'firmware'     && <FirmwareImplants />}
           {view === 'zero-click'   && <MobileZeroClick />}
+          {view === 'bloc3'        && <ZeroDayBloc3 />}
           {view === 'settings'     && <SettingsView />}
         </main>
       </div>

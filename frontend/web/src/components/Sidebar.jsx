@@ -291,6 +291,7 @@ const NAV = [
   { id: 'wifi-crack',   icon: '🔓', label: 'WiFi Crack'  },
   { id: 'firmware',     icon: '⚡', label: 'Firmware'    },
   { id: 'zero-click',  icon: '📱', label: 'Zero-Click'  },
+  { id: 'bloc3',       icon: '🔬', label: 'Fuzzing Ind.' },
   { id: 'settings',     icon: '⚙️', label: 'Paramètres' },
 ]
 
