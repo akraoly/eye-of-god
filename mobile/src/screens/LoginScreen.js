@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
-import { API_BASE, setToken } from '../utils/api';
+import { getApiBase, setApiBase, setToken } from '../utils/api';
 import { colors, fonts } from '../utils/theme';
 
 export default function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [serverUrl, setServerUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showServer, setShowServer] = useState(false);
+
+  useEffect(() => {
+    getApiBase().then(url => setServerUrl(url));
+  }, []);
 
   async function handleLogin() {
     if (!username || !password) {
@@ -18,7 +24,11 @@ export default function LoginScreen({ onLogin }) {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      // Sauvegarder l'URL serveur si modifiée
+      const base = serverUrl.trim().replace(/\/$/, '') || (await getApiBase());
+      await setApiBase(base);
+
+      const res = await fetch(`${base}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -68,6 +78,33 @@ export default function LoginScreen({ onLogin }) {
             placeholderTextColor={colors.textDim}
             secureTextEntry
           />
+
+          {/* Champ serveur configurable */}
+          <TouchableOpacity onPress={() => setShowServer(v => !v)} style={s.serverToggle}>
+            <Text style={s.serverToggleText}>
+              {showServer ? '▲ Masquer le serveur' : '⚙️ Configurer le serveur'}
+            </Text>
+          </TouchableOpacity>
+          {showServer && (
+            <>
+              <Text style={s.label}>URL SERVEUR</Text>
+              <TextInput
+                style={s.input}
+                value={serverUrl}
+                onChangeText={setServerUrl}
+                placeholder="http://192.168.x.x:8001"
+                placeholderTextColor={colors.textDim}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+              <Text style={s.hint}>
+                Modifie l'IP selon ton réseau WiFi actuel.{'\n'}
+                Exemple hôtel : http://192.168.1.100:8001
+              </Text>
+            </>
+          )}
+
           <TouchableOpacity
             style={[s.btn, loading && s.btnDisabled]}
             onPress={handleLogin}
@@ -106,6 +143,9 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'monospace',
   },
+  serverToggle: { marginTop: 12, marginBottom: 4 },
+  serverToggleText: { color: colors.accent, fontSize: 12, opacity: 0.8 },
+  hint: { color: colors.textDim, fontSize: 11, lineHeight: 16, marginTop: 4 },
   btn: {
     backgroundColor: colors.accent,
     borderRadius: 8,

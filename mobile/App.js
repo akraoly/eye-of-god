@@ -4,7 +4,7 @@ import { StatusBar, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { getToken, removeToken, isTokenValid, setLogoutCallback } from './src/utils/api';
+import { getToken, removeToken, isTokenValid, setLogoutCallback, initApiBase } from './src/utils/api';
 import LoginScreen from './src/screens/LoginScreen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { colors } from './src/utils/theme';
@@ -20,6 +20,9 @@ export default function App() {
   useEffect(() => {
     // Enregistrer le callback de logout global (pour 401 dans apiFetch / voice)
     setLogoutCallback(logout);
+
+    // Charger l'URL serveur sauvegardée (WiFi hôtel, hotspot, etc.)
+    initApiBase();
 
     // Valider le token au démarrage — si expiré, vider et montrer le login
     getToken().then(t => {

@@ -74,11 +74,24 @@ for i in $(seq 1 15); do
 done
 
 # ── Résumé ────────────────────────────────────────────────────────────────────
+# Détecter toutes les IPs locales (WiFi, hotspot, etc.)
+LOCAL_IPS=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E "^(192\.168|10\.|172\.)" | head -5)
+
 echo ""
 echo -e "${G}${B}  🚀 L'Œil de Dieu est en ligne !${N}"
 echo -e "  ${B}→ Application :${N}  http://localhost:3001"
 echo -e "  ${B}→ API docs    :${N}  http://localhost:8001/docs"
 echo -e "  ${B}→ Login       :${N}  admin / oeil2026"
+echo ""
+echo -e "  ${C}${B}📱 Mobile Expo Go — URL serveur selon le réseau :${N}"
+if [ -n "$LOCAL_IPS" ]; then
+  while IFS= read -r ip; do
+    echo -e "     ${G}http://$ip:8001${N}"
+  done <<< "$LOCAL_IPS"
+else
+  echo -e "     ${Y}⚠️  Aucune IP locale détectée (vérifie ta connexion réseau)${N}"
+fi
+echo -e "  ${Y}→ Change l'URL dans l'app mobile : écran login → ⚙️ Configurer le serveur${N}"
 echo ""
 echo -e "  Logs : $LOG_BACK"
 echo -e "         $LOG_FRONT"
