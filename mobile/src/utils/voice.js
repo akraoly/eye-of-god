@@ -3,7 +3,7 @@
  */
 import * as Speech from 'expo-speech';
 import { Audio } from 'expo-av';
-import { API_BASE, getToken, triggerLogout } from './api';
+import { getApiBase, getToken, triggerLogout } from './api';
 
 // ─── Nettoyage texte avant TTS ────────────────────────────────────────────────
 function cleanForTTS(raw) {
@@ -37,13 +37,10 @@ function cleanForTTS(raw) {
     .slice(0, 3000);
 }
 
-// ─── TTS : parler un texte avec une voix d'homme ───────────────────────────
-
+// ─── TTS : parler un texte avec une voix d'homme ──────────────────────────────
 export async function speak(text, opts = {}) {
   if (!text?.trim()) return;
-
   Speech.stop();
-
   const options = {
     language: opts.language || 'fr-FR',
     pitch: opts.pitch ?? 0.01,
@@ -53,7 +50,6 @@ export async function speak(text, opts = {}) {
     onError: opts.onError,
     ...opts,
   };
-
   try {
     const voices = await Speech.getAvailableVoicesAsync?.() || [];
     const male = voices.find(v =>
@@ -62,59 +58,48 @@ export async function speak(text, opts = {}) {
     );
     if (male) options.voice = male.identifier;
   } catch (_) {}
-
   Speech.speak(cleanForTTS(text), options);
 }
 
-export function stopSpeaking() {
-  Speech.stop();
-}
+export function stopSpeaking() { Speech.stop(); }
 
 export async function isSpeaking() {
   return Speech.isSpeakingAsync?.() ?? false;
 }
 
-// ─── STT : enregistrer et transcrire via le backend ────────────────────────
-
+// ─── STT : enregistrer et transcrire via le backend ───────────────────────────
 let _recording = null;
 
-// Options d'enregistrement compatibles expo-av v16
-const RECORDING_OPTIONS = {
-  android: {
-    extension: '.m4a',
-    outputFormat: Audio.AndroidOutputFormat?.MPEG_4 ?? 2,
-    audioEncoder: Audio.AndroidAudioEncoder?.AAC ?? 3,
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    bitRate: 128000,
-  },
-  ios: {
-    extension: '.m4a',
-    outputFormat: Audio.IOSOutputFormat?.MPEG4AAC ?? 'aac ',
-    audioQuality: Audio.IOSAudioQuality?.HIGH ?? 0x60,
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    bitRate: 128000,
-  },
-  web: {},
-};
-
 export async function startRecording() {
+  // Nettoyer tout enregistrement précédent bloqué
+  if (_recording) {
+    try { await _recording.stopAndUnloadAsync(); } catch (_) {}
+    _recording = null;
+  }
+
   try {
     const { status } = await Audio.requestPermissionsAsync();
     if (status !== 'granted') throw new Error('Permission micro refusée');
 
+    // Configurer la session audio iOS AVANT de créer l'enregistreur
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
     });
 
-    // expo-av v16 : API createAsync recommandée
-    const { recording: rec } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
+    // Délai requis : iOS a besoin de 150ms pour activer la session audio
+    await new Promise(r => setTimeout(r, 150));
+
+    // Utiliser le preset HIGH_QUALITY — fiable sur iOS et Android
+    const { recording: rec } = await Audio.Recording.createAsync(
+      Audio.RecordingOptionsPresets.HIGH_QUALITY
+    );
     _recording = rec;
     return rec;
   } catch (e) {
     _recording = null;
+    // Remettre la session audio en mode normal en cas d'erreur
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
     throw new Error(`Enregistrement impossible : ${e.message}`);
   }
 }
@@ -132,6 +117,7 @@ export async function stopRecordingAndTranscribe(language = 'fr-FR') {
 
     if (!uri) throw new Error('URI audio manquant après enregistrement');
 
+    const base = await getApiBase();
     const token = await getToken();
     const formData = new FormData();
     formData.append('file', {
@@ -141,17 +127,16 @@ export async function stopRecordingAndTranscribe(language = 'fr-FR') {
     });
     formData.append('language', language);
 
-    // Timeout 45s — Google STT peut être lent
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     let res;
     try {
-      res = await fetch(`${API_BASE}/api/voice/transcribe`, {
+      res = await fetch(`${base}/api/voice/transcribe`, {
         method: 'POST',
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          // NE PAS mettre Content-Type : React Native le gère avec le boundary
+          // NE PAS mettre Content-Type : React Native gère le boundary multipart
         },
         body: formData,
         signal: controller.signal,
@@ -160,8 +145,7 @@ export async function stopRecordingAndTranscribe(language = 'fr-FR') {
       if (fetchErr.name === 'AbortError') {
         throw new Error('Délai dépassé — serveur trop lent (>45s)');
       }
-      // "Network request failed" → diagnostic précis
-      throw new Error(`Serveur inaccessible (${API_BASE}) — vérifie que le backend tourne`);
+      throw new Error(`Serveur inaccessible (${base}) — vérifie que le backend tourne`);
     } finally {
       clearTimeout(timeoutId);
     }
