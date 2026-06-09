@@ -31,21 +31,15 @@ def _get_ffmpeg():
 
 
 def _to_pcm_wav(src_path: str, dst_path: str, ffmpeg_bin: str) -> None:
-    """
-    Convertit vers PCM WAV 16kHz mono avec :
-    - normalisation du volume (afftdn = réduction bruit, loudnorm = volume stable)
-    - filtrage passe-haut 80Hz (supprime grondements basse fréquence)
-    - normalisation loudness pour STT optimal
-    """
+    """Conversion rapide vers PCM WAV 16kHz mono — filtre léger uniquement."""
     result = subprocess.run(
         [ffmpeg_bin, "-y", "-i", src_path,
          "-ar", "16000", "-ac", "1",
-         "-af", "highpass=f=80,afftdn=nf=-25,loudnorm=I=-16:LRA=11:TP=-1.5",
+         "-af", "highpass=f=80",   # filtre léger (~10ms) — supprime grondements
          "-f", "wav", dst_path],
         capture_output=True,
     )
     if result.returncode != 0:
-        # Fallback sans filtres si le codec ne les supporte pas
         result = subprocess.run(
             [ffmpeg_bin, "-y", "-i", src_path,
              "-ar", "16000", "-ac", "1", "-f", "wav", dst_path],
@@ -53,6 +47,31 @@ def _to_pcm_wav(src_path: str, dst_path: str, ffmpeg_bin: str) -> None:
         )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.decode(errors="replace")[-400:])
+
+
+def _wav_energy(wav_path: str):
+    """Calcule RMS et durée depuis le WAV en Python pur — pas de 2ème processus."""
+    import wave, struct, math
+    try:
+        with wave.open(wav_path, 'rb') as w:
+            frames = w.getnframes()
+            rate   = w.getframerate()
+            raw    = w.readframes(frames)
+        duration = frames / rate
+        samples  = struct.unpack('<' + 'h' * (len(raw) // 2), raw)
+        if not samples:
+            return "normal", 0.0
+        rms_linear = math.sqrt(sum(s * s for s in samples) / len(samples))
+        rms_db = 20 * math.log10(max(rms_linear, 1) / 32768)
+        if rms_db > -15:
+            energy = "intense"
+        elif rms_db > -28:
+            energy = "normal"
+        else:
+            energy = "calme"
+        return energy, round(duration, 2)
+    except Exception:
+        return "normal", 0.0
 
 
 @router.post("/transcribe")
@@ -90,33 +109,8 @@ async def transcribe_audio(
             # Pas de ffmpeg : espère que le fichier est déjà PCM WAV
             wav_path = src_path
 
-        # Étape 2 : analyse de l'énergie vocale (ton, urgence, émotion)
-        voice_energy = "normal"
-        voice_duration = 0.0
-        if ffmpeg_bin:
-            try:
-                stats = subprocess.run(
-                    [ffmpeg_bin, "-i", wav_path, "-af", "astats=metadata=1:reset=1", "-f", "null", "-"],
-                    capture_output=True,
-                )
-                stderr = stats.stderr.decode(errors="replace")
-                # Extraire durée et volume RMS
-                import re as _re
-                dur_m = _re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", stderr)
-                rms_m = _re.search(r"RMS level dB:\s*([-\d.]+)", stderr)
-                if dur_m:
-                    h, m, s = int(dur_m.group(1)), int(dur_m.group(2)), float(dur_m.group(3))
-                    voice_duration = h * 3600 + m * 60 + s
-                if rms_m:
-                    rms = float(rms_m.group(1))
-                    if rms > -15:
-                        voice_energy = "intense"    # voix forte, urgente
-                    elif rms > -25:
-                        voice_energy = "normal"
-                    else:
-                        voice_energy = "calme"      # voix douce, posée
-            except Exception:
-                pass
+        # Étape 2 : énergie vocale via Python pur (pas de 2ème process ffmpeg)
+        voice_energy, voice_duration = _wav_energy(wav_path)
 
         # Étape 3 : reconnaissance vocale
         recognizer = sr.Recognizer()

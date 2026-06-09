@@ -90,10 +90,23 @@ export async function startRecording() {
     // Délai requis : iOS a besoin de 150ms pour activer la session audio
     await new Promise(r => setTimeout(r, 150));
 
-    // Utiliser le preset HIGH_QUALITY — fiable sur iOS et Android
-    const { recording: rec } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY
-    );
+    // Options optimisées STT : 16kHz mono → fichier 4x plus petit = upload plus rapide
+    const sttOptions = {
+      ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      android: {
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY.android,
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        bitRate: 32000,
+      },
+      ios: {
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        bitRate: 32000,
+      },
+    };
+    const { recording: rec } = await Audio.Recording.createAsync(sttOptions);
     _recording = rec;
     return rec;
   } catch (e) {
