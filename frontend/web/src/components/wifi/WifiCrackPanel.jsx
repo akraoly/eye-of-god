@@ -134,7 +134,7 @@ export default function WifiCrackPanel() {
                   </div>
                 ))}
               </div>
-              <BtnRun label="🎯 Capturer Handshake" onClick={() => post('/api/wifi/crack/handshake', hsForm)} />
+              <BtnRun label="🎯 Capturer Handshake" onClick={() => post('/wifi/crack/handshake', hsForm)} />
               {handshakes.length > 0 && (
                 <div style={{ marginTop: 16 }}>
                   <div style={sectionTitle}>Handshakes capturés</div>
@@ -166,7 +166,7 @@ export default function WifiCrackPanel() {
                   <div key={k} style={fieldStyle}><label style={labelStyle}>{l}</label><input style={inputStyle} value={pmForm[k]} onChange={e => setPmForm(f => ({ ...f, [k]: e.target.value }))} /></div>
                 ))}
               </div>
-              <BtnRun label="📡 Capturer PMKID" onClick={() => post('/api/wifi/crack/pmkid', pmForm)} />
+              <BtnRun label="📡 Capturer PMKID" onClick={() => post('/wifi/crack/pmkid', pmForm)} />
               <div style={{ marginTop: 16 }}>
                 <div style={sectionTitle}>Lancer le cracking sur le PMKID</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -174,7 +174,7 @@ export default function WifiCrackPanel() {
                     <div key={k} style={fieldStyle}><label style={labelStyle}>{l}</label><input style={inputStyle} value={crackForm[k]} onChange={e => setCrackForm(f => ({ ...f, [k]: e.target.value }))} /></div>
                   ))}
                 </div>
-                <BtnRun label="🔨 Hashcat" color="#ff8800" onClick={() => post('/api/wifi/crack/start', crackForm)} />
+                <BtnRun label="🔨 Hashcat" color="#ff8800" onClick={() => post('/wifi/crack/start', crackForm)} />
               </div>
             </div>
           )}
@@ -190,7 +190,7 @@ export default function WifiCrackPanel() {
                   <div key={k} style={fieldStyle}><label style={labelStyle}>{l}</label><input style={inputStyle} value={wpsForm[k]} onChange={e => setWpsForm(f => ({ ...f, [k]: e.target.value }))} /></div>
                 ))}
               </div>
-              <BtnRun label="💥 Pixie Dust" color="#ff4444" onClick={() => post('/api/wifi/wps/attack', wpsForm)} />
+              <BtnRun label="💥 Pixie Dust" color="#ff4444" onClick={() => post('/wifi/wps/attack', wpsForm)} />
               {jobs.filter(j => j.method === 'wps_pixiedust').length > 0 && (
                 <div style={{ marginTop: 16 }}>
                   <div style={sectionTitle}>Historique WPS</div>
@@ -218,7 +218,7 @@ export default function WifiCrackPanel() {
                   <div key={k} style={fieldStyle}><label style={labelStyle}>{l}</label><input style={inputStyle} value={etForm[k]} onChange={e => setEtForm(f => ({ ...f, [k]: e.target.value }))} /></div>
                 ))}
               </div>
-              <BtnRun label="🎭 Démarrer Evil Twin" color="#ff4444" onClick={() => post('/api/wifi/eviltwin/start', etForm)} />
+              <BtnRun label="🎭 Démarrer Evil Twin" color="#ff4444" onClick={() => post('/wifi/eviltwin/start', etForm)} />
             </div>
           )}
 
@@ -232,7 +232,7 @@ export default function WifiCrackPanel() {
                   <div key={k} style={fieldStyle}><label style={labelStyle}>{l}</label><input style={inputStyle} type={k === 'passphrase' ? 'password' : 'text'} value={connForm[k]} onChange={e => setConnForm(f => ({ ...f, [k]: e.target.value }))} /></div>
                 ))}
               </div>
-              <BtnRun label="🔗 Connecter" color="#44ff88" onClick={() => post('/api/wifi/connect', connForm)} />
+              <BtnRun label="🔗 Connecter" color="#44ff88" onClick={() => post('/wifi/connect', connForm)} />
               {conns.length > 0 && (
                 <div style={{ marginTop: 16 }}>
                   <div style={sectionTitle}>Historique connexions</div>
@@ -256,7 +256,7 @@ export default function WifiCrackPanel() {
               <p style={fDesc}>Scanner le réseau local après connexion — découverte d'hôtes, ports, SMB.</p>
               <div style={fieldStyle}><label style={labelStyle}>Gateway (ex: 192.168.1.1)</label><input style={inputStyle} value={postForm.gateway} onChange={e => setPostForm(f => ({ ...f, gateway: e.target.value }))} /></div>
               <BtnRun label="🔍 Scanner réseau (ARP)" onClick={async () => {
-                const d = await post(`/api/wifi/connected/scan?gateway=${postForm.gateway}`, {})
+                const d = await post(`/wifi/connected/scan?gateway=${postForm.gateway}`, {})
                 if (d?.hosts) setResult(d)
               }} />
               {result?.hosts && (
@@ -268,8 +268,8 @@ export default function WifiCrackPanel() {
                       <span style={{ color: '#888', fontSize: 11 }}>{h.hostname || ''}</span>
                       <span style={{ color: '#666', fontSize: 11 }}>{h.vendor || ''}</span>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button style={smallBtn} onClick={() => { setPostForm(f => ({ ...f, ip: h.ip })); post(`/api/wifi/connected/host/${h.ip}/scan`, {}) }}>Ports</button>
-                        <button style={smallBtn} onClick={() => post(`/api/wifi/connected/host/${h.ip}/smb`, {})}>SMB</button>
+                        <button style={smallBtn} onClick={() => { setPostForm(f => ({ ...f, ip: h.ip })); post(`/wifi/connected/host/${h.ip}/scan`, {}) }}>Ports</button>
+                        <button style={smallBtn} onClick={() => post(`/wifi/connected/host/${h.ip}/smb`, {})}>SMB</button>
                       </div>
                     </div>
                   ))}
@@ -288,7 +288,7 @@ export default function WifiCrackPanel() {
                   <div key={k} style={fieldStyle}><label style={labelStyle}>{l}</label><input style={inputStyle} value={autoForm[k]} onChange={e => setAutoForm(f => ({ ...f, [k]: e.target.value }))} /></div>
                 ))}
               </div>
-              <BtnRun label="🚀 Lancer workflow" color="#ff8800" onClick={() => post('/api/wifi/automation/run', autoForm)} />
+              <BtnRun label="🚀 Lancer workflow" color="#ff8800" onClick={() => post('/wifi/automation/run', autoForm)} />
               {result?.log && (
                 <div style={{ marginTop: 12, maxHeight: 300, overflowY: 'auto', background: '#0a0a0a', padding: 8, borderRadius: 4 }}>
                   {result.log.map((l, i) => (

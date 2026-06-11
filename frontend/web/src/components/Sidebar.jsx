@@ -287,6 +287,7 @@ const NAV = [
   { id: 'mesh',         icon: '📻', label: 'Mesh Radio'  },
   { id: 'stego',        icon: '🕵️', label: 'Stéganogr.'  },
   { id: 'anonymizer',   icon: '🥷', label: 'Anonymizer'  },
+  { id: 'wifi-connect', icon: '📲', label: 'WiFi Rés.'   },
   { id: 'wifi',         icon: '📶', label: 'WiFi Scan'   },
   { id: 'wifi-crack',   icon: '🔓', label: 'WiFi Crack'  },
   { id: 'firmware',     icon: '⚡', label: 'Firmware'    },

@@ -55,6 +55,7 @@ import Steganography from './components/Steganography'
 import AnonymizerControl from './components/AnonymizerControl'
 import WifiDashboard from './components/wifi/WifiDashboard'
 import WifiCrackPanel from './components/wifi/WifiCrackPanel'
+import WifiSelector from './components/wifi/WifiSelector'
 import FirmwareImplants from './components/firmware/FirmwareImplants'
 import MobileZeroClick from './components/mobile/MobileZeroClick'
 import ZeroDayBloc3 from './components/zeroday/ZeroDayBloc3'
@@ -165,6 +166,7 @@ function MainApp() {
           {view === 'anonymizer'   && <AnonymizerControl />}
           {view === 'wifi'         && <WifiDashboard />}
           {view === 'wifi-crack'   && <WifiCrackPanel />}
+          {view === 'wifi-connect' && <WifiSelector />}
           {view === 'firmware'     && <FirmwareImplants />}
           {view === 'zero-click'   && <MobileZeroClick />}
           {view === 'bloc3'        && <ZeroDayBloc3 />}

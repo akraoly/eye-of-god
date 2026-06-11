@@ -1,11 +1,14 @@
 """
-Routes /api/wifi — Scanner, Cracking, Post-Exploit, Automation, Agent.
-30+ routes couvrant toutes les capacités WiFi.
+Routes /api/wifi — Scanner, Cracking, Post-Exploit, Automation, Agent, System WiFi.
+35+ routes couvrant toutes les capacités WiFi.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import shutil
+import subprocess
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -103,6 +106,10 @@ class AutomationRequest(BaseModel):
 class AgentRequest(BaseModel):
     message: str
     history: Optional[List[Dict]] = None
+
+class SystemConnectRequest(BaseModel):
+    ssid: str
+    password: str = ""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -600,3 +607,222 @@ def _conn_to_dict(r: WifiConnection) -> Dict:
         "dns": r.dns, "status": r.status, "hosts_found": r.hosts_found,
         "connected_at": str(r.connected_at) if r.connected_at else None,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 13. SYSTÈME WIFI — style iPhone/PC (nmcli)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _nmcli_available() -> bool:
+    return shutil.which("nmcli") is not None
+
+
+def _has_wifi_hardware() -> bool:
+    """Vérifie si une interface WiFi est disponible."""
+    try:
+        r = subprocess.run(["nmcli", "-g", "WIFI-HW", "general", "status"],
+                           capture_output=True, text=True, timeout=5)
+        return "enabled" in r.stdout.lower() or "missing" not in r.stdout.lower()
+    except Exception:
+        return False
+
+
+def _get_server_ips() -> List[Dict]:
+    """Retourne les IPs locales du serveur sur chaque interface."""
+    ips = []
+    try:
+        r = subprocess.run(["ip", "-o", "addr", "show"], capture_output=True, text=True, timeout=5)
+        for line in r.stdout.strip().splitlines():
+            parts = line.split()
+            if len(parts) < 4:
+                continue
+            iface = parts[1]
+            addr_full = parts[3]  # e.g. 192.168.1.5/24
+            addr = addr_full.split("/")[0]
+            if addr.startswith("127.") or addr == "::1":
+                continue
+            family = parts[2]  # inet or inet6
+            if family == "inet":
+                ips.append({"iface": iface, "ip": addr, "url_backend": f"http://{addr}:8001", "url_frontend": f"http://{addr}:3001"})
+    except Exception as e:
+        logger.warning("get_server_ips failed: %s", e)
+    return ips
+
+
+def _parse_available_networks() -> List[Dict]:
+    """Retourne les réseaux WiFi visibles via nmcli device wifi list."""
+    try:
+        # nmcli -t -e yes → colons in values escaped as \:
+        # We split on unescaped colons then unescape each field
+        r = subprocess.run(
+            ["nmcli", "-t", "-e", "yes", "-f",
+             "SSID,BSSID,SIGNAL,SECURITY,ACTIVE,CHAN,FREQ",
+             "device", "wifi", "list", "--rescan", "auto"],
+            capture_output=True, text=True, timeout=25,
+        )
+        networks: List[Dict] = []
+        seen: set = set()
+        for line in r.stdout.strip().splitlines():
+            # Split on unescaped colons
+            parts = re.split(r'(?<!\\):', line)
+            unescape = lambda s: s.replace('\\:', ':')
+            if len(parts) < 7:
+                continue
+            ssid     = unescape(parts[0])
+            bssid    = unescape(parts[1])
+            signal_s = parts[2]
+            security = unescape(parts[3])
+            active   = parts[4].strip() == "yes"
+            channel  = parts[5]
+            freq     = unescape(parts[6]) if len(parts) > 6 else ""
+
+            try:
+                signal = int(signal_s)
+            except ValueError:
+                signal = 0
+
+            if bssid in seen or len(bssid) != 17:
+                continue
+            seen.add(bssid)
+            bars = 4 if signal >= 80 else 3 if signal >= 60 else 2 if signal >= 40 else 1
+            networks.append({
+                "ssid":     ssid,
+                "bssid":    bssid,
+                "signal":   signal,
+                "security": security.strip() or "Open",
+                "secured":  bool(security.strip() and security.strip() != "--"),
+                "active":   active,
+                "channel":  channel,
+                "freq":     freq,
+                "bars":     bars,
+            })
+        networks.sort(key=lambda x: (-int(x["active"]), -x["signal"]))
+        return networks
+    except Exception as e:
+        logger.warning("nmcli available failed: %s", e)
+        return []
+
+
+def _get_system_wifi_status() -> Dict:
+    """Retourne la connexion WiFi active via nmcli + IPs serveur."""
+    server_ips = _get_server_ips()
+    has_wifi_hw = _has_wifi_hardware()
+
+    if not _nmcli_available():
+        return {"connected": False, "error": "nmcli non disponible", "server_ips": server_ips, "has_wifi_hw": False}
+
+    try:
+        r = subprocess.run(
+            ["nmcli", "-t", "-e", "yes", "-f", "NAME,TYPE,DEVICE,STATE",
+             "connection", "show", "--active"],
+            capture_output=True, text=True, timeout=5,
+        )
+        ssid = device = None
+        for line in r.stdout.strip().splitlines():
+            parts = re.split(r'(?<!\\):', line)
+            if len(parts) >= 4 and "wifi" in parts[1].lower() and "activated" in parts[3].lower():
+                ssid   = parts[0].replace('\\:', ':')
+                device = parts[2].replace('\\:', ':')
+                break
+
+        if not ssid:
+            return {"connected": False, "server_ips": server_ips, "has_wifi_hw": has_wifi_hw}
+
+        # IP locale via device
+        ip_r = subprocess.run(
+            ["nmcli", "-t", "-e", "yes", "-f", "IP4.ADDRESS,IP4.GATEWAY,IP4.DNS",
+             "connection", "show", ssid],
+            capture_output=True, text=True, timeout=5,
+        )
+        local_ip = gateway = dns = None
+        for line in ip_r.stdout.strip().splitlines():
+            if "IP4.ADDRESS" in line and not local_ip:
+                val = line.split(":")[-1].split("/")[0]
+                local_ip = val if val else None
+            elif "IP4.GATEWAY" in line and not gateway:
+                gateway = line.split(":")[-1] or None
+            elif "IP4.DNS" in line and not dns:
+                dns = line.split(":")[-1] or None
+
+        return {
+            "connected": True,
+            "ssid":      ssid,
+            "device":    device,
+            "local_ip":  local_ip,
+            "gateway":   gateway,
+            "dns":       dns,
+            "server_ips": server_ips,
+            "has_wifi_hw": has_wifi_hw,
+        }
+    except Exception as e:
+        return {"connected": False, "error": str(e), "server_ips": server_ips, "has_wifi_hw": has_wifi_hw}
+
+
+def _nmcli_connect(ssid: str, password: str) -> Dict:
+    """Connexion nmcli — retourne statut + nouvelle IP."""
+    if not _nmcli_available():
+        return {"status": "error", "error": "nmcli non disponible sur ce système"}
+    try:
+        cmd = ["sudo", "nmcli", "device", "wifi", "connect", ssid]
+        if password:
+            cmd += ["password", password]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
+        if r.returncode == 0:
+            status = _get_system_wifi_status()
+            return {"status": "connected", "ssid": ssid, **status}
+        err = (r.stderr or r.stdout).strip()
+        return {"status": "error", "error": err or "Connexion refusée"}
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "error": "Timeout — réseau trop lent ou mot de passe erroné"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def _nmcli_disconnect() -> Dict:
+    """Déconnexion WiFi via nmcli."""
+    if not _nmcli_available():
+        return {"status": "error", "error": "nmcli non disponible"}
+    try:
+        r = subprocess.run(
+            ["sudo", "nmcli", "device", "disconnect", "wlan0"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return {"status": "disconnected" if r.returncode == 0 else "error",
+                "error": r.stderr.strip() if r.returncode != 0 else None}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.get("/available")
+def list_available_networks():
+    """Lister les réseaux WiFi disponibles en live (nmcli rescan)."""
+    if not _nmcli_available():
+        return {"networks": [], "has_wifi_hw": False, "error": "nmcli non disponible — installer network-manager"}
+    has_hw = _has_wifi_hardware()
+    if not has_hw:
+        return {"networks": [], "has_wifi_hw": False, "error": "Aucun adaptateur WiFi détecté — branchez un adaptateur USB"}
+    return {"networks": _parse_available_networks(), "has_wifi_hw": True}
+
+
+@router.get("/server-ips")
+def get_server_ips():
+    """Retourne les IPs du serveur — utile après changement de réseau."""
+    return {"ips": _get_server_ips()}
+
+
+@router.get("/system-status")
+def system_wifi_status():
+    """Statut de la connexion WiFi système actuelle."""
+    return _get_system_wifi_status()
+
+
+@router.post("/system-connect")
+def system_wifi_connect(req: SystemConnectRequest):
+    """Connexion système WiFi style iPhone/PC via nmcli."""
+    return _nmcli_connect(req.ssid, req.password)
+
+
+@router.post("/system-disconnect")
+def system_wifi_disconnect():
+    """Déconnexion WiFi système."""
+    return _nmcli_disconnect()

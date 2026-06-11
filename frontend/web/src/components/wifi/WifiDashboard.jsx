@@ -110,7 +110,7 @@ export default function WifiDashboard() {
   }
 
   async function toggleMonitor() {
-    const endpoint = monStatus ? '/api/wifi/monitor/stop' : '/api/wifi/monitor/start'
+    const endpoint = monStatus ? '/wifi/monitor/stop' : '/wifi/monitor/start'
     try {
       const r = await apiFetch(endpoint, {
         method: 'POST',
@@ -129,7 +129,7 @@ export default function WifiDashboard() {
     setSelected(net)
     setFingerprint(null)
     try {
-      const r = await apiFetch(`/api/wifi/network/${net.bssid}`)
+      const r = await apiFetch(`/wifi/network/${net.bssid}`)
       const d = await r.json()
       setFingerprint(d.fingerprint)
     } catch {}
