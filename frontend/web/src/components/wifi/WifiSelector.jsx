@@ -50,6 +50,8 @@ export default function WifiSelector() {
   const [serverIps,    setServerIps]    = useState([])
   const [hasWifiHw,    setHasWifiHw]    = useState(null)
   const [wifiError,    setWifiError]    = useState(null)
+  const [demoMode,     setDemoMode]     = useState(false)
+  const [btDemoMode,   setBtDemoMode]   = useState(false)
   const [hasBtHw,      setHasBtHw]      = useState(null)
   const [btDevices,    setBtDevices]    = useState([])
   const [btError,      setBtError]      = useState(null)
@@ -93,7 +95,8 @@ export default function WifiSelector() {
       const d = await r.json()
       setNetworks(d.networks || [])
       if (d.has_wifi_hw !== undefined) setHasWifiHw(d.has_wifi_hw)
-      if (d.error) setWifiError(d.error)
+      setDemoMode(!!d.demo)
+      if (d.error && !d.demo) setWifiError(d.error)
     } catch (e) {
       setWifiError('Erreur scan : ' + e.message)
     } finally {
@@ -117,7 +120,8 @@ export default function WifiSelector() {
       const r = await apiFetch('/wifi/bluetooth/scan', { method: 'POST' })
       const d = await r.json()
       setHasBtHw(d.has_bluetooth_hw)
-      if (d.error) setBtError(d.error)
+      setBtDemoMode(!!d.demo)
+      if (d.error && !d.demo) setBtError(d.error)
       setBtDevices(d.devices || [])
       if (d.devices?.length > 0) showToast(`${d.devices.length} appareil(s) Bluetooth trouvé(s)`, true)
     } catch (e) {
@@ -193,6 +197,21 @@ export default function WifiSelector() {
       {toast && (
         <div style={{ ...S.toast, background: toast.ok ? '#001800' : '#1a0000', borderColor: toast.ok ? '#44ff8877' : '#ff444477', color: toast.ok ? '#44ff88' : '#ff6666' }}>
           {toast.msg}
+        </div>
+      )}
+
+      {/* Bannière MODE DÉMO */}
+      {demoMode && (
+        <div style={{ padding: '10px 14px', background: '#1a1000', border: '1px solid #f59e0b44', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>🔮</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>MODE DÉMO — Réseaux simulés</div>
+            <div style={{ fontSize: 10, color: '#926a1a', lineHeight: 1.5 }}>
+              Pas d'adaptateur WiFi USB détecté. Les réseaux ci-dessous sont simulés pour la démonstration.<br />
+              Pour un scan réel → branchez un <strong style={{ color: '#ccc' }}>dongle USB WiFi</strong> et activez USB Passthrough dans VirtualBox.
+            </div>
+          </div>
+          <span style={{ fontSize: 10, padding: '3px 8px', background: '#f59e0b22', color: '#f59e0b', borderRadius: 5, fontWeight: 700, whiteSpace: 'nowrap' }}>DÉMO</span>
         </div>
       )}
 
@@ -273,7 +292,7 @@ export default function WifiSelector() {
             </button>
           </div>
 
-          {hasWifiHw === false && <NoHwBanner type="wifi" error={wifiError} />}
+          {hasWifiHw === false && !demoMode && <NoHwBanner type="wifi" error={wifiError} />}
 
           {scanning ? (
             <div style={S.scanAnim}>
@@ -340,7 +359,12 @@ export default function WifiSelector() {
             </button>
           </div>
 
-          {hasBtHw === false && <NoHwBanner type="bluetooth" error={btError} />}
+          {hasBtHw === false && !btDemoMode && <NoHwBanner type="bluetooth" error={btError} />}
+          {btDemoMode && (
+            <div style={{ padding: '8px 12px', background: '#1a1000', border: '1px solid #f59e0b33', borderRadius: 6, marginBottom: 8, fontSize: 11, color: '#926a1a' }}>
+              🔮 <strong style={{ color: '#f59e0b' }}>MODE DÉMO</strong> — Appareils Bluetooth simulés · Branchez un dongle USB BT pour un scan réel
+            </div>
+          )}
 
           {btScanning ? (
             <div style={S.scanAnim}>

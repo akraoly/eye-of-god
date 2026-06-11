@@ -431,6 +431,8 @@ function NetworkWidget({ onNav }) {
   const [btDevices,  setBtDevices]  = useState([])
   const [hasBt,      setHasBt]      = useState(null)
   const [hasWifi,    setHasWifi]    = useState(null)
+  const [demoWifi,   setDemoWifi]   = useState(false)
+  const [demoBt,     setDemoBt]     = useState(false)
   const [scanning,   setScanning]   = useState(false)
   const [btScanning, setBtScanning] = useState(false)
   const [modal,      setModal]      = useState(null)
@@ -457,6 +459,7 @@ function NetworkWidget({ onNav }) {
     if (d) {
       setNetworks(d.networks || [])
       if (d.has_wifi_hw !== undefined) setHasWifi(d.has_wifi_hw)
+      setDemoWifi(!!d.demo)
     }
     setScanning(false)
   }, [])
@@ -467,6 +470,7 @@ function NetworkWidget({ onNav }) {
     const d = await apiFetch('/wifi/bluetooth/scan', { method: 'POST' }).then(r => r.json()).catch(() => null)
     if (d) {
       setHasBt(d.has_bluetooth_hw)
+      setDemoBt(!!d.demo)
       setBtDevices(d.devices || [])
       if (d.devices?.length) showToast(`${d.devices.length} appareil(s) BT trouvé(s)`)
     }
@@ -567,7 +571,8 @@ function NetworkWidget({ onNav }) {
               {scanning ? '⏳' : '🔄 Scan'}
             </button>
           </div>
-          {hasWifi === false
+          {demoWifi && <div style={{ fontSize: '0.55rem', color: '#f59e0b', background: '#1a1000', borderRadius: 5, padding: '3px 8px', marginBottom: 5 }}>🔮 MODE DÉMO — réseaux simulés</div>}
+          {hasWifi === false && !demoWifi
             ? <div style={{ fontSize: '0.65rem', color: '#f97316', padding: '8px 10px', background: '#1a0f00', borderRadius: 6, lineHeight: 1.6 }}>
                 Pas d'adaptateur WiFi physique<br />
                 <span style={{ color: '#664422', fontSize: '0.58rem' }}>→ Branchez un dongle USB WiFi</span>
@@ -610,7 +615,8 @@ function NetworkWidget({ onNav }) {
               {btScanning ? '⏳ ~8s' : '🔄 Scan'}
             </button>
           </div>
-          {hasBt === false
+          {demoBt && <div style={{ fontSize: '0.55rem', color: '#f59e0b', background: '#1a1000', borderRadius: 5, padding: '3px 8px', marginBottom: 5 }}>🔮 MODE DÉMO — appareils simulés</div>}
+          {hasBt === false && !demoBt
             ? <div style={{ fontSize: '0.65rem', color: '#f97316', padding: '8px 10px', background: '#1a0f00', borderRadius: 6, lineHeight: 1.6 }}>
                 Pas d'adaptateur Bluetooth<br />
                 <span style={{ color: '#664422', fontSize: '0.58rem' }}>→ Branchez un dongle USB BT</span>
@@ -683,28 +689,28 @@ export default function DashboardView({ onNav }) {
   }, [])
 
   return (
-    <div style={{ padding: 24, maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--accent)', letterSpacing: 1 }}>
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', rowGap: 8 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--accent)', letterSpacing: 1 }}>
               {greeting}, Mr Vitch
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text3)', marginTop: 2 }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text3)', marginTop: 2 }}>
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              {' · '}L'Œil de Dieu v8.0 · Tous les systèmes opérationnels
+              {' · '}L'Œil de Dieu v8.0
             </div>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
               { label: 'Chat', view: 'chat', icon: '💬' },
               { label: 'AEGIS', view: 'soc', icon: '🛡️' },
               { label: 'Sentinel', view: 'sentinel', icon: '🔬' },
             ].map(({ label, view, icon }) => (
               <button key={view} onClick={() => onNav(view)} style={{
-                padding: '7px 14px', background: 'var(--glass)', border: '1px solid var(--border)',
-                borderRadius: 8, color: 'var(--accent)', cursor: 'pointer', fontSize: '0.72rem',
+                padding: '6px 12px', background: 'var(--glass)', border: '1px solid var(--border)',
+                borderRadius: 8, color: 'var(--accent)', cursor: 'pointer', fontSize: '0.7rem',
                 display: 'flex', alignItems: 'center', gap: 5,
               }}>
                 {icon} {label}
@@ -714,11 +720,11 @@ export default function DashboardView({ onNav }) {
         </div>
       </motion.div>
 
-      {/* Grid 3×2 de widgets */}
+      {/* Grid responsive : 3 colonnes sur grand écran, 2 sur moyen, 1 sur petit */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 16,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+        gap: 14,
       }}>
         <SystemWidget />
         <AegisWidget onNav={onNav} />
@@ -726,7 +732,9 @@ export default function DashboardView({ onNav }) {
         <MemoryWidget onNav={onNav} />
         <LifeWidget onNav={onNav} />
         <NetworkWidget onNav={onNav} />
-        <ActionLogWidget />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <ActionLogWidget />
+        </div>
       </div>
     </div>
   )

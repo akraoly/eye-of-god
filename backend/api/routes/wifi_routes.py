@@ -793,15 +793,41 @@ def _nmcli_disconnect() -> Dict:
         return {"status": "error", "error": str(e)}
 
 
+def _demo_wifi_networks() -> List[Dict]:
+    """Réseaux WiFi simulés pour démo sans adaptateur physique."""
+    return [
+        {"ssid": "Livebox-7F2A",        "bssid": "A4:B1:C2:7F:2A:01", "signal": 82, "bars": 4, "security": "WPA3",   "secured": True,  "active": False, "channel": "6",  "freq": "2.437 GHz", "demo": True},
+        {"ssid": "iPhone de Mr Vitch",  "bssid": "AA:BB:CC:DD:EE:FF", "signal": 95, "bars": 4, "security": "WPA3",   "secured": True,  "active": True,  "channel": "6",  "freq": "2.437 GHz", "demo": True},
+        {"ssid": "Freebox-4A2B",        "bssid": "F0:12:34:4A:2B:11", "signal": 78, "bars": 4, "security": "WPA2",   "secured": True,  "active": False, "channel": "11", "freq": "2.462 GHz", "demo": True},
+        {"ssid": "SFR_B342",            "bssid": "50:FD:09:78:8B:EC", "signal": 65, "bars": 3, "security": "WPA2",   "secured": True,  "active": False, "channel": "1",  "freq": "2.412 GHz", "demo": True},
+        {"ssid": "TP-Link_Guest_5G",    "bssid": "C8:3A:35:B4:7D:22", "signal": 51, "bars": 3, "security": "WPA2",   "secured": True,  "active": False, "channel": "36", "freq": "5.180 GHz", "demo": True},
+        {"ssid": "Bbox-2F4A12",         "bssid": "D4:6E:0E:2F:4A:12", "signal": 40, "bars": 2, "security": "WPA2",   "secured": True,  "active": False, "channel": "6",  "freq": "2.437 GHz", "demo": True},
+        {"ssid": "Voisin_WiFi",         "bssid": "B8:27:EB:4C:A3:99", "signal": 28, "bars": 1, "security": "WPA2",   "secured": True,  "active": False, "channel": "11", "freq": "2.462 GHz", "demo": True},
+        {"ssid": "",                    "bssid": "E4:95:6E:44:01:8B", "signal": 22, "bars": 1, "security": "WPA2",   "secured": True,  "active": False, "channel": "3",  "freq": "2.422 GHz", "demo": True, "hidden": True},
+    ]
+
+
+def _demo_bt_devices() -> List[Dict]:
+    """Appareils Bluetooth simulés pour démo sans adaptateur physique."""
+    return [
+        {"name": "AirPods Pro",          "address": "AA:11:22:33:44:01", "type": "Audio",     "rssi": -52, "demo": True},
+        {"name": "iPhone de Mr Vitch",   "address": "AA:BB:CC:DD:EE:FF", "type": "Phone",     "rssi": -41, "demo": True},
+        {"name": "Magic Keyboard",       "address": "CC:DD:EE:FF:00:11", "type": "Keyboard",  "rssi": -68, "demo": True},
+        {"name": "JBL Charge 5",         "address": "F4:4E:FD:88:12:AB", "type": "Speaker",   "rssi": -75, "demo": True},
+    ]
+
+
 @router.get("/available")
 def list_available_networks():
-    """Lister les réseaux WiFi disponibles en live (nmcli rescan)."""
+    """Lister les réseaux WiFi disponibles en live (nmcli rescan). Mode démo si pas de matériel."""
     if not _nmcli_available():
-        return {"networks": [], "has_wifi_hw": False, "error": "nmcli non disponible — installer network-manager"}
+        return {"networks": _demo_wifi_networks(), "has_wifi_hw": False, "demo": True,
+                "error": "nmcli non disponible — mode démo activé"}
     has_hw = _has_wifi_hardware()
     if not has_hw:
-        return {"networks": [], "has_wifi_hw": False, "error": "Aucun adaptateur WiFi détecté — branchez un adaptateur USB"}
-    return {"networks": _parse_available_networks(), "has_wifi_hw": True}
+        return {"networks": _demo_wifi_networks(), "has_wifi_hw": False, "demo": True,
+                "error": "Aucun adaptateur WiFi — mode démo activé"}
+    return {"networks": _parse_available_networks(), "has_wifi_hw": True, "demo": False}
 
 
 @router.get("/server-ips")
@@ -898,10 +924,10 @@ def bluetooth_status():
 
 @router.post("/bluetooth/scan")
 async def scan_bluetooth(timeout: int = 8):
-    """Scanner les appareils Bluetooth à proximité."""
+    """Scanner les appareils Bluetooth à proximité. Mode démo si pas de matériel."""
     if not _has_bluetooth_hw():
-        return {"devices": [], "has_bluetooth_hw": False,
-                "error": "Aucun adaptateur Bluetooth — branchez un dongle USB BT"}
+        return {"devices": _demo_bt_devices(), "has_bluetooth_hw": False, "demo": True,
+                "error": "Aucun adaptateur Bluetooth — mode démo activé"}
     loop = asyncio.get_event_loop()
     devices = await loop.run_in_executor(None, lambda: _scan_bluetooth_devices(timeout))
-    return {"devices": devices, "has_bluetooth_hw": True, "count": len(devices)}
+    return {"devices": devices, "has_bluetooth_hw": True, "demo": False, "count": len(devices)}
