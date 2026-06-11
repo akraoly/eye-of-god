@@ -24,4 +24,4 @@ imageio-ffmpeg>=0.6.0
 edge-tts>=7.2.8
 faster-whisper>=1.2.1
 # Filesystem watcher
-watchdog>=4.0.0
+watchdog>=6.0.0
