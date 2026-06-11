@@ -135,8 +135,34 @@ export default function WifiDashboard() {
     } catch {}
   }
 
+  const allSimulated = networks.length > 0 && networks.every(n => n.simulated)
+  const hasReal = networks.some(n => !n.simulated)
+
   return (
     <div style={s.root}>
+      {/* Bannière simulation — affiché quand aucun matériel WiFi réel */}
+      {(allSimulated || (networks.length === 0 && !scanning)) && (
+        <div style={{
+          background: '#1a0d00', borderBottom: '1px solid #ff880044',
+          padding: '6px 16px', fontSize: 11, color: '#ff8800',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span>⚠️</span>
+          <span>
+            <strong>Aucun matériel WiFi réel détecté</strong> — les réseaux affichés sont simulés (badge SIM).
+            Pour scanner de vrais réseaux : branchez un adaptateur USB WiFi et activez le USB passthrough dans VirtualBox.
+          </span>
+        </div>
+      )}
+      {hasReal && (
+        <div style={{
+          background: '#001a00', borderBottom: '1px solid #44ff8844',
+          padding: '6px 16px', fontSize: 11, color: '#44ff88',
+        }}>
+          ✅ Scan réel — {networks.filter(n => !n.simulated).length} réseau(x) détecté(s) en live
+        </div>
+      )}
+
       {/* Header */}
       <div style={s.header}>
         <span style={s.title}>📶 WiFi Scanner</span>

@@ -826,3 +826,82 @@ def system_wifi_connect(req: SystemConnectRequest):
 def system_wifi_disconnect():
     """Déconnexion WiFi système."""
     return _nmcli_disconnect()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 14. BLUETOOTH — scan appareils à proximité
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _has_bluetooth_hw() -> bool:
+    try:
+        r = subprocess.run(["hciconfig"], capture_output=True, text=True, timeout=5)
+        return bool(r.stdout.strip())
+    except Exception:
+        return False
+
+
+def _scan_bluetooth_devices(timeout: int = 8) -> List[Dict]:
+    """Scan Bluetooth classique + BLE via bluetoothctl."""
+    if not shutil.which("bluetoothctl"):
+        return []
+    devices: List[Dict] = []
+    seen: set = set()
+    try:
+        # Démarrer scan via bluetoothctl pipe
+        import pexpect
+        child = pexpect.spawn("bluetoothctl", timeout=timeout + 5)
+        child.expect(r"\[bluetooth\].*#")
+        child.sendline("scan on")
+        import time; time.sleep(timeout)
+        child.sendline("devices")
+        child.expect(r"\[bluetooth\].*#")
+        output = child.before.decode(errors="replace")
+        child.sendline("scan off")
+        child.sendline("quit")
+        child.close()
+
+        for line in output.splitlines():
+            # Device XX:XX:XX:XX:XX:XX Name
+            m = re.search(r"Device\s+([0-9A-F:]{17})\s+(.*)", line, re.IGNORECASE)
+            if m:
+                addr = m.group(1).upper()
+                name = m.group(2).strip() or "Appareil inconnu"
+                if addr not in seen:
+                    seen.add(addr)
+                    devices.append({"address": addr, "name": name, "type": "bluetooth"})
+    except Exception:
+        # Fallback: hcitool scan (classic BT only)
+        try:
+            r = subprocess.run(
+                ["hcitool", "scan", "--length", str(timeout // 2)],
+                capture_output=True, text=True, timeout=timeout + 5,
+            )
+            for line in r.stdout.strip().splitlines():
+                parts = line.strip().split("\t")
+                if len(parts) >= 2:
+                    addr = parts[0].strip()
+                    name = parts[1].strip() if len(parts) > 1 else "Inconnu"
+                    if re.match(r"([0-9A-F:]{17})", addr, re.I) and addr not in seen:
+                        seen.add(addr)
+                        devices.append({"address": addr, "name": name, "type": "bluetooth"})
+        except Exception:
+            pass
+    return devices
+
+
+@router.get("/bluetooth/status")
+def bluetooth_status():
+    """Statut Bluetooth — présence hardware."""
+    has_hw = _has_bluetooth_hw()
+    return {"has_bluetooth_hw": has_hw, "adapter": "hci0" if has_hw else None}
+
+
+@router.post("/bluetooth/scan")
+async def scan_bluetooth(timeout: int = 8):
+    """Scanner les appareils Bluetooth à proximité."""
+    if not _has_bluetooth_hw():
+        return {"devices": [], "has_bluetooth_hw": False,
+                "error": "Aucun adaptateur Bluetooth — branchez un dongle USB BT"}
+    loop = asyncio.get_event_loop()
+    devices = await loop.run_in_executor(None, lambda: _scan_bluetooth_devices(timeout))
+    return {"devices": devices, "has_bluetooth_hw": True, "count": len(devices)}
