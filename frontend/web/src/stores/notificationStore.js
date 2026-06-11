@@ -16,9 +16,18 @@ export const useNotificationStore = create((set, get) => ({
 
   // Ajouter une notification (et un toast)
   add: (notif) => {
+    // Déduplication : même dedupeKey ou même (title+source) déjà visible à l'écran → skip
+    const dedupeKey = notif.dedupeKey || `${notif.title}::${notif.source || ''}`
+    const alreadyVisible = get().toasts.some(t =>
+      t.dedupeKey === dedupeKey ||
+      (!notif.dedupeKey && t.title === notif.title && t.source === (notif.source || ''))
+    )
+    if (alreadyVisible) return null
+
     const id = ++_id
     const entry = {
       id,
+      dedupeKey,
       type: notif.type || 'info',    // info | warning | critical
       title: notif.title || '',
       body: notif.body || '',

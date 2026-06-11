@@ -67,8 +67,8 @@ function SystemWidget() {
         ram: d.snapshot?.ram_pct ?? 0,
       }].slice(-20))
 
-      if (d.score < 50) notify('critical', 'Santé système critique', `Score: ${d.score}/100`, { source: 'Sentinel' })
-      else if (d.score < 80) notify('warning', 'Santé système dégradée', `Score: ${d.score}/100`, { source: 'Sentinel' })
+      if (d.score < 50) notify('critical', 'Santé système critique', `Score: ${d.score}/100`, { source: 'Sentinel', dedupeKey: 'sentinel-health-critical' })
+      else if (d.score < 80) notify('warning', 'Santé système dégradée', `Score: ${d.score}/100`, { source: 'Sentinel', dedupeKey: 'sentinel-health-warning' })
     }
     load()
     const t = setInterval(load, 10000)
@@ -136,7 +136,7 @@ function AegisWidget({ onNav }) {
       if (a) {
         setAlerts(a.alerts || a || [])
         const crits = (a.alerts || a || []).filter(al => al.severity === 'critical' || al.severity === 'CRITICAL')
-        if (crits.length > 0) notify('critical', `${crits.length} alerte(s) AEGIS critique(s)`, crits[0]?.title || '', { source: 'AEGIS', persistent: true })
+        if (crits.length > 0) notify('critical', `${crits.length} alerte(s) AEGIS critique(s)`, crits[0]?.title || '', { source: 'AEGIS', persistent: true, dedupeKey: 'aegis-crits-widget' })
       }
     }
     load()
