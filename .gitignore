@@ -39,3 +39,10 @@ backend/data/post_exploit/
 data/reports/
 data/sdr_recordings/
 .claude/
+
+# Données générées au runtime (ne pas versionner)
+backend/data/chroma/
+backend/data/chroma_bak*/
+backend/data/voice_models/
+data/firmware/
+frontend/web/data/

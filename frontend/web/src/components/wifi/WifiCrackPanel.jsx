@@ -46,16 +46,16 @@ export default function WifiCrackPanel() {
   }, [])
 
   async function loadNetworks() {
-    try { const r = await apiFetch('/api/wifi/networks?limit=100'); const d = await r.json(); setNetworks(d.networks || []) } catch {}
+    try { const r = await apiFetch('/wifi/networks?limit=100'); const d = await r.json(); setNetworks(d.networks || []) } catch {}
   }
   async function loadHandshakes() {
-    try { const r = await apiFetch('/api/wifi/handshakes'); const d = await r.json(); setHandshakes(d.handshakes || []) } catch {}
+    try { const r = await apiFetch('/wifi/handshakes'); const d = await r.json(); setHandshakes(d.handshakes || []) } catch {}
   }
   async function loadJobs() {
-    try { const r = await apiFetch('/api/wifi/crack/jobs'); const d = await r.json(); setJobs(d.jobs || []) } catch {}
+    try { const r = await apiFetch('/wifi/crack/jobs'); const d = await r.json(); setJobs(d.jobs || []) } catch {}
   }
   async function loadConns() {
-    try { const r = await apiFetch('/api/wifi/connections'); const d = await r.json(); setConns(d.connections || []) } catch {}
+    try { const r = await apiFetch('/wifi/connections'); const d = await r.json(); setConns(d.connections || []) } catch {}
   }
 
   async function post(path, body) {
@@ -82,7 +82,7 @@ export default function WifiCrackPanel() {
     setAgentHistory(h => [...h, { role: 'user', content: msg }])
     setLoading(true)
     try {
-      const r = await apiFetch('/api/wifi/agent', {
+      const r = await apiFetch('/wifi/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg, history: agentHistory }),

@@ -8,7 +8,7 @@ export default function ReportPreview({ reportId, onClose }) {
 
   useEffect(() => {
     if (!reportId) return;
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('eye_token');
     setUrl(`${API}/reports/download/${reportId}?token=${token}`);
     setLoading(false);
   }, [reportId]);

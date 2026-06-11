@@ -36,6 +36,8 @@ sleep 1
 echo -e "${B}[1/2]${N} Démarrage du backend..."
 source "$VENV/bin/activate"
 export PYTHONPATH="$BACKEND"
+export ANONYMIZED_TELEMETRY=False   # désactive télémétrie ChromaDB
+export CHROMA_TELEMETRY=False
 cd "$BACKEND"
 nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8001 > "$LOG_BACK" 2>&1 &
 BACK_PID=$!

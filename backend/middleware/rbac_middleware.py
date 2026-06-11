@@ -28,6 +28,8 @@ def register_rbac_middleware(app):
 
     class RBACMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
+            if request.scope.get("type") == "websocket":
+                return await call_next(request)
             path = request.url.path
 
             # Routes publiques toujours autorisées

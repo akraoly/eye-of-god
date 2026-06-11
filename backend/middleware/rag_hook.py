@@ -53,6 +53,8 @@ def register_rag_hooks(app):
 
     class RAGMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
+            if request.scope.get("type") == "websocket":
+                return await call_next(request)
             response = await call_next(request)
 
             # Index après POST /api/chat (non stream)

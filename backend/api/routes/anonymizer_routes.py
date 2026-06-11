@@ -46,12 +46,12 @@ class UAReq(AuthReq):
 
 @router.get("/status")
 async def get_status():
-    return await anonymizer_service.get_anonymity_status()
+    return await anonymizer_service.get_status()
 
 
 @router.get("/score")
 async def get_score():
-    status = await anonymizer_service.get_anonymity_status()
+    status = await anonymizer_service.get_status()
     return {"score": status.get("anonymity_score", 0), "grade": status.get("grade", "F"), "active_layers": status.get("active_layers", [])}
 
 

@@ -57,7 +57,7 @@ export default function WifiDashboard() {
 
   async function loadInterfaces() {
     try {
-      const r = await apiFetch('/api/wifi/interfaces')
+      const r = await apiFetch('/wifi/interfaces')
       const d = await r.json()
       setInterfaces(d.interfaces || [])
       if (d.interfaces?.length) setIface(d.interfaces[0].name)
@@ -66,7 +66,7 @@ export default function WifiDashboard() {
 
   async function loadNetworks() {
     try {
-      const r = await apiFetch('/api/wifi/networks?limit=100')
+      const r = await apiFetch('/wifi/networks?limit=100')
       const d = await r.json()
       setNetworks(d.networks || [])
     } catch {}
@@ -74,7 +74,7 @@ export default function WifiDashboard() {
 
   async function loadClients() {
     try {
-      const r = await apiFetch('/api/wifi/clients')
+      const r = await apiFetch('/wifi/clients')
       const d = await r.json()
       setClients(d.clients || [])
     } catch {}
@@ -82,7 +82,7 @@ export default function WifiDashboard() {
 
   async function loadScans() {
     try {
-      const r = await apiFetch('/api/wifi/scans')
+      const r = await apiFetch('/wifi/scans')
       const d = await r.json()
       setScans(d.scans || [])
     } catch {}
@@ -92,7 +92,7 @@ export default function WifiDashboard() {
     setScanning(true)
     addLog(`Scan démarré sur ${iface} (${duration}s)…`, 'info')
     try {
-      const r = await apiFetch('/api/wifi/scan', {
+      const r = await apiFetch('/wifi/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ interface: iface, duration }),

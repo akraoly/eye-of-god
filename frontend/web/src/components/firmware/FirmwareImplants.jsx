@@ -212,7 +212,7 @@ function ModulePanel({ mod }) {
 function HistoryPanel() {
   const [ops, setOps] = useState([])
   useEffect(() => {
-    apiFetch(`${API}/history`).then(r => Array.isArray(r) && setOps(r)).catch(() => {})
+    apiFetch(`${API}/history`).then(r => r.json()).then(d => Array.isArray(d) && setOps(d)).catch(() => {})
   }, [])
   if (!ops.length) return null
   return (
@@ -248,7 +248,7 @@ export default function FirmwareImplants() {
   const [tab, setTab] = useState('modules')
 
   useEffect(() => {
-    apiFetch(`${API}/overview`).then(r => setOverview(r)).catch(() => {})
+    apiFetch(`${API}/overview`).then(r => r.json()).then(d => setOverview(d)).catch(() => {})
   }, [])
 
   return (
