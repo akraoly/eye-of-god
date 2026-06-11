@@ -37,6 +37,7 @@ export default function TerminalView() {
   const termRef      = useRef(null)
   const fitRef       = useRef(null)
   const wsRef        = useRef(null)
+  const mountedRef   = useRef(true)
   const [status, setStatus] = useState('disconnected')
 
   const connect = () => {
@@ -50,6 +51,7 @@ export default function TerminalView() {
     ws.binaryType = 'arraybuffer'
 
     ws.onopen = () => {
+      if (!mountedRef.current) return
       setStatus('connected')
       // Envoyer la taille initiale
       const { rows, cols } = termRef.current || { rows: 24, cols: 80 }
@@ -58,11 +60,13 @@ export default function TerminalView() {
     }
 
     ws.onclose = (e) => {
+      if (!mountedRef.current) return
       setStatus('disconnected')
       termRef.current?.write('\r\n\x1b[31m[Connexion fermée — cliquez Reconnecter]\x1b[0m\r\n')
     }
 
     ws.onerror = () => {
+      if (!mountedRef.current) return
       setStatus('error')
       termRef.current?.write('\r\n\x1b[31m[Erreur WebSocket]\x1b[0m\r\n')
     }
@@ -145,6 +149,7 @@ export default function TerminalView() {
     connect()
 
     return () => {
+      mountedRef.current = false
       cancelAnimationFrame(rafId)
       resizeObs.disconnect()
       wsRef.current?.close()
