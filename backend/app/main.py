@@ -17,6 +17,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="L'Œil de Dieu — Compagnon numérique personnel ultra avancé",
+    redirect_slashes=False,
     lifespan=lifespan,
 )
 

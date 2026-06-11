@@ -17,6 +17,7 @@ from core.auth.dependencies import get_current_user
 from services.agent_service import agent_service
 
 router = APIRouter()
+ws_router = APIRouter()  # WebSocket routes — registered without auth dependency (token via query param)
 
 # ── Classif commandes ─────────────────────────────────────────────────────────
 _READ_ONLY = frozenset([
@@ -455,7 +456,7 @@ def _set_pty_size(fd: int, rows: int, cols: int) -> None:
         pass
 
 
-@router.websocket("/terminal-ws")
+@ws_router.websocket("/terminal-ws")
 async def terminal_websocket(websocket: WebSocket, token: str = Query(None)):
     """Interactive PTY terminal over WebSocket. Token via ?token= query param."""
     if not _verify_ws_token(token):

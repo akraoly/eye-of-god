@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
-const BASE = 'http://localhost:8001'
+const BASE = ''
 
 function useApi() {
-  const token = localStorage.getItem('token') || ''
+  const token = localStorage.getItem('eye_token') || ''
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
   return {
     get:  (p)    => fetch(`${BASE}${p}`, { headers: h }).then(r => r.json()),

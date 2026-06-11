@@ -60,7 +60,7 @@ from api.routes import (
 )
 from core.auth.dependencies import get_current_user
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 
 # ── Route publique ─────────────────────────────────────────────────────────────
 router.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -73,6 +73,7 @@ router.include_router(chat.router,       prefix="/chat",       tags=["Chat"],   
 router.include_router(memory.router,     prefix="/memory",     tags=["Memory"],                 **_protected)
 router.include_router(user.router,       prefix="/user",       tags=["User"],                   **_protected)
 router.include_router(system.router,     prefix="/system",     tags=["System"],                 **_protected)
+router.include_router(system.ws_router,  prefix="/system",     tags=["System WS"])
 router.include_router(exploit.router,    prefix="/exploit",    tags=["Exploit / OSEE"],         **_protected)
 router.include_router(code.router,       prefix="/code",       tags=["Code / Dev"],             **_protected)
 router.include_router(knowledge.router,  prefix="/knowledge",  tags=["Knowledge Base"],         **_protected)

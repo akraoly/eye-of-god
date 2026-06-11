@@ -2486,7 +2486,7 @@ kbd { background: var(--glass2); border: 1px solid var(--border2); border-radius
   overflow: hidden;
   border: 1px solid var(--border);
   background: #000208;
-  min-height: 0;
+  min-height: 300px;
 }
 .terminal-container .xterm { padding: 8px; }
 .terminal-container .xterm-viewport { border-radius: 8px; }

@@ -140,7 +140,7 @@ export default function TriggersView() {
   const timelineRef = useRef(null)
 
   const loadTriggers = () => {
-    apiFetch('/triggers').then(r => r.json()).then(d => setTriggers(d.triggers || [])).catch(() => {})
+    apiFetch('/triggers/').then(r => r.json()).then(d => setTriggers(d.triggers || [])).catch(() => {})
   }
   const loadTimeline = () => {
     apiFetch('/triggers/logs/all').then(r => r.json()).then(d => setTimeline(d.logs || d.events || [])).catch(() => {})
@@ -164,7 +164,7 @@ export default function TriggersView() {
     if (!condType || !actType) { setError('Sélectionner condition ET action'); return }
     setSaving(true); setError(''); setSuccess('')
     try {
-      const r = await apiFetch('/triggers', {
+      const r = await apiFetch('/triggers/', {
         method: 'POST',
         body: JSON.stringify({
           name: name || `${condType} → ${actType}`,

@@ -97,15 +97,21 @@ export default function TerminalView() {
 
     term.loadAddon(fitAddon)
     term.loadAddon(linksAddon)
-    term.open(containerRef.current)
-    fitAddon.fit()
 
     termRef.current = term
     fitRef.current  = fitAddon
 
-    term.write('\x1b[1;36m╔══════════════════════════════════════════╗\x1b[0m\r\n')
-    term.write('\x1b[1;36m║  L\'Œil de Dieu — Terminal PTY            ║\x1b[0m\r\n')
-    term.write('\x1b[1;36m╚══════════════════════════════════════════╝\x1b[0m\r\n\r\n')
+    // Defer open() until browser has laid out the container — avoids xterm
+    // internal ResizeObserver firing before _renderService is initialized
+    const rafId = requestAnimationFrame(() => {
+      if (!containerRef.current) return
+      term.open(containerRef.current)
+      try { fitAddon.fit() } catch (_) {}
+
+      term.write('\x1b[1;36m╔══════════════════════════════════════════╗\x1b[0m\r\n')
+      term.write('\x1b[1;36m║  L\'Œil de Dieu — Terminal PTY            ║\x1b[0m\r\n')
+      term.write('\x1b[1;36m╚══════════════════════════════════════════╝\x1b[0m\r\n\r\n')
+    })
 
     // Clavier → WebSocket
     term.onData(data => {
@@ -125,7 +131,7 @@ export default function TerminalView() {
 
     // Resize → backend
     const resizeObs = new ResizeObserver(() => {
-      fitAddon.fit()
+      try { fitAddon.fit() } catch (_) {}
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({
           type: 'resize',
@@ -139,6 +145,7 @@ export default function TerminalView() {
     connect()
 
     return () => {
+      cancelAnimationFrame(rafId)
       resizeObs.disconnect()
       wsRef.current?.close()
       term.dispose()

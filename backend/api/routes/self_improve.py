@@ -100,8 +100,21 @@ async def get_recommendations(
 
 @router.get("/digest")
 async def weekly_digest():
-    """Generate weekly intelligence digest with new CVEs, techniques, and recommendations."""
-    return await _engine.weekly_intelligence_digest()
+    """Generate weekly intelligence digest. Times out after 25s to avoid browser abort."""
+    import asyncio
+    try:
+        return await asyncio.wait_for(_engine.weekly_intelligence_digest(), timeout=25.0)
+    except asyncio.TimeoutError:
+        from datetime import datetime
+        return {
+            "digest_date": datetime.utcnow().isoformat(),
+            "period": "last_7_days",
+            "stats": {},
+            "highlights": [],
+            "ai_digest": {"ai_summary": "Digest en cours de génération — réessayez dans quelques secondes."},
+            "top_techniques": [],
+            "skill_gaps_summary": [],
+        }
 
 
 @router.get("/gaps")
