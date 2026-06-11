@@ -86,14 +86,31 @@ echo -e "  ${B}→ API docs    :${N}  http://localhost:8001/docs"
 echo -e "  ${B}→ Login       :${N}  admin / oeil2026"
 echo ""
 echo -e "  ${C}${B}📱 Mobile Expo Go — URL serveur selon le réseau :${N}"
+PRIMARY_IP=""
 if [ -n "$LOCAL_IPS" ]; then
   while IFS= read -r ip; do
     echo -e "     ${G}http://$ip:8001${N}"
+    [ -z "$PRIMARY_IP" ] && PRIMARY_IP="$ip"
   done <<< "$LOCAL_IPS"
 else
   echo -e "     ${Y}⚠️  Aucune IP locale détectée (vérifie ta connexion réseau)${N}"
 fi
-echo -e "  ${Y}→ Change l'URL dans l'app mobile : écran login → ⚙️ Configurer le serveur${N}"
+
+# QR code — scanne-le depuis Expo Go pour configurer l'URL automatiquement
+if [ -n "$PRIMARY_IP" ]; then
+  SERVER_URL="http://$PRIMARY_IP:8001"
+  echo ""
+  echo -e "  ${C}${B}📷 QR Code — Scanner depuis Expo Go (⚙️ Configurer le serveur) :${N}"
+  "$VENV/bin/python3" -c "
+import qrcode, sys
+url = sys.argv[1]
+qr = qrcode.QRCode(border=1)
+qr.add_data(url)
+qr.make(fit=True)
+qr.print_ascii(invert=True)
+" "$SERVER_URL" 2>/dev/null || echo -e "     ${Y}(installer qrcode : pip install qrcode)${N}"
+fi
+echo -e "  ${Y}→ Ou : écran login → ⚙️ Configurer le serveur → 🔍 AUTO-DÉTECTER${N}"
 echo ""
 echo -e "  Logs : $LOG_BACK"
 echo -e "         $LOG_FRONT"

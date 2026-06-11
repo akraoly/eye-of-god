@@ -4,40 +4,59 @@ import { StatusBar, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { getToken, removeToken, isTokenValid, setLogoutCallback, initApiBase } from './src/utils/api';
+import {
+  getToken, removeToken, isTokenValid, setLogoutCallback,
+  initApiBase, testServer,
+} from './src/utils/api';
 import LoginScreen from './src/screens/LoginScreen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { colors } from './src/utils/theme';
 
 export default function App() {
-  const [token, setTokenState] = useState(null);
-  const [checking, setChecking] = useState(true);
+  const [token,            setTokenState]        = useState(null);
+  const [checking,         setChecking]          = useState(true);
+  const [serverUnreachable, setServerUnreachable] = useState(false);
+  const [savedToken,       setSavedToken]        = useState(null);
 
   const logout = useCallback(() => {
     setTokenState(null);
+    setSavedToken(null);
+    setServerUnreachable(false);
   }, []);
 
   useEffect(() => {
-    // Enregistrer le callback de logout global (pour 401 dans apiFetch / voice)
     setLogoutCallback(logout);
 
-    // Charger l'URL serveur sauvegardée (WiFi hôtel, hotspot, etc.)
-    initApiBase();
+    (async () => {
+      const base = await initApiBase();
+      const jwt  = await getToken();
 
-    // Valider le token au démarrage — si expiré, vider et montrer le login
-    getToken().then(t => {
-      if (isTokenValid(t)) {
-        setTokenState(t);
+      // Test server reachability — 3s timeout
+      const reachable = base ? await testServer(base, 3000) : false;
+
+      if (reachable && isTokenValid(jwt)) {
+        // Happy path: server up + token valid → go straight to app
+        setTokenState(jwt);
+      } else if (!reachable && isTokenValid(jwt)) {
+        // New network: server IP changed, but token is still valid
+        // Keep token so LoginScreen can auto-reconnect after URL fix
+        setSavedToken(jwt);
+        setServerUnreachable(true);
+        setTokenState(null);
       } else {
-        removeToken();
+        // Server up (or unknown) but token expired → normal login
+        await removeToken();
         setTokenState(null);
       }
+
       setChecking(false);
-    });
+    })();
   }, [logout]);
 
   function handleLogin(t) {
     setTokenState(t);
+    setServerUnreachable(false);
+    setSavedToken(null);
   }
 
   if (checking) {
@@ -57,7 +76,11 @@ export default function App() {
             <AppNavigator />
           </NavigationContainer>
         ) : (
-          <LoginScreen onLogin={handleLogin} />
+          <LoginScreen
+            onLogin={handleLogin}
+            serverUnreachable={serverUnreachable}
+            savedToken={savedToken}
+          />
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>

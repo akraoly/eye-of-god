@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, RefreshControl, ActivityIndicator,
+  StyleSheet, RefreshControl, ActivityIndicator, Alert,
 } from 'react-native';
-import { apiJSON } from '../utils/api';
+import { apiJSON, getApiBase, clearApiBase, triggerLogout } from '../utils/api';
 import { colors } from '../utils/theme';
 
 function Gauge({ value, label, color }) {
@@ -28,9 +28,10 @@ function StatusDot({ status }) {
 }
 
 export default function DiagScreen() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data,       setData]       = useState(null);
+  const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [serverUrl,  setServerUrl]  = useState('');
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -47,9 +48,28 @@ export default function DiagScreen() {
 
   useEffect(() => {
     load();
+    getApiBase().then(u => setServerUrl(u || 'non configuré'));
     const t = setInterval(() => load(true), 10000);
     return () => clearInterval(t);
   }, [load]);
+
+  const resetServer = () => {
+    Alert.alert(
+      'Reconfigurer le serveur',
+      'Cela efface l\'URL enregistrée et te déconnecte.\nUtile quand tu changes de réseau WiFi.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Reconfigurer',
+          style: 'destructive',
+          onPress: async () => {
+            await clearApiBase();
+            triggerLogout(); // → App.js affiche LoginScreen avec config ouverte
+          },
+        },
+      ]
+    );
+  };
 
   if (loading && !data) {
     return <ActivityIndicator size="large" color={colors.accent} style={{ flex: 1, backgroundColor: colors.bg }} />;
@@ -145,6 +165,21 @@ export default function DiagScreen() {
           </View>
         ))}
       </View>
+
+      {/* Serveur */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>🌐 Serveur</Text>
+        <View style={s.serverRow}>
+          <Text style={s.serverLabel}>URL</Text>
+          <Text style={s.serverUrl} numberOfLines={1}>{serverUrl}</Text>
+        </View>
+        <TouchableOpacity style={s.resetBtn} onPress={resetServer} activeOpacity={0.8}>
+          <Text style={s.resetBtnText}>🔄  Reconfigurer (changement de réseau)</Text>
+        </TouchableOpacity>
+        <Text style={s.serverHint}>
+          Appuie ici si tu as changé de WiFi et que l'app ne répond plus.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -208,8 +243,22 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border + '40',
   },
   procName: { flex: 1, color: colors.text, fontSize: 13 },
-  procCpu: { fontSize: 12, fontWeight: '600', marginRight: 12 },
-  procMem: { color: colors.textMuted, fontSize: 12 },
+  procCpu:  { fontSize: 12, fontWeight: '600', marginRight: 12 },
+  procMem:  { color: colors.textMuted, fontSize: 12 },
+  serverRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  serverLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700', letterSpacing: 1, width: 30 },
+  serverUrl:   { flex: 1, color: colors.accent, fontSize: 12, fontFamily: 'monospace' },
+  resetBtn: {
+    borderWidth: 1,
+    borderColor: colors.yellow,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    backgroundColor: colors.yellow + '15',
+    marginBottom: 8,
+  },
+  resetBtnText: { color: colors.yellow, fontWeight: '800', fontSize: 13 },
+  serverHint:   { color: colors.textDim, fontSize: 11, lineHeight: 15 },
 });
 
 const g = StyleSheet.create({

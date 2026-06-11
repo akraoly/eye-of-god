@@ -25,3 +25,5 @@ edge-tts>=7.2.8
 faster-whisper>=1.2.1
 # Filesystem watcher
 watchdog>=6.0.0
+# QR code terminal (start.sh → URL pour Expo Go)
+qrcode>=8.2
