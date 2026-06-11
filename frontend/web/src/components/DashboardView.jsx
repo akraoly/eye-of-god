@@ -376,7 +376,7 @@ function ActionLogWidget() {
   const SEV_COL = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#fbbf24', LOW: '#4ade80', INFO: '#38bdf8' }
 
   return (
-    <Widget title="JOURNAL TEMPS RÉEL" icon="📋" color="#38bdf8" style={{ gridColumn: 'span 2' }}>
+    <Widget title="JOURNAL TEMPS RÉEL" icon="📋" color="#38bdf8" style={{ gridColumn: 'span 3' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 220, overflowY: 'auto' }}>
         {events.length === 0
           ? <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '0.72rem', padding: 20 }}>Aucune action récente…</div>
@@ -406,6 +406,267 @@ function ActionLogWidget() {
             })
         }
       </div>
+    </Widget>
+  )
+}
+
+// ── Widget Réseau WiFi / Bluetooth ────────────────────────────────────────────
+function SignalDots({ pct }) {
+  const bars = pct >= 75 ? 4 : pct >= 50 ? 3 : pct >= 25 ? 2 : 1
+  const col  = pct >= 75 ? '#4ade80' : pct >= 50 ? '#44aaff' : pct >= 25 ? '#fbbf24' : '#f97316'
+  return (
+    <span style={{ display: 'inline-flex', gap: 2, alignItems: 'flex-end' }}>
+      {[1,2,3,4].map(i => (
+        <span key={i} style={{ width: 3, height: 3 + i * 2, borderRadius: 1, display: 'inline-block',
+          background: i <= bars ? col : '#333' }} />
+      ))}
+    </span>
+  )
+}
+
+function NetworkWidget({ onNav }) {
+  const [tab,        setTab]        = useState('wifi')
+  const [status,     setStatus]     = useState(null)
+  const [networks,   setNetworks]   = useState([])
+  const [btDevices,  setBtDevices]  = useState([])
+  const [hasBt,      setHasBt]      = useState(null)
+  const [hasWifi,    setHasWifi]    = useState(null)
+  const [scanning,   setScanning]   = useState(false)
+  const [btScanning, setBtScanning] = useState(false)
+  const [modal,      setModal]      = useState(null)
+  const [pwd,        setPwd]        = useState('')
+  const [showPwd,    setShowPwd]    = useState(false)
+  const [connecting, setConnecting] = useState(false)
+  const [toast,      setToast]      = useState(null)
+
+  const showToast = (msg, ok = true) => {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  const loadStatus = useCallback(async () => {
+    const d = await api('/wifi/system-status')
+    if (!d) return
+    setStatus(d)
+    if (d.has_wifi_hw !== undefined) setHasWifi(d.has_wifi_hw)
+  }, [])
+
+  const scanWifi = useCallback(async () => {
+    setScanning(true)
+    const d = await api('/wifi/available')
+    if (d) {
+      setNetworks(d.networks || [])
+      if (d.has_wifi_hw !== undefined) setHasWifi(d.has_wifi_hw)
+    }
+    setScanning(false)
+  }, [])
+
+  const scanBt = useCallback(async () => {
+    setBtScanning(true)
+    setBtDevices([])
+    const d = await apiFetch('/wifi/bluetooth/scan', { method: 'POST' }).then(r => r.json()).catch(() => null)
+    if (d) {
+      setHasBt(d.has_bluetooth_hw)
+      setBtDevices(d.devices || [])
+      if (d.devices?.length) showToast(`${d.devices.length} appareil(s) BT trouvé(s)`)
+    }
+    setBtScanning(false)
+  }, [])
+
+  useEffect(() => {
+    loadStatus()
+    scanWifi()
+    apiFetch('/wifi/bluetooth/status').then(r => r.json()).then(d => setHasBt(d.has_bluetooth_hw)).catch(() => {})
+    const t = setInterval(loadStatus, 30000)
+    return () => clearInterval(t)
+  }, [])
+
+  async function connect() {
+    if (!modal) return
+    setConnecting(true)
+    const d = await apiFetch('/wifi/system-connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ssid: modal.ssid, password: pwd }),
+    }).then(r => r.json()).catch(() => null)
+    setConnecting(false)
+    if (d?.status === 'connected') {
+      showToast(`✅ Connecté à ${modal.ssid}${d.local_ip ? ' — ' + d.local_ip : ''}`)
+      setModal(null)
+      await loadStatus()
+      await scanWifi()
+    } else {
+      showToast(d?.error || 'Connexion échouée', false)
+    }
+  }
+
+  async function disconnect() {
+    const d = await apiFetch('/wifi/system-disconnect', { method: 'POST' }).then(r => r.json()).catch(() => null)
+    if (d?.status === 'disconnected') { showToast('Déconnecté'); loadStatus(); scanWifi() }
+    else showToast(d?.error || 'Erreur déconnexion', false)
+  }
+
+  const ip = status?.local_ip || (status?.server_ips?.[0]?.ip)
+  const connected = status?.connected
+  const SEC = { WPA3: '#4ade80', WPA2: '#44aaff', WEP: '#f97316', OPEN: '#fbbf24' }
+
+  return (
+    <Widget title="RÉSEAU" icon="📶" color="#38bdf8" accent="#38bdf830">
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 16, right: 72, zIndex: 9999,
+          padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+          background: toast.ok ? '#001800' : '#1a0000',
+          border: `1px solid ${toast.ok ? '#4ade8077' : '#ef444477'}`,
+          color: toast.ok ? '#4ade80' : '#ef4444',
+          boxShadow: '0 4px 20px #0008',
+        }}>{toast.msg}</div>
+      )}
+
+      {/* Statut actuel */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: '#ffffff06', borderRadius: 8 }}>
+        <span style={{ fontSize: 16 }}>{connected ? '🟢' : hasWifi === false ? '⚠️' : '⭕'}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {connected
+            ? <><span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4ade80' }}>{status.ssid}</span>
+                <span style={{ fontSize: '0.6rem', color: '#44aaff', marginLeft: 8, fontFamily: 'monospace' }}>{status.local_ip}</span></>
+            : <span style={{ fontSize: '0.72rem', color: hasWifi === false ? '#f97316' : 'var(--text3)' }}>
+                {hasWifi === false ? 'Pas d\'adaptateur WiFi' : 'Non connecté'}
+              </span>
+          }
+          {ip && !connected && <div style={{ fontSize: '0.58rem', color: '#44aaff', fontFamily: 'monospace' }}>Serveur : {ip}:8001</div>}
+        </div>
+        {connected && (
+          <button onClick={disconnect} style={{ padding: '3px 8px', background: 'transparent', border: '1px solid #ef444433', color: '#ef4444', borderRadius: 5, cursor: 'pointer', fontSize: '0.6rem' }}>
+            Déco
+          </button>
+        )}
+      </div>
+
+      {/* Onglets */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        {[['wifi','📶 WiFi'], ['bt','🔵 BT']].map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{
+            flex: 1, padding: '5px 0', borderRadius: 6, cursor: 'pointer', fontSize: '0.65rem', fontWeight: tab === id ? 700 : 400,
+            background: tab === id ? '#38bdf820' : 'transparent',
+            border: `1px solid ${tab === id ? '#38bdf840' : '#ffffff10'}`,
+            color: tab === id ? '#38bdf8' : 'var(--text3)',
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {/* Panel WiFi */}
+      {tab === 'wifi' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ fontSize: '0.6rem', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>
+              {networks.length > 0 ? `${networks.length} réseau(x)` : 'Réseaux à proximité'}
+            </span>
+            <button onClick={scanWifi} disabled={scanning} style={{ padding: '2px 8px', background: '#38bdf815', border: '1px solid #38bdf830', color: '#38bdf8', borderRadius: 5, cursor: 'pointer', fontSize: '0.6rem' }}>
+              {scanning ? '⏳' : '🔄 Scan'}
+            </button>
+          </div>
+          {hasWifi === false
+            ? <div style={{ fontSize: '0.65rem', color: '#f97316', padding: '8px 10px', background: '#1a0f00', borderRadius: 6, lineHeight: 1.6 }}>
+                Pas d'adaptateur WiFi physique<br />
+                <span style={{ color: '#664422', fontSize: '0.58rem' }}>→ Branchez un dongle USB WiFi</span>
+              </div>
+            : networks.length === 0
+              ? <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '0.68rem', padding: '10px 0' }}>
+                  {scanning ? 'Scan…' : 'Aucun réseau — clique Scan'}
+                </div>
+              : <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
+                  {networks.slice(0, 6).map((n, i) => (
+                    <div key={n.bssid || i}
+                      onClick={() => !n.active && setModal({ ssid: n.ssid, secured: n.secured })}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 6,
+                        background: n.active ? '#4ade8010' : '#ffffff04',
+                        border: `1px solid ${n.active ? '#4ade8030' : '#ffffff08'}`,
+                        cursor: n.active ? 'default' : 'pointer',
+                      }}>
+                      <SignalDots pct={n.signal} />
+                      <span style={{ flex: 1, fontSize: '0.68rem', color: n.active ? '#4ade80' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: n.active ? 700 : 400 }}>
+                        {n.ssid || <em style={{ color: '#444' }}>Caché</em>}
+                      </span>
+                      {n.active && <span style={{ fontSize: '0.55rem', color: '#4ade80', background: '#4ade8020', borderRadius: 4, padding: '1px 5px' }}>✓</span>}
+                      <span style={{ fontSize: '0.58rem', color: SEC[n.security] || '#888' }}>{n.secured ? '🔒' : '🔓'}</span>
+                    </div>
+                  ))}
+                </div>
+          }
+        </div>
+      )}
+
+      {/* Panel Bluetooth */}
+      {tab === 'bt' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ fontSize: '0.6rem', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>
+              {btDevices.length > 0 ? `${btDevices.length} appareil(s)` : 'Appareils BT'}
+            </span>
+            <button onClick={scanBt} disabled={btScanning} style={{ padding: '2px 8px', background: '#a78bfa15', border: '1px solid #a78bfa30', color: '#a78bfa', borderRadius: 5, cursor: 'pointer', fontSize: '0.6rem' }}>
+              {btScanning ? '⏳ ~8s' : '🔄 Scan'}
+            </button>
+          </div>
+          {hasBt === false
+            ? <div style={{ fontSize: '0.65rem', color: '#f97316', padding: '8px 10px', background: '#1a0f00', borderRadius: 6, lineHeight: 1.6 }}>
+                Pas d'adaptateur Bluetooth<br />
+                <span style={{ color: '#664422', fontSize: '0.58rem' }}>→ Branchez un dongle USB BT</span>
+              </div>
+            : btDevices.length === 0
+              ? <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '0.68rem', padding: '10px 0' }}>
+                  {btScanning ? 'Scan Bluetooth (~8s)…' : 'Aucun appareil — clique Scan'}
+                </div>
+              : <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
+                  {btDevices.map((d, i) => (
+                    <div key={d.address || i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 6, background: '#a78bfa08', border: '1px solid #a78bfa20' }}>
+                      <span style={{ fontSize: 14 }}>🔵</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name || 'Appareil inconnu'}</div>
+                        <div style={{ fontSize: '0.55rem', color: 'var(--text3)', fontFamily: 'monospace' }}>{d.address}</div>
+                      </div>
+                      <span style={{ fontSize: '0.55rem', padding: '1px 5px', background: '#a78bfa20', color: '#a78bfa', borderRadius: 4 }}>{d.type || 'BT'}</span>
+                    </div>
+                  ))}
+                </div>
+          }
+        </div>
+      )}
+
+      <button onClick={() => onNav('wifi-selector')} style={{ width: '100%', padding: '6px', background: '#38bdf815', border: '1px solid #38bdf840', borderRadius: 7, color: '#38bdf8', cursor: 'pointer', fontSize: '0.68rem' }}>
+        Gérer les réseaux →
+      </button>
+
+      {/* Modal connexion */}
+      {modal && (
+        <div style={{ position: 'fixed', inset: 0, background: '#000c', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => !connecting && setModal(null)}>
+          <div style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: 14, padding: 24, width: 320, boxShadow: '0 24px 60px #000d' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '0.6rem', color: '#555', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Se connecter à</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#44aaff', marginBottom: 16 }}>📶 {modal.ssid}</div>
+            {modal.secured
+              ? <div style={{ position: 'relative', marginBottom: 16 }}>
+                  <input autoFocus type={showPwd ? 'text' : 'password'} value={pwd} onChange={e => setPwd(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !connecting && connect()}
+                    placeholder="Mot de passe WiFi"
+                    style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d0d', border: '1px solid #2a2a2a', color: '#fff', padding: '10px 40px 10px 12px', borderRadius: 8, fontSize: 14, outline: 'none' }} />
+                  <button onClick={() => setShowPwd(p => !p)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>{showPwd ? '🙈' : '👁️'}</button>
+                </div>
+              : <div style={{ color: '#fbbf24', fontSize: 12, marginBottom: 16, padding: '6px 10px', background: '#1a1200', borderRadius: 6 }}>🔓 Réseau ouvert</div>
+            }
+            {connecting && <div style={{ color: '#44aaff', fontSize: 12, marginBottom: 10, textAlign: 'center' }}>⏳ Connexion…</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModal(null)} disabled={connecting} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #2a2a2a', color: '#666', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>Annuler</button>
+              <button onClick={connect} disabled={connecting} style={{ padding: '8px 18px', background: '#44aaff', border: 'none', color: '#000', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: connecting ? 0.6 : 1 }}>
+                {connecting ? '…' : '🔗 Connecter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Widget>
   )
 }
@@ -464,6 +725,7 @@ export default function DashboardView({ onNav }) {
         <AgentsWidget onNav={onNav} />
         <MemoryWidget onNav={onNav} />
         <LifeWidget onNav={onNav} />
+        <NetworkWidget onNav={onNav} />
         <ActionLogWidget />
       </div>
     </div>
