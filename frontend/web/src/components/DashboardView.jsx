@@ -480,7 +480,7 @@ function NetworkWidget({ onNav }) {
   useEffect(() => {
     loadStatus()
     scanWifi()
-    apiFetch('/wifi/bluetooth/status').then(r => r.json()).then(d => setHasBt(d.has_bluetooth_hw)).catch(() => {})
+    apiFetch('/wifi/bluetooth/status').then(r => r.json()).then(d => { setHasBt(d.has_bluetooth_hw); if (!d.has_bluetooth_hw) setDemoBt(true) }).catch(() => {})
     const t = setInterval(loadStatus, 30000)
     return () => clearInterval(t)
   }, [])

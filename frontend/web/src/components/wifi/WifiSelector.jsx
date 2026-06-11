@@ -109,6 +109,7 @@ export default function WifiSelector() {
       const r = await apiFetch('/wifi/bluetooth/status')
       const d = await r.json()
       setHasBtHw(d.has_bluetooth_hw)
+      if (!d.has_bluetooth_hw) setBtDemoMode(true)
     } catch {}
   }, [])
 

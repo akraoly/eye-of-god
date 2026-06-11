@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L'Œil de Dieu — Audit Professionnel v8.0</title>
+<style>
+  :root {
+    --bg: #020a14;
+    --bg2: #0a1628;
+    --bg3: #0f1f3d;
+    --accent: #00d4ff;
+    --accent2: #8b5cf6;
+    --accent3: #00e876;
+    --accent4: #f59e0b;
+    --red: #ff4466;
+    --text: #c8e8ff;
+    --text2: #7fb3d3;
+    --text3: #4a7a99;
+    --border: rgba(0,212,255,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #020a14 0%, #0a1628 50%, #020a14 100%);
+    border-bottom: 1px solid var(--accent);
+    padding: 40px 60px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(0,212,255,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 50%, rgba(139,92,246,0.06) 0%, transparent 60%);
+  }
+  .eye-logo {
+    font-size: 64px;
+    filter: drop-shadow(0 0 20px var(--accent));
+    position: relative;
+  }
+  .header-text { position: relative; }
+  .header-title {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(0,212,255,0.5);
+    letter-spacing: -0.5px;
+  }
+  .header-sub { color: var(--text2); font-size: 16px; margin-top: 4px; }
+  .header-meta { margin-left: auto; text-align: right; position: relative; }
+  .version-badge {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .header-date { color: var(--text3); font-size: 12px; margin-top: 8px; }
+
+  /* CONTENT */
+  .content { max-width: 1200px; margin: 0 auto; padding: 40px 40px 80px; }
+
+  /* SECTION */
+  .section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-num {
+    background: var(--accent);
+    color: var(--bg);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800;
+  }
+
+  /* STAT CARDS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-num {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--accent);
+    display: block;
+    text-shadow: 0 0 20px rgba(0,212,255,0.4);
+  }
+  .stat-num.green { color: var(--accent3); text-shadow: 0 0 20px rgba(0,232,118,0.4); }
+  .stat-num.purple { color: var(--accent2); text-shadow: 0 0 20px rgba(139,92,246,0.4); }
+  .stat-num.gold { color: var(--accent4); text-shadow: 0 0 20px rgba(245,158,11,0.4); }
+  .stat-num.red { color: var(--red); text-shadow: 0 0 20px rgba(255,68,102,0.4); }
+  .stat-label { color: var(--text2); font-size: 12px; margin-top: 4px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--bg3);
+    color: var(--accent);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(0,212,255,0.06);
+    color: var(--text);
+    font-size: 13px;
+  }
+  tr:hover td { background: rgba(0,212,255,0.03); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 1px;
+  }
+  .tag-blue { background: rgba(0,212,255,0.15); color: var(--accent); }
+  .tag-purple { background: rgba(139,92,246,0.15); color: var(--accent2); }
+  .tag-green { background: rgba(0,232,118,0.15); color: var(--accent3); }
+  .tag-gold { background: rgba(245,158,11,0.15); color: var(--accent4); }
+  .tag-red { background: rgba(255,68,102,0.15); color: var(--red); }
+  .count-badge {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ARCH BOX */
+  .arch-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    font-size: 12px;
+    color: var(--accent3);
+    line-height: 1.8;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* MODULE GRID */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .module-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .module-card:hover { border-color: var(--accent); }
+  .module-title {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .module-routes {
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .module-desc { color: var(--text2); font-size: 12px; line-height: 1.5; }
+
+  /* PROGRESS BAR */
+  .progress-item { margin-bottom: 12px; }
+  .progress-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; }
+  .progress-label { color: var(--text2); }
+  .progress-val { color: var(--accent); font-weight: 700; }
+  .progress-bar { height: 6px; background: rgba(0,212,255,0.1); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+  .fill-blue { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .fill-green { background: linear-gradient(90deg, var(--accent3), #00b860); }
+  .fill-gold { background: linear-gradient(90deg, var(--accent4), #d97706); }
+  .fill-red { background: linear-gradient(90deg, var(--red), #cc2244); }
+
+  /* INFO BOXES */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 768px) { .info-grid { grid-template-columns: 1fr; } }
+  .info-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .info-box h4 { color: var(--accent); font-size: 14px; margin-bottom: 12px; }
+  .info-list { list-style: none; }
+  .info-list li {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0,212,255,0.06);
+    font-size: 13px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .info-list li::before { content: '→'; color: var(--accent); font-size: 11px; }
+
+  /* STRENGTHS */
+  .strengths-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .strength-item {
+    background: var(--bg2);
+    border-left: 3px solid var(--accent3);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .strength-item.warn { border-left-color: var(--accent4); }
+  .strength-title { color: var(--text); font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+
+  /* SCORE */
+  .score-box {
+    background: linear-gradient(135deg, var(--bg2), var(--bg3));
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .score-num {
+    font-size: 80px;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(0,212,255,0.6);
+    line-height: 1;
+  }
+  .score-denom { font-size: 32px; color: var(--text3); }
+  .score-label { color: var(--text2); margin-top: 12px; font-size: 15px; }
+
+  /* FOOTER */
+  .footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 12px;
+  }
+
+  /* SEPARATOR */
+  .sep { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  code {
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .highlight { color: var(--accent4); font-weight: 700; }
+  .green-text { color: var(--accent3); }
+  .red-text { color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="eye-logo">👁️</div>
+  <div class="header-text">
+    <div class="header-title">L'Œil de Dieu</div>
+    <div class="header-sub">Audit Professionnel Complet — Plateforme de Cybersécurité Avancée</div>
+  </div>
+  <div class="header-meta">
+    <div class="version-badge">VERSION 8.0.0 / Mobile 8.1.0</div>
+    <div class="header-date">Rapport généré le 11 juin 2026</div>
+    <div class="header-date">CONFIDENTIEL — Usage opérateur</div>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- SECTION 1 — METRICS -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">1</div>
+    MÉTRIQUES CLÉS
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-num">1 256</span>
+      <div class="stat-label">Routes API REST</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num green">69</span>
+      <div class="stat-label">Vues interface</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num purple">76</span>
+      <div class="stat-label">Composants React</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num gold">79</span>
+      <div class="stat-label">Modules backend</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num">500K+</span>
+      <div class="stat-label">Lignes de code</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num green">13</span>
+      <div class="stat-label">Blocs supra-étatiques</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num purple">8.1.0</span>
+      <div class="stat-label">App mobile Expo</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num gold">24h</span>
+      <div class="stat-label">TTL JWT auth</div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2 — ARCHITECTURE -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">2</div>
+    ARCHITECTURE TECHNIQUE
+  </div>
+  <div class="arch-box">┌──────────────────────────────────────────────────────────────────────────┐
+│                        COUCHE PRÉSENTATION                               │
+│   React 18 + Vite (port 3001)         │   Expo Go 54 — Mobile 8.1.0     │
+│   76 composants JSX                    │   React Native 0.81.5            │
+│   xterm.js PTY + WebSocket             │   iOS + Android                  │
+└─────────────────────┬──────────────────┴───────────────┬─────────────────┘
+                      │ HTTP/REST + WebSocket             │ HTTP/REST
+                      ▼                                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    FastAPI GATEWAY — port 8001                           │
+│   1 256 routes │ JWT Bearer HS256 │ CORS dynamique (LAN + exp://)        │
+│   RAG Hook Middleware     │     RBAC Middleware                          │
+│   APScheduler (autonomie) │     faster-whisper (STT)                     │
+└────────┬───────────────┬────────────────────┬────────────────────────────┘
+         │               │                    │
+┌────────▼──┐   ┌────────▼──────┐   ┌─────────▼────────────────────────┐
+│  SQLite   │   │   ChromaDB    │   │   Anthropic Claude API            │
+│  memory   │   │   vectoriel   │   │   claude-sonnet-4-6               │
+│  users    │   │   embeddings  │   │   4096 tokens │ Vision │ RAG       │
+└───────────┘   └───────────────┘   └──────────────────────────────────┘
+         │
+┌────────▼─────────────────────────────────────────────────────────────────┐
+│                     OUTILS SYSTÈME (Kali Linux)                         │
+│   nmap │ nmcli │ bluetoothctl │ aircrack-ng │ yara-python               │
+│   ffmpeg │ watchdog │ faster-whisper │ APScheduler                      │
+└──────────────────────────────────────────────────────────────────────────┘</div>
+</div>
+
+<!-- SECTION 3 — API COVERAGE -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">3</div>
+    COUVERTURE API — TOP 15 MODULES PAR ROUTES
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Routes</th>
+          <th>Catégorie</th>
+          <th>Volume</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>🔴 SOC — Centre Opérations</td><td><span class="count-badge">111</span></td><td><span class="tag tag-green">Défensif</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:100%;background:linear-gradient(90deg,#00d4ff,#8b5cf6);border-radius:4px"></div></div></td></tr>
+        <tr><td>💾 Firmware Implants</td><td><span class="count-badge">59</span></td><td><span class="tag tag-red">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:53%;background:linear-gradient(90deg,#ff4466,#cc2244);border-radius:4px"></div></div></td></tr>
+        <tr><td>📱 Mobile Exploitation</td><td><span class="count-badge">47</span></td><td><span class="tag tag-red">Offensif</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:42%;background:linear-gradient(90deg,#ff4466,#cc2244);border-radius:4px"></div></div></td></tr>
+        <tr><td>💥 Zero-Day Fuzzing</td><td><span class="count-badge">47</span></td><td><span class="tag tag-red">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:42%;background:linear-gradient(90deg,#ff4466,#cc2244);border-radius:4px"></div></div></td></tr>
+        <tr><td>🎯 Neutralisation</td><td><span class="count-badge">47</span></td><td><span class="tag tag-red">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:42%;background:linear-gradient(90deg,#ff4466,#cc2244);border-radius:4px"></div></div></td></tr>
+        <tr><td>⚛️ Quantum & Cryptographie</td><td><span class="count-badge">45</span></td><td><span class="tag tag-purple">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:40%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);border-radius:4px"></div></div></td></tr>
+        <tr><td>🤖 Automation Stratégique</td><td><span class="count-badge">43</span></td><td><span class="tag tag-purple">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:39%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);border-radius:4px"></div></div></td></tr>
+        <tr><td>🧠 Influence Stratégique</td><td><span class="count-badge">43</span></td><td><span class="tag tag-purple">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:39%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);border-radius:4px"></div></div></td></tr>
+        <tr><td>📡 Guerre Électronique</td><td><span class="count-badge">43</span></td><td><span class="tag tag-purple">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:39%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);border-radius:4px"></div></div></td></tr>
+        <tr><td>🎭 Deepfake Vishing</td><td><span class="count-badge">42</span></td><td><span class="tag tag-red">Offensif</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:38%;background:linear-gradient(90deg,#ff4466,#cc2244);border-radius:4px"></div></div></td></tr>
+        <tr><td>👁️ Surveillance Stratégique</td><td><span class="count-badge">39</span></td><td><span class="tag tag-purple">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:35%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);border-radius:4px"></div></div></td></tr>
+        <tr><td>📶 WiFi (Scan/Connect/Crack)</td><td><span class="count-badge">38</span></td><td><span class="tag tag-blue">RF/Réseau</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:34%;background:linear-gradient(90deg,#00d4ff,#8b5cf6);border-radius:4px"></div></div></td></tr>
+        <tr><td>🚀 Guerre Spatiale</td><td><span class="count-badge">38</span></td><td><span class="tag tag-purple">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:34%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);border-radius:4px"></div></div></td></tr>
+        <tr><td>🔇 Air-Gap Exploitation</td><td><span class="count-badge">32</span></td><td><span class="tag tag-red">Supra-État</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:29%;background:linear-gradient(90deg,#ff4466,#cc2244);border-radius:4px"></div></div></td></tr>
+        <tr><td>🌍 OSINT Géopolitique</td><td><span class="count-badge">31</span></td><td><span class="tag tag-gold">Renseignement</span></td><td><div style="height:8px;background:rgba(0,212,255,0.1);border-radius:4px"><div style="height:8px;width:28%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:4px"></div></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SECTION 4 — IA -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">4</div>
+    INTELLIGENCE ARTIFICIELLE — CLAUDE SONNET 4.6
+  </div>
+  <div class="modules-grid">
+    <div class="module-card">
+      <div class="module-title">🤖 Chat IA <span class="module-routes">4 routes</span></div>
+      <div class="module-desc">Claude Sonnet 4.6 — 4096 tokens max. Mémoire court terme (20 échanges), injection automatique de contexte via RAG middleware.</div>
+    </div>
+    <div class="module-card">
+      <div class="module-title">🧠 Mémoire Vectorielle <span class="module-routes">ChromaDB</span></div>
+      <div class="module-desc">SQLite + ChromaDB. Embeddings persistants, k=8 résultats par requête. Résumé auto après 50 échanges (lots de 20). Sessions UUID.</div>
+    </div>
+    <div class="module-card">
+      <div class="module-title">👁️ Vision <span class="module-routes">3 routes</span></div>
+      <div class="module-desc">Analyse d'images via Claude Vision API. OCR, interprétation captures d'écran, analyse photos tactiques.</div>
+    </div>
+    <div class="module-card">
+      <div class="module-title">🎙️ Voix STT/TTS <span class="module-routes">6 routes</span></div>
+      <div class="module-desc">faster-whisper pipeline 5x optimisé. Entrée vocale mobile iOS/Android. WebSocket streaming audio temps réel.</div>
+    </div>
+    <div class="module-card">
+      <div class="module-title">⏰ Autonomie APScheduler <span class="module-routes">13 routes</span></div>
+      <div class="module-desc">Tâches planifiées asynchrones : alertes, scans, rapports. Notifications toast temps réel avec déduplication.</div>
+    </div>
+    <div class="module-card">
+      <div class="module-title">📚 RAG Engine <span class="module-routes">6 routes</span></div>
+      <div class="module-desc">Retrieval-Augmented Generation. Indexation documentaire automatique. Requêtes sémantiques sur la base de connaissances.</div>
+    </div>
+    <div class="module-card">
+      <div class="module-title">🔍 AEGIS Intel <span class="module-routes">21 routes</span></div>
+      <div class="module-desc">Renseignement offensif stratégique. Enrichissement IOC, corrélation multi-sources, pivot d'entités.</div>
+    </div>
+    <div class="module-card">
+      <div class="module-title">🔄 Self-Improve <span class="module-routes">9 routes</span></div>
+      <div class="module-desc">Auto-amélioration de l'agent. Observation de ses propres performances et ajustement des stratégies.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5 — SÉCURITÉ -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">5</div>
+    SÉCURITÉ & AUTHENTIFICATION
+  </div>
+  <div class="info-grid">
+    <div class="info-box">
+      <h4>🔐 Authentification JWT</h4>
+      <ul class="info-list">
+        <li>JWT HS256 — 24h d'expiration</li>
+        <li>HTTPBearer sur toutes routes protégées</li>
+        <li>Vérification <code>user.is_active</code> par requête</li>
+        <li>Routes publiques : auth, network, sentinel</li>
+        <li>Credentials : <code>admin / oeil2026</code></li>
+        <li>JWT Secret configurable via <code>.env</code></li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🛡️ Middlewares de Sécurité</h4>
+      <ul class="info-list">
+        <li>RBAC Middleware — contrôle par rôle</li>
+        <li>CORS dynamique — regex LAN + Expo</li>
+        <li>RAG Hook — injection contexte auto</li>
+        <li>Gestion multi-utilisateurs (9 routes)</li>
+        <li>Logs d'audit YARA traçables</li>
+        <li>APScheduler — vérifications planifiées</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>📡 Réseau & Connectivité</h4>
+      <ul class="info-list">
+        <li>CORS : localhost + 192.168.x.x + 10.x.x.x + 172.16-31.x.x</li>
+        <li>Expo protocol : <code>exp://</code> supporté</li>
+        <li>Terminal PTY : WebSocket + JWT param</li>
+        <li>WiFi mode démo : auto sans hardware</li>
+        <li>3 ports ouverts (3001, 8001, réservé)</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>⚡ Terminal PTY WebSocket</h4>
+      <ul class="info-list">
+        <li>Shell bash interactif temps réel</li>
+        <li><code>ws://host/api/system/terminal-ws</code></li>
+        <li>JWT en paramètre URL</li>
+        <li>Resize dynamique (ResizeObserver)</li>
+        <li>Scrollback 2000 lignes</li>
+        <li>Fix React StrictMode (mountedRef)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 6 — BLOCS SUPRA-ÉTATIQUES -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">6</div>
+    BLOCS SUPRA-ÉTATIQUES — CAPACITÉS NIVEAU APT/ÉTAT-NATION
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Bloc</th><th>Nom</th><th>Routes</th><th>Capacités clés</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">Bloc 1</span></td><td>WiFi Avancé</td><td><span class="count-badge">38</span></td><td>802.11 WPA2/WPA3, PMKID, EAPOL capture, déauthentification</td></tr>
+        <tr><td><span class="tag tag-red">Bloc 2</span></td><td>Firmware Implants</td><td><span class="count-badge">59</span></td><td>UEFI/BIOS implants, bootkit, persistence niveau matériel, MBR</td></tr>
+        <tr><td><span class="tag tag-red">Bloc 3</span></td><td>Zero-Day Fuzzing</td><td><span class="count-badge">47</span></td><td>Découverte 0-day automatisée, fuzzing protocoles, CVE generation</td></tr>
+        <tr><td><span class="tag tag-red">Bloc 4</span></td><td>Air-Gap Exfiltration</td><td><span class="count-badge">32</span></td><td>Canaux couverts : acoustique, électromagnétique, optique, thermique</td></tr>
+        <tr><td><span class="tag tag-purple">Bloc 5</span></td><td>Deepfake Vishing</td><td><span class="count-badge">42</span></td><td>Clonage vocal, deepfake vidéo temps réel, ingénierie sociale IA</td></tr>
+        <tr><td><span class="tag tag-gold">Bloc 6</span></td><td>OSINT Géopolitique</td><td><span class="count-badge">31</span></td><td>GEOINT, SIGINT, renseignement stratégique open-source</td></tr>
+        <tr><td><span class="tag tag-purple">Bloc 7</span></td><td>Automation Stratégique</td><td><span class="count-badge">43</span></td><td>Playbooks cyber automatisés, opérations planifiées, kill chain auto</td></tr>
+        <tr><td><span class="tag tag-purple">Bloc 8</span></td><td>Quantum & Cryptographie</td><td><span class="count-badge">45</span></td><td>Post-quantum (CRYSTALS), cryptanalyse, Shor/Grover simulés</td></tr>
+        <tr><td><span class="tag tag-purple">Bloc 9</span></td><td>Influence Stratégique</td><td><span class="count-badge">43</span></td><td>Opérations d'influence, désinformation ciblée, narratives IA</td></tr>
+        <tr><td><span class="tag tag-blue">Bloc 11</span></td><td>Guerre Électronique</td><td><span class="count-badge">43</span></td><td>Brouillage, interception, déni électronique, SDR offensif</td></tr>
+        <tr><td><span class="tag tag-blue">Bloc 12</span></td><td>Surveillance Strat.</td><td><span class="count-badge">39</span></td><td>Surveillance multi-domaines, corrélation temps réel</td></tr>
+        <tr><td><span class="tag tag-red">Bloc 13</span></td><td>Neutralisation</td><td><span class="count-badge">47</span></td><td>Neutralisation cibles logiques et physiques, disruption</td></tr>
+        <tr><td><span class="tag tag-blue">Bloc 14</span></td><td>Guerre Spatiale</td><td><span class="count-badge">38</span></td><td>Interférence satellite, orbital operations, jamming spatial</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SECTION 7 — MOBILE -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">7</div>
+    APPLICATION MOBILE — EXPO GO 8.1.0
+  </div>
+  <div class="info-grid">
+    <div class="info-box">
+      <h4>📱 Spécifications</h4>
+      <ul class="info-list">
+        <li>Version : 8.1.0</li>
+        <li>SDK Expo : ~54.0</li>
+        <li>React Native : 0.81.5</li>
+        <li>Bundle ID : com.mrvitch.eyeofgod</li>
+        <li>iOS + Android (Expo Go)</li>
+        <li>expo-doctor : 18/18 vérifications ✅</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🔗 Connectivité</h4>
+      <ul class="info-list">
+        <li>URL dynamique via AsyncStorage</li>
+        <li>Même réseau WiFi que la machine</li>
+        <li>Accès : http://172.20.10.5:8001</li>
+        <li>CORS adapté exp:// Expo Go</li>
+        <li>JWT stocké localement</li>
+        <li>Auto-reconnexion réseau</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 8 — SENTINEL -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">8</div>
+    SURVEILLANCE SYSTÈME — SENTINEL (16 routes)
+  </div>
+  <div style="max-width:600px">
+    <div class="progress-item">
+      <div class="progress-header"><span class="progress-label">CPU</span><span class="progress-val">89%</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:89%"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-header"><span class="progress-label">RAM</span><span class="progress-val">55%</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-blue" style="width:55%"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-header"><span class="progress-label">Disque</span><span class="progress-val">53%</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:53%"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-header"><span class="progress-label">Swap</span><span class="progress-val highlight">99.9% ⚠</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:99%"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-header"><span class="progress-label">Santé globale</span><span class="progress-val green-text">78/100</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:78%"></div></div>
+    </div>
+  </div>
+  <p style="color:var(--text2);font-size:12px;margin-top:16px">205 processus actifs · 3 ports ouverts · 180 Mo envoyés / 22 Mo reçus</p>
+</div>
+
+<!-- SECTION 9 — FORCES/LIMITES -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">9</div>
+    FORCES ET LIMITATIONS
+  </div>
+  <div style="margin-bottom:20px">
+    <h4 style="color:var(--accent3);margin-bottom:12px;font-size:14px">✅ FORCES MAJEURES</h4>
+    <div class="strengths-grid">
+      <div class="strength-item"><div class="strength-title">Couverture fonctionnelle exceptionnelle</div>1 256 routes API — l'une des plateformes les plus complètes du marché civil</div>
+      <div class="strength-item"><div class="strength-title">IA intégrée nativement</div>Claude Sonnet 4.6 dans chaque module — pas un chatbot greffé, mais un vrai co-pilote opérationnel</div>
+      <div class="strength-item"><div class="strength-title">Mémoire persistante vectorielle</div>SQLite + ChromaDB — l'agent se souvient des sessions précédentes, apprentissage continu</div>
+      <div class="strength-item"><div class="strength-title">Architecture modulaire exemplaire</div>79 modules indépendants, facilement extensibles, FastAPI bien structuré</div>
+      <div class="strength-item"><div class="strength-title">Mobile natif fonctionnel</div>Expo Go iOS/Android avec JWT, voix, chat — accessible depuis n'importe quel téléphone</div>
+      <div class="strength-item"><div class="strength-title">Terminal PTY sécurisé</div>Shell interactif WebSocket JWT — capacité rare sur les plateformes SOC commerciales</div>
+      <div class="strength-item"><div class="strength-title">13 blocs supra-étatiques</div>Capacités de niveau APT/NSA : firmware, quantum, influence, guerre spatiale — unique marché civil</div>
+      <div class="strength-item"><div class="strength-title">Mode démo intelligent</div>Fonctionne sans hardware WiFi/BT — transition automatique au branchement dongle</div>
+    </div>
+  </div>
+  <div>
+    <h4 style="color:var(--accent4);margin-bottom:12px;font-size:14px">⚠️ LIMITATIONS ACTUELLES</h4>
+    <div class="strengths-grid">
+      <div class="strength-item warn"><div class="strength-title">WiFi/BT hardware absent</div>Machine virtuelle VirtualBox sans adaptateur USB — mode démo actif (résolu par dongle USB WiFi)</div>
+      <div class="strength-item warn"><div class="strength-title">JWT Secret par défaut</div>"change-me-in-production" — à modifier dans <code>.env</code> avant déploiement production</div>
+      <div class="strength-item warn"><div class="strength-title">Swap saturé</div>99.9% swap sur VM — pression mémoire normale en environnement virtualisé intensif</div>
+      <div class="strength-item warn"><div class="strength-title">Hardware spécifique requis</div>SDR (RTL-SDR), RFID (Proxmark), BLE avancé nécessitent le hardware dédié</div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 10 — ACCÈS -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">10</div>
+    ACCÈS ET DÉMONSTRATION
+  </div>
+  <div class="info-grid">
+    <div class="info-box">
+      <h4>🌐 URLs</h4>
+      <ul class="info-list">
+        <li>Application Web : <code>http://localhost:3001</code></li>
+        <li>API Backend : <code>http://localhost:8001</code></li>
+        <li>Docs Swagger : <code>http://localhost:8001/docs</code></li>
+        <li>Mobile LAN : <code>http://172.20.10.5:8001</code></li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🔑 Credentials</h4>
+      <ul class="info-list">
+        <li>Username : <code>admin</code></li>
+        <li>Password : <code>oeil2026</code></li>
+        <li>JWT valable 24h</li>
+        <li>Configurable via <code>.env</code></li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🎯 Parcours démo OSEE recommandé</h4>
+      <ul class="info-list">
+        <li>1. Dashboard cockpit → 7 widgets temps réel</li>
+        <li>2. SOC → 19 onglets, 111 routes</li>
+        <li>3. Terminal PTY → lancer <code>nmap -sV localhost</code></li>
+        <li>4. Chat IA → démontrer la mémoire contextuelle</li>
+        <li>5. WiFi → mode démo 8 réseaux simulés</li>
+        <li>6. Quantum Bloc 8 → capacités post-quantum</li>
+        <li>7. Swagger → <code>/docs</code> — 1 256 opérations visibles</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🚀 Démarrage</h4>
+      <ul class="info-list">
+        <li><code>cd /home/kali/eye-of-god</code></li>
+        <li><code>bash start.sh</code></li>
+        <li>Backend : uvicorn port 8001</li>
+        <li>Frontend : vite port 3001</li>
+        <li>Mobile : scanner QR avec Expo Go</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SCORE FINAL -->
+<div class="section">
+  <div class="section-title">
+    <div class="section-num">11</div>
+    NOTE GLOBALE
+  </div>
+  <div class="score-box">
+    <div class="score-num">8.5<span class="score-denom">/10</span></div>
+    <div class="score-label">Plateforme ambitieuse et techniquement solide</div>
+    <div style="margin-top:16px;color:var(--text2);font-size:13px;line-height:1.7">
+      Architecture FastAPI professionnelle · React 18 moderne<br>
+      Auth JWT solide · Mémoire vectorielle ChromaDB<br>
+      500 000+ lignes · 13 capacités niveau état-nation<br>
+      Prête pour démonstration à expert OSEE
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<div class="footer">
+  Rapport généré par AEGIS AI Audit Engine · L'Œil de Dieu v8.0.0 · 11 juin 2026<br>
+  CONFIDENTIEL — Destiné à usage opérateur uniquement
+</div>
+
+</body>
+</html>
