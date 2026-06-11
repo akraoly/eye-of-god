@@ -39,7 +39,7 @@ export default function ChatScreen() {
     setLoading(true);
 
     try {
-      const data = await apiJSON('/api/chat', {
+      const data = await apiJSON('/api/chat/', {
         method: 'POST',
         body: JSON.stringify({ message: text, session_id: sessionId, vocal_input: isVocal, voice_energy: voiceEnergy, voice_duration: voiceDuration }),
       });

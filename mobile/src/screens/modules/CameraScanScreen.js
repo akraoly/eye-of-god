@@ -51,7 +51,7 @@ function CameraDetailSheet({ cam, visible, onClose }) {
   const takeSnapshot = async () => {
     setSnapLoading(true);
     try {
-      const d = await apiJSON('/cameras/snapshot', {
+      const d = await apiJSON('/api/cameras/snapshot', {
         method: 'POST', body: JSON.stringify({ ip: cam.ip, port: cam.port }),
       });
       setSnapshot(d.url || (d.data ? `data:image/jpeg;base64,${d.data}` : null));
@@ -62,7 +62,7 @@ function CameraDetailSheet({ cam, visible, onClose }) {
   const testCreds = async () => {
     setCredsLoading(true);
     try {
-      const d = await apiJSON('/cameras/test-creds', {
+      const d = await apiJSON('/api/cameras/test-creds', {
         method: 'POST', body: JSON.stringify({ ip: cam.ip, port: cam.port }),
       });
       setCredsResult(d);
@@ -150,7 +150,7 @@ export default function CameraScanScreen() {
     setScanning(true); setProgress(0); setError(''); setCameras([]);
     progressRef.current = setInterval(() => setProgress(p => Math.min(p + Math.random() * 8, 88)), 400);
     try {
-      const d = await apiJSON('/cameras/scan', {
+      const d = await apiJSON('/api/cameras/scan', {
         method: 'POST', body: JSON.stringify({ subnet: subnet.trim() }),
       });
       setCameras(d.cameras || []);

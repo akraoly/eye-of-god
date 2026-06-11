@@ -81,6 +81,7 @@ export default function AudioCaptureScreen() {
   const [duration,        setDuration]        = useState(30);
   const [quality,         setQuality]         = useState('medium');
   const [recording,       setRecording]       = useState(false);
+  const [activeJobId,     setActiveJobId]     = useState(null);
   const [recordings,      setRecordings]      = useState([]);
   const [keyword,         setKeyword]         = useState('');
   const [keywordActive,   setKeywordActive]   = useState(false);
@@ -96,13 +97,13 @@ export default function AudioCaptureScreen() {
 
   // Load sessions
   useEffect(() => {
-    apiJSON('/pentest/jobs').then(d => setSessions(d.jobs || [])).catch(() => {});
+    apiJSON('/api/pentest/jobs').then(d => setSessions(d.jobs || [])).catch(() => {});
   }, []);
 
   // Load recordings
   const loadRecordings = useCallback(() => {
     const qs = sessionId ? `?session_id=${sessionId}` : '';
-    apiJSON(`/audio/recordings${qs}`).then(d => setRecordings(d.recordings || [])).catch(() => {});
+    apiJSON(`/api/audio/recordings${qs}`).then(d => setRecordings(d.recordings || [])).catch(() => {});
   }, [sessionId]);
 
   useEffect(() => {
@@ -181,7 +182,7 @@ export default function AudioCaptureScreen() {
     if (!sessionId) { Alert.alert('Erreur', 'Sélectionner une session'); return; }
     setMicLoading(true);
     try {
-      const d = await apiJSON(`/audio/microphones/${sessionId}`);
+      const d = await apiJSON(`/api/audio/microphones/${sessionId}`);
       setMicrophones(d.microphones || []);
     } catch { Alert.alert('Erreur', 'Impossible de lister les microphones'); }
     setMicLoading(false);
@@ -191,14 +192,14 @@ export default function AudioCaptureScreen() {
     if (!sessionId) { Alert.alert('Erreur', 'Sélectionner une session'); return; }
     setLoading(true);
     try {
-      await apiJSON('/audio/record', {
+      const res = await apiJSON('/api/audio/record/start', {
         method: 'POST',
         body: JSON.stringify({
           session_id: sessionId, duration, quality,
-          microphone: selectedMic || undefined,
-          keyword: keywordActive && keyword ? keyword : undefined,
+          mic_id: selectedMic || 'default',
         }),
       });
+      setActiveJobId(res.job_id || res.recording_id || null);
       setRecording(true);
       recordTimeout.current = setTimeout(() => {
         setRecording(false);
@@ -211,7 +212,10 @@ export default function AudioCaptureScreen() {
   const stopRecording = async () => {
     clearTimeout(recordTimeout.current);
     setRecording(false);
-    try { await apiFetch('/audio/record/stop', { method: 'POST', body: JSON.stringify({ session_id: sessionId }) }); } catch {}
+    if (activeJobId) {
+      try { await apiFetch(`/api/audio/record/stop/${activeJobId}`, { method: 'POST' }); } catch {}
+    }
+    setActiveJobId(null);
     loadRecordings();
   };
 

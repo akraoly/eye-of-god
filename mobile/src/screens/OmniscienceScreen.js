@@ -55,9 +55,9 @@ export default function OmniscienceScreen() {
   const [report,       setReport]       = useState(null);
 
   const loadAll = () => {
-    apiJSON('/omniscience/stats').then(setStats).catch(() => {});
-    apiJSON('/omniscience/activity?limit=20').then(d => setActivities(d.events || [])).catch(() => {});
-    apiJSON('/soc/alerts?limit=30').then(d => setAlerts(d.alerts || [])).catch(() => {});
+    apiJSON('/api/omniscience/stats').then(setStats).catch(() => {});
+    apiJSON('/api/omniscience/activity?limit=20').then(d => setActivities(d.events || [])).catch(() => {});
+    apiJSON('/api/soc/alerts?limit=30').then(d => setAlerts(d.alerts || [])).catch(() => {});
   };
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function OmniscienceScreen() {
   const generateReport = async () => {
     setReportLoading(true);
     try {
-      const d = await apiJSON('/omniscience/report');
+      const d = await apiJSON('/api/omniscience/report');
       setReport(JSON.stringify(d, null, 2));
     } catch { Alert.alert('Erreur', 'Impossible de générer le rapport'); }
     setReportLoading(false);

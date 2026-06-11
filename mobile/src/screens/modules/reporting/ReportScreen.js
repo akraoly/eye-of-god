@@ -54,7 +54,7 @@ export default function ReportScreen() {
     if (!campaignId) return;
     setLoading(true);
     try {
-      const d = await apiJSON(`/reports/audit/campaign/${campaignId}`);
+      const d = await apiJSON(`/api/reports/audit/campaign/${campaignId}`);
       setReports(d.reports || []);
     } catch {}
     setLoading(false);
@@ -82,7 +82,7 @@ export default function ReportScreen() {
     }, 900);
 
     try {
-      await apiJSON('/reports/audit/generate', {
+      await apiJSON('/api/reports/audit/generate', {
         method: 'POST',
         body: JSON.stringify({
           campaign_id: campaignId,
