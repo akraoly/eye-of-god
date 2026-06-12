@@ -62,7 +62,7 @@ function CameraDetailSheet({ cam, visible, onClose }) {
   const testCreds = async () => {
     setCredsLoading(true);
     try {
-      const d = await apiJSON('/api/cameras/test-creds', {
+      const d = await apiJSON('/api/cameras/creds-test', {
         method: 'POST', body: JSON.stringify({ ip: cam.ip, port: cam.port }),
       });
       setCredsResult(d);

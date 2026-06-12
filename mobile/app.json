@@ -24,6 +24,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": []
+    "plugins": [
+      ["expo-av", {
+        "microphonePermission": "L'Œil de Dieu a besoin du microphone pour la reconnaissance vocale."
+      }]
+    ]
   }
 }

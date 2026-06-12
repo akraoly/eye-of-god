@@ -43,8 +43,8 @@ export async function speak(text, opts = {}) {
   Speech.stop();
   const options = {
     language: opts.language || 'fr-FR',
-    pitch: opts.pitch ?? 0.01,
-    rate: opts.rate ?? 1.20,
+    pitch: opts.pitch ?? 1.0,
+    rate: opts.rate ?? 1.0,
     volume: opts.volume ?? 1.0,
     onDone: opts.onDone,
     onError: opts.onError,
@@ -52,11 +52,8 @@ export async function speak(text, opts = {}) {
   };
   try {
     const voices = await Speech.getAvailableVoicesAsync?.() || [];
-    const male = voices.find(v =>
-      v.language?.startsWith('fr') &&
-      (v.name?.toLowerCase().includes('male') || v.name?.toLowerCase().includes('homme') || v.identifier?.toLowerCase().includes('male'))
-    );
-    if (male) options.voice = male.identifier;
+    const fr = voices.find(v => v.language?.startsWith('fr'));
+    if (fr) options.voice = fr.identifier;
   } catch (_) {}
   Speech.speak(cleanForTTS(text), options);
 }
@@ -70,6 +67,40 @@ export async function isSpeaking() {
 // ─── STT : enregistrer et transcrire via le backend ───────────────────────────
 let _recording = null;
 
+const STT_RECORDING_OPTIONS = {
+  android: {
+    extension: '.m4a',
+    outputFormat: 2,   // MPEG_4
+    audioEncoder: 3,   // AAC
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 32000,
+  },
+  ios: {
+    extension: '.m4a',
+    audioQuality: 0x60, // HIGH
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 32000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {},
+};
+
+const AUDIO_MODE_RECORDING = {
+  allowsRecordingIOS: true,
+  playsInSilentModeIOS: true,
+  staysActiveInBackground: false,
+};
+
+const AUDIO_MODE_PLAYBACK = {
+  allowsRecordingIOS: false,
+  playsInSilentModeIOS: true,  // garder true pour que le TTS fonctionne en mode silencieux iOS
+  staysActiveInBackground: false,
+};
+
 export async function startRecording() {
   // Nettoyer tout enregistrement précédent bloqué
   if (_recording) {
@@ -79,41 +110,21 @@ export async function startRecording() {
 
   try {
     const { status } = await Audio.requestPermissionsAsync();
-    if (status !== 'granted') throw new Error('Permission micro refusée');
+    if (status !== 'granted') throw new Error('Autorise l\'accès au microphone dans les Réglages');
 
     // Configurer la session audio iOS AVANT de créer l'enregistreur
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-    });
+    await Audio.setAudioModeAsync(AUDIO_MODE_RECORDING);
 
     // Délai requis : iOS a besoin de 150ms pour activer la session audio
     await new Promise(r => setTimeout(r, 150));
 
-    // Options optimisées STT : 16kHz mono → fichier 4x plus petit = upload plus rapide
-    const sttOptions = {
-      ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      android: {
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY.android,
-        sampleRate: 16000,
-        numberOfChannels: 1,
-        bitRate: 32000,
-      },
-      ios: {
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
-        sampleRate: 16000,
-        numberOfChannels: 1,
-        bitRate: 32000,
-      },
-    };
-    const { recording: rec } = await Audio.Recording.createAsync(sttOptions);
+    const { recording: rec } = await Audio.Recording.createAsync(STT_RECORDING_OPTIONS);
     _recording = rec;
     return rec;
   } catch (e) {
     _recording = null;
-    // Remettre la session audio en mode normal en cas d'erreur
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
-    throw new Error(`Enregistrement impossible : ${e.message}`);
+    await Audio.setAudioModeAsync(AUDIO_MODE_PLAYBACK).catch(() => {});
+    throw new Error(`Micro inaccessible : ${e.message}`);
   }
 }
 
@@ -126,7 +137,8 @@ export async function stopRecordingAndTranscribe(language = 'fr-FR') {
     uri = _recording.getURI();
     _recording = null;
 
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+    // Restaurer le mode lecture (playsInSilentModeIOS: true pour que le TTS marche après)
+    await Audio.setAudioModeAsync(AUDIO_MODE_PLAYBACK);
 
     if (!uri) throw new Error('URI audio manquant après enregistrement');
 
